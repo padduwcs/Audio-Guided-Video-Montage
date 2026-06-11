@@ -2,24 +2,62 @@
 
 ## 1. Mục tiêu bài toán
 
-Bài toán cần xây dựng một hệ thống giúp người dùng tạo video hoàn chỉnh từ:
+Bài toán cần xây dựng một hệ thống hỗ trợ tạo video hoàn chỉnh từ:
 
-- Video nguồn có sẵn
-- Audio thuyết minh / voice-over có sẵn
+* Một hoặc nhiều video nguồn có sẵn
+* Một file audio thuyết minh / voice-over có sẵn
 
-Hệ thống không tự sinh video mới, mà sẽ trích xuất, chọn lọc, cắt ghép và căn chỉnh các đoạn hình ảnh từ video nguồn sao cho khớp với nội dung audio.
+Hệ thống không tự sinh video mới từ đầu, mà sử dụng các phân cảnh có trong video nguồn để trích xuất, chọn lọc, cắt ghép, sắp xếp và căn chỉnh sao cho hình ảnh phù hợp nhất với nội dung và nhịp độ của lời thuyết minh.
 
-Thành phẩm mong muốn không chỉ là một video nháp, mà là một bản dựng có thể dùng được, hạn chế tối đa việc người dùng phải mang sang phần mềm hậu kỳ khác để chỉnh tiếp.
+Mục tiêu không nên được hiểu là “khớp hoàn toàn tuyệt đối” giữa hình ảnh và lời nói, vì trong thực tế có nhiều đoạn thuyết minh mang tính trừu tượng, tổng quát hoặc cảm xúc, không phải lúc nào video nguồn cũng có đúng cảnh minh họa trực tiếp.
 
-Tuy nhiên, không nên thiết kế theo hướng tự động 100%. Hướng phù hợp hơn là bán tự động:
+Cách phát biểu phù hợp hơn là:
 
-> Hệ thống tự dựng bản đầu tiên, sau đó cho người dùng kiểm tra và tinh chỉnh trực tiếp trên giao diện.
+> Hệ thống tối ưu mức độ phù hợp giữa hình ảnh và audio thuyết minh, trong phạm vi các video nguồn có sẵn, đồng thời đảm bảo thời lượng, chất lượng hình ảnh, nhịp dựng và khả năng chỉnh sửa của người dùng.
+
+Thành phẩm mong muốn không chỉ là một video nháp, mà là một bản dựng có thể sử dụng được sau khi người dùng kiểm tra và tinh chỉnh cơ bản trên giao diện.
+
+Vì vậy, hướng thiết kế phù hợp nhất không phải là tự động 100%, mà là bán tự động:
+
+> Hệ thống tự tạo bản dựng ban đầu, sau đó người dùng có thể kiểm tra, đổi clip, chỉnh một số tham số quan trọng và render lại video cuối cùng.
 
 ---
 
-## 2. Định hướng thiết kế chính
+## 2. Giả định và phạm vi bài toán
 
-Hệ thống nên đi theo hướng pipeline nhiều module, mỗi module tạo ra dữ liệu trung gian rõ ràng.
+Để bài toán khả thi và rõ ràng hơn, cần xác định một số giả định đầu vào.
+
+### 2.1. Giả định về video nguồn
+
+* Video nguồn phải có liên quan tương đối đến nội dung audio thuyết minh.
+* Video nguồn có thể gồm nhiều file khác nhau.
+* Video nguồn có thể chứa nhiều cảnh dư thừa, cảnh không liên quan, cảnh rung, tối, mờ hoặc chất lượng thấp.
+* Hệ thống chỉ sử dụng hình ảnh từ video nguồn, không sinh thêm cảnh mới.
+* Nếu video nguồn thiếu cảnh phù hợp, hệ thống cần chọn cảnh thay thế gần nghĩa nhất hoặc cảnh fallback, đồng thời đánh dấu confidence thấp để người dùng kiểm tra.
+
+### 2.2. Giả định về audio thuyết minh
+
+* Audio thuyết minh là kênh âm thanh chính của video thành phẩm.
+* Audio có thể là tiếng Việt ở giai đoạn hiện tại.
+* Hệ thống cần chuyển audio thành transcript có timestamp.
+* Người dùng nên được phép sửa transcript nếu ASR nhận sai tên riêng, địa danh hoặc thuật ngữ.
+
+### 2.3. Giới hạn của hệ thống
+
+Hệ thống không đảm bảo mọi đoạn hình đều khớp tuyệt đối với lời thuyết minh. Thay vào đó, hệ thống cố gắng:
+
+* Chọn cảnh có liên quan nhất trong video nguồn
+* Ưu tiên cảnh có chất lượng hình ảnh tốt
+* Căn thời lượng cảnh với audio
+* Hạn chế lặp cảnh quá gần nhau
+* Đánh dấu các đoạn hệ thống không chắc chắn
+* Cho phép người dùng chỉnh lại các đoạn chưa hợp
+
+---
+
+## 3. Định hướng thiết kế tổng thể
+
+Hệ thống nên được thiết kế theo dạng pipeline nhiều module, trong đó mỗi module có input/output rõ ràng.
 
 Pipeline tổng thể:
 
@@ -31,68 +69,74 @@ Input:
 Pipeline:
 1. Chuẩn hóa dữ liệu đầu vào
 2. Phân tích audio
-3. Phân tích và cắt video nguồn
+3. Phân tích video nguồn
 4. Trích đặc trưng và đánh chỉ mục video
 5. So khớp audio segment với top-k clip phù hợp
-6. Tối ưu timeline
+6. Lập timeline dựng video
 7. UI review và chỉnh sửa bán tự động
 8. Render video hoàn chỉnh
 
 Output:
 - Video hoàn chỉnh
 - Timeline JSON
-- Danh sách candidate clips theo từng audio segment
-- Báo cáo đánh giá chất lượng
-````
+- Danh sách candidate clips cho từng audio segment
+- Báo cáo chất lượng / confidence
+```
 
-Điểm quan trọng nhất là phải có `timeline JSON` làm dữ liệu trung gian.
+Điểm trung tâm của thiết kế là `timeline JSON`.
 
-Timeline JSON giúp:
+`timeline JSON` đóng vai trò như hợp đồng dữ liệu giữa các phần:
 
-* Dễ kiểm tra clip nào đang ghép với câu nào
-* Dễ sửa từng đoạn mà không chạy lại toàn bộ pipeline
-* Dễ render lại video sau khi người dùng chỉnh sửa
-* Dễ phát triển UI chỉnh sửa
-* Dễ chia việc cho các thành viên trong nhóm
+* Matching Engine đề xuất clip
+* Timeline Planner quyết định cách sắp xếp clip
+* UI cho người dùng xem và chỉnh sửa
+* Renderer đọc timeline để xuất video cuối
 
----
-
-## 3. Kiến trúc nên tách module độc lập
-
-Không nên thiết kế kiểu giai đoạn 1 xong mới làm giai đoạn 2, rồi giai đoạn 2 xong mới làm giai đoạn 3.
-
-Thay vào đó, nên tách thành các module có input/output rõ ràng để nhiều phần có thể phát triển song song.
-
-Các module chính:
-
-| Module            | Vai trò                                   | Có thể phát triển song song không?   |
-| ----------------- | ----------------------------------------- | ------------------------------------ |
-| Input Processor   | Chuẩn hóa video/audio                     | Có                                   |
-| Audio Analyzer    | ASR, transcript, timestamp, audio segment | Có                                   |
-| Video Analyzer    | Scene detection, keyframe, quality score  | Có                                   |
-| Embedding Indexer | Tạo embedding và FAISS index              | Có, sau khi có metadata/keyframe mẫu |
-| Matching Engine   | Tìm top-k clip cho từng audio segment     | Có, nếu đã thống nhất schema         |
-| Timeline Planner  | Chọn clip, căn thời lượng, xử lý fallback | Có thể làm với dữ liệu giả trước     |
-| Review UI         | Cho người dùng xem và chỉnh timeline      | Có thể làm với mock JSON trước       |
-| Renderer          | Render video từ timeline JSON             | Có thể làm độc lập với timeline mẫu  |
-| Evaluation        | Tính metric, báo cáo chất lượng           | Có thể làm sau khi có timeline mẫu   |
-
-Thiết kế này giúp nhóm không bị phụ thuộc quá nhiều vào một luồng tuần tự.
+Nhờ có `timeline JSON`, hệ thống không cần chạy lại toàn bộ pipeline mỗi khi người dùng chỉnh một đoạn nhỏ.
 
 Ví dụ:
 
-* Người làm UI có thể dùng file `timeline_sample.json` để phát triển trước.
-* Người làm render có thể dùng timeline giả để test FFmpeg.
-* Người làm matching có thể xuất top-k candidate theo schema đã thống nhất.
-* Người làm audio và video có thể xử lý hai nhánh song song.
+```text
+Người dùng đổi clip ở đoạn 10-15 giây
+→ UI cập nhật timeline JSON
+→ Renderer render lại video
+→ Không cần chạy lại ASR, scene detection, embedding hoặc matching
+```
 
 ---
 
-## 4. Giai đoạn 1 — Chuẩn hóa dữ liệu đầu vào
+## 4. Kiến trúc module độc lập
 
-### Mục tiêu
+Không nên thiết kế theo kiểu giai đoạn 1 làm xong hoàn toàn mới đến giai đoạn 2. Thay vào đó, nên chia hệ thống thành các module tương đối độc lập để nhiều thành viên có thể phát triển song song.
 
-Đưa tất cả video và audio về định dạng thống nhất để các bước sau xử lý ổn định.
+| Module            | Vai trò                                       | Có thể phát triển song song không? |
+| ----------------- | --------------------------------------------- | ---------------------------------- |
+| Input Processor   | Chuẩn hóa video/audio, lấy metadata           | Có                                 |
+| Audio Analyzer    | ASR, transcript, timestamp, audio segment     | Có                                 |
+| Video Analyzer    | Scene detection, keyframe, quality score      | Có                                 |
+| Embedding Indexer | Tạo embedding và index cho clip/keyframe      | Có, nếu có dữ liệu mẫu             |
+| Matching Engine   | Tìm top-k clip phù hợp cho từng audio segment | Có, nếu thống nhất schema          |
+| Timeline Planner  | Lập timeline, xử lý duration, speed, fallback | Có thể làm với dữ liệu giả         |
+| Review UI         | Cho người dùng xem, đổi clip, chỉnh tham số   | Có thể làm với timeline mẫu        |
+| Renderer          | Render video cuối từ timeline JSON            | Có thể làm với timeline mẫu        |
+| Evaluation        | Tính metric và báo cáo chất lượng             | Có thể làm sau                     |
+
+Cách làm này giúp nhóm giảm phụ thuộc lẫn nhau.
+
+Ví dụ:
+
+* Người làm UI có thể dùng `timeline_sample.json`.
+* Người làm renderer có thể dùng timeline giả để test FFmpeg.
+* Người làm matching có thể xuất `matching_candidates.json`.
+* Người làm audio và video có thể xử lý hai nhánh độc lập trước khi ghép lại.
+
+---
+
+## 5. Giai đoạn 1 — Chuẩn hóa dữ liệu đầu vào
+
+### 5.1. Mục tiêu
+
+Đưa video và audio về định dạng thống nhất để các bước sau xử lý ổn định.
 
 Ví dụ chuẩn hóa:
 
@@ -100,17 +144,17 @@ Ví dụ chuẩn hóa:
 * Audio: `.wav` hoặc `.mp3`, sample rate thống nhất
 * Metadata: duration, fps, resolution, bitrate
 
-### Việc cần làm
+### 5.2. Quy trình
 
 ```text
 Input video/audio
 → kiểm tra định dạng
-→ chuẩn hóa resolution/fps
-→ tách metadata
+→ chuẩn hóa resolution/fps nếu cần
+→ trích metadata
 → lưu vào cấu trúc thư mục chuẩn
 ```
 
-### Output đề xuất
+### 5.3. Output đề xuất
 
 ```json
 {
@@ -119,19 +163,18 @@ Input video/audio
   "duration": 125.4,
   "fps": 30,
   "width": 1920,
-  "height": 1080
+  "height": 1080,
+  "has_audio": true
 }
 ```
 
-### Ghi chú phát triển song song
-
-Module này có thể làm độc lập tương đối sớm. Các module khác chỉ cần thống nhất format metadata là có thể dùng dữ liệu giả để phát triển trước.
+Module này có thể phát triển sớm vì các module khác chỉ cần thống nhất format metadata là có thể dùng dữ liệu giả để test.
 
 ---
 
-## 5. Giai đoạn 2 — Phân tích audio thuyết minh
+## 6. Giai đoạn 2 — Phân tích audio thuyết minh
 
-### Mục tiêu
+### 6.1. Mục tiêu
 
 Biến audio thành transcript có timestamp và chia thành các audio segment có ý nghĩa.
 
@@ -143,7 +186,7 @@ Audio
 → sinh query tìm video
 ```
 
-Ví dụ:
+### 6.2. Output đề xuất
 
 ```json
 [
@@ -164,35 +207,40 @@ Ví dụ:
 ]
 ```
 
-### Cách chia segment
+### 6.3. Cách chia segment
 
-Không nên chia quá nhỏ theo từng câu ngắn. Nên chia theo ý nghĩa và thời lượng.
+Không nên chia quá nhỏ theo từng câu ngắn nếu câu đó không đủ ý nghĩa để chọn hình.
+
+Nên chia theo:
+
+* Ý nghĩa hoàn chỉnh
+* Nhịp ngắt tự nhiên của voice-over
+* Thời lượng đủ để dựng hình
+
+Gợi ý:
 
 | Loại segment     | Thời lượng gợi ý |
 | ---------------- | ---------------- |
-| Câu ngắn         | 3–5 giây         |
-| Một ý hoàn chỉnh | 5–10 giây        |
-| Đoạn mô tả dài   | 8–15 giây        |
+| Câu ngắn         | 3-5 giây         |
+| Một ý hoàn chỉnh | 5-10 giây        |
+| Đoạn mô tả dài   | 8-15 giây        |
 
-### UI cần hỗ trợ
+### 6.4. Vì sao cần cho sửa transcript?
 
-Người dùng nên có thể sửa transcript trước khi dựng.
+ASR có thể nhận sai:
 
-Lý do:
+* Tên riêng
+* Địa danh
+* Thuật ngữ chuyên ngành
+* Từ tiếng Anh lẫn trong tiếng Việt
 
-* ASR có thể nhận sai tên riêng, địa danh, thuật ngữ.
-* Transcript sai sẽ làm matching sai.
-* Sửa transcript dễ hơn nhiều so với sửa video sau cùng.
-
-### Ghi chú phát triển song song
-
-Audio Analyzer chỉ cần xuất đúng schema `audio_segments.json`. Các module matching, timeline, UI có thể dùng file này hoặc file mẫu để phát triển độc lập.
+Nếu transcript sai, query sai. Nếu query sai, matching sẽ chọn sai clip. Vì vậy, sửa transcript là bước rẻ hơn nhiều so với sửa video sau cùng.
 
 ---
 
-## 6. Giai đoạn 3 — Phân tích và cắt video nguồn
+## 7. Giai đoạn 3 — Phân tích video nguồn
 
-### Mục tiêu
+### 7.1. Mục tiêu
 
 Từ video nguồn, tách ra danh sách clip candidate có thể dùng để dựng.
 
@@ -204,7 +252,7 @@ Video nguồn
 → tính quality score
 ```
 
-### Metadata mỗi clip
+### 7.2. Metadata mỗi clip
 
 ```json
 {
@@ -226,26 +274,33 @@ Video nguồn
 }
 ```
 
-### Quy tắc xử lý
+### 7.3. Quy tắc xử lý
 
-* Bỏ clip quá ngắn dưới khoảng 1.5 giây.
-* Clip quá dài trên 15–20 giây nên chia nhỏ thêm.
+* Bỏ clip quá ngắn, ví dụ dưới 1.5 giây.
+* Clip quá dài, ví dụ trên 15-20 giây, nên chia nhỏ thêm.
 * Không nhất thiết render vật lý từng clip ngay từ đầu.
-* Nên lưu `video_id`, `start`, `end` trong metadata để render cuối.
+* Nên lưu `video_id`, `start`, `end` để renderer cắt từ video gốc.
+* Mỗi clip nên có nhiều keyframe, không chỉ một keyframe duy nhất.
 
-### Ghi chú phát triển song song
+### 7.4. Lưu ý quan trọng
 
-Video Analyzer có thể chạy song song với Audio Analyzer. Hai nhánh này chỉ gặp nhau ở Matching Engine.
+Nếu chỉ dùng một keyframe đại diện cho cả clip thì kết quả matching có thể sai, vì keyframe đó chưa chắc thể hiện đúng nội dung của toàn bộ clip.
+
+Nên ưu tiên:
+
+* Lấy nhiều keyframe theo thời gian
+* Lấy keyframe ở đầu, giữa, cuối clip
+* Nếu có thể, lấy thêm thông tin chuyển động hoặc caption ngắn cho clip
 
 ---
 
-## 7. Giai đoạn 4 — Trích đặc trưng và đánh chỉ mục video
+## 8. Giai đoạn 4 — Trích đặc trưng và đánh chỉ mục video
 
-### Mục tiêu
+### 8.1. Mục tiêu
 
-Biến keyframe/clip thành vector để có thể tìm kiếm theo nghĩa.
+Biến clip/keyframe thành vector để có thể tìm kiếm theo nghĩa.
 
-Ý tưởng:
+Ý tưởng cơ bản:
 
 ```text
 Audio segment text/query → text embedding
@@ -253,19 +308,31 @@ Video keyframe/clip → image embedding
 So sánh vector → tìm clip gần nghĩa nhất
 ```
 
-### Hướng MVP
+### 8.2. Hướng MVP
 
-Nên dùng hướng đơn giản:
+MVP có thể dùng hướng đơn giản:
 
 ```text
 Transcript tiếng Việt
 → rút keyword hoặc mô tả ngắn
-→ dịch/chuẩn hóa sang English query
+→ chuẩn hóa/dịch sang English query nếu cần
 → tạo text embedding
 → so với image embedding của keyframe
 ```
 
-### Output đề xuất
+### 8.3. Giới hạn cần ghi rõ
+
+Matching bằng text-image embedding là baseline hợp lý, nhưng có giới hạn:
+
+* Keyframe không hiểu đầy đủ hành động kéo dài trong clip.
+* CLIP/image embedding thường mạnh với vật thể/bối cảnh, nhưng yếu hơn với hành động phức tạp.
+* Dịch tiếng Việt sang tiếng Anh có thể mất nghĩa.
+* Câu trừu tượng như “chuyến đi để lại nhiều cảm xúc” rất khó tìm cảnh chính xác.
+* Clip top 1 theo embedding chưa chắc là clip người dùng thấy hay nhất.
+
+Vì vậy, hệ thống cần kết hợp nhiều điểm số khác nhau, không chỉ dựa vào semantic score.
+
+### 8.4. Output đề xuất
 
 ```json
 {
@@ -279,59 +346,55 @@ Transcript tiếng Việt
 }
 ```
 
-### Ghi chú phát triển song song
-
-Module này phụ thuộc vào keyframe từ Video Analyzer, nhưng có thể phát triển trước bằng một tập keyframe mẫu.
-
 ---
 
-## 8. Giai đoạn 5 — So khớp audio segment với top-k clip
+## 9. Giai đoạn 5 — So khớp audio segment với top-k clip
 
-### Mục tiêu
+### 9.1. Mục tiêu
 
-Với mỗi audio segment, hệ thống không chỉ chọn một clip duy nhất, mà trả về danh sách top-k clip phù hợp.
+Với mỗi audio segment, hệ thống trả về danh sách top-k clip phù hợp thay vì chỉ chọn một clip duy nhất.
 
-Mặc định hệ thống vẫn chọn clip tốt nhất, nhưng người dùng có thể mở danh sách top-k để thay thế nếu clip mặc định chưa hợp.
+Mặc định hệ thống chọn clip tốt nhất, nhưng người dùng có thể chọn clip khác trong top-k nếu clip mặc định chưa hợp.
 
-Đây là thay đổi quan trọng so với thiết kế tự động hoàn toàn.
+Đây là điểm quan trọng giúp hệ thống thực tế hơn.
 
-### Vì sao cần top-k?
+### 9.2. Vì sao cần top-k?
 
-Vì clip có điểm cao nhất theo hệ thống chưa chắc là clip người dùng thích nhất.
+Clip có điểm cao nhất theo hệ thống chưa chắc là clip tốt nhất theo cảm nhận người dùng.
 
 Ví dụ:
 
 * Clip top 1 đúng nghĩa nhưng góc quay xấu.
 * Clip top 2 hơi kém điểm hơn nhưng đẹp hơn.
-* Clip top 3 có cảm xúc tốt hơn, hợp với video hơn.
-* Clip top 1 đã bị dùng gần đó, người dùng muốn tránh lặp.
+* Clip top 3 có cảm xúc tốt hơn.
+* Clip top 1 đã bị dùng gần đó, dễ gây lặp.
 * Với câu trừu tượng, nhiều clip đều có thể chấp nhận được.
 
-### Hàm điểm đề xuất
+### 9.3. Hàm điểm đề xuất
 
 ```text
-score = 0.50 * semantic_score
+score = 0.45 * semantic_score
       + 0.20 * visual_quality_score
       + 0.15 * duration_fit_score
       + 0.10 * continuity_score
-      + 0.05 * diversity_score
+      + 0.10 * diversity_score
       - repetition_penalty
       - bad_clip_penalty
 ```
 
-### Ý nghĩa các thành phần
+Ý nghĩa:
 
-| Thành phần           | Ý nghĩa                                   |
-| -------------------- | ----------------------------------------- |
-| Semantic Score       | Clip có đúng nội dung đang nói không      |
-| Visual Quality Score | Hình có nét, sáng, ít rung không          |
-| Duration Fit Score   | Clip có đủ dài cho audio segment không    |
-| Continuity Score     | Clip có nối mượt với đoạn trước/sau không |
-| Diversity Score      | Có giúp video đa dạng cảnh hơn không      |
-| Repetition Penalty   | Phạt nếu clip bị dùng lại quá gần         |
-| Bad Clip Penalty     | Phạt clip quá tối, mờ, rung hoặc lỗi      |
+| Thành phần           | Ý nghĩa                                    |
+| -------------------- | ------------------------------------------ |
+| Semantic Score       | Clip có đúng nội dung đang nói không       |
+| Visual Quality Score | Hình có nét, sáng, ít rung không           |
+| Duration Fit Score   | Clip có đủ dài hoặc dễ căn với audio không |
+| Continuity Score     | Clip có nối mượt với đoạn trước/sau không  |
+| Diversity Score      | Có giúp video đa dạng cảnh hơn không       |
+| Repetition Penalty   | Phạt nếu clip/cảnh bị dùng lại quá gần     |
+| Bad Clip Penalty     | Phạt clip quá tối, mờ, rung hoặc lỗi       |
 
-### Output top-k candidate
+### 9.4. Output top-k candidate
 
 ```json
 {
@@ -355,71 +418,94 @@ score = 0.50 * semantic_score
       "quality_score": 0.86,
       "duration_fit_score": 0.70,
       "reason": "Hình đẹp hơn nhưng khớp nghĩa thấp hơn một chút."
-    },
-    {
-      "rank": 3,
-      "clip_id": "v03_c011",
-      "final_score": 0.72,
-      "semantic_score": 0.74,
-      "quality_score": 0.82,
-      "duration_fit_score": 0.68,
-      "reason": "Có thể dùng làm cảnh thay thế hoặc B-roll."
     }
   ]
 }
 ```
 
-### UI cần hỗ trợ ở giai đoạn này
+### 9.5. Lưu ý về reason
 
-Trong giao diện review, mỗi audio segment nên hiển thị:
+Ở MVP, `reason` có thể là mô tả đơn giản dựa trên điểm số, không cần quá thông minh.
 
-* Transcript của đoạn audio
-* Clip đang được chọn mặc định
-* Score/confidence
-* Danh sách top-k clip thay thế
-* Preview nhanh từng clip
-* Nút chọn clip khác
-* Lý do hệ thống đề xuất clip đó
+Ví dụ:
 
-Hành vi mặc định:
-
-```text
-Nếu người dùng không chỉnh:
-→ dùng clip rank 1
-
-Nếu người dùng chọn clip khác trong top-k:
-→ cập nhật selected_clip_id trong timeline
-→ preview lại đoạn tương ứng
-→ render lại khi cần
-```
-
-### Ghi chú phát triển song song
-
-Matching Engine có thể được phát triển độc lập nếu đã có:
-
-* `audio_segments.json`
-* `clip_metadata.json`
-* `embedding_index`
-
-UI cũng có thể phát triển trước bằng file `matching_candidates_sample.json`.
+* “Khớp nội dung tốt, chất lượng hình cao.”
+* “Chất lượng hình tốt nhưng thời lượng hơi ngắn.”
+* “Confidence thấp, nên kiểm tra lại.”
 
 ---
 
-## 9. Giai đoạn 6 — Tối ưu timeline
+## 10. Giai đoạn 6 — Lập timeline dựng video
 
-### Mục tiêu
+### 10.1. Mục tiêu
 
 Tạo timeline dựng cuối cùng từ audio segment và clip đã chọn.
 
 Timeline phải đảm bảo:
 
-* Khớp nội dung
-* Khớp thời lượng audio
+* Có hình ảnh cho toàn bộ audio
+* Cảnh phù hợp nhất có thể với nội dung lời nói
+* Thời lượng hình khớp với thời lượng audio
 * Nhịp dựng tự nhiên
 * Hạn chế lặp cảnh
 * Có fallback khi thiếu clip phù hợp
 
-### Tình huống 1: Clip dài hơn audio segment
+### 10.2. Không nên khóa cứng 1 segment = 1 clip
+
+Trong bản thiết kế ban đầu, mỗi audio segment thường gắn với một clip. Cách này đơn giản nhưng chưa đủ linh hoạt.
+
+Thực tế có thể xảy ra:
+
+* Một audio segment dài cần nhiều clip ngắn.
+* Một clip dài có thể được dùng cho một segment nhưng chỉ lấy một phần.
+* Một đoạn thuyết minh trừu tượng cần cảnh B-roll thay thế.
+* Một cảnh có thể kéo dài qua nhiều câu nếu nội dung liên tục.
+
+Vì vậy, timeline nên hỗ trợ:
+
+```text
+1 audio segment → 1 hoặc nhiều visual items
+```
+
+### 10.3. Timeline JSON đề xuất
+
+```json
+[
+  {
+    "segment_id": "a001",
+    "audio_start": 0.0,
+    "audio_end": 10.0,
+    "text": "Đầu tiên, chúng ta bước vào khu vực trưng bày chính.",
+    "confidence": "high",
+    "score": 0.82,
+    "visual_items": [
+      {
+        "clip_id": "v01_c003",
+        "video_source": "video_01.mp4",
+        "clip_start": 34.5,
+        "clip_end": 39.5,
+        "speed": 1.0,
+        "transition": "cut",
+        "effect": null
+      },
+      {
+        "clip_id": "v02_c008",
+        "video_source": "video_02.mp4",
+        "clip_start": 12.0,
+        "clip_end": 17.0,
+        "speed": 1.0,
+        "transition": "fade",
+        "effect": null
+      }
+    ],
+    "candidates_ref": "candidates_a001"
+  }
+]
+```
+
+Cấu trúc này linh hoạt hơn vì một audio segment có thể dùng nhiều cảnh.
+
+### 10.4. Trường hợp clip dài hơn audio segment
 
 Ví dụ:
 
@@ -430,11 +516,12 @@ Clip có: 12 giây
 
 Cách xử lý:
 
-* Cắt lấy đoạn đẹp nhất.
-* Ưu tiên đoạn giữa clip nếu chưa có phân tích chi tiết.
+* Cắt lấy đoạn phù hợp nhất.
+* Nếu chưa có phân tích chi tiết, ưu tiên đoạn giữa clip.
 * Nếu có quality/motion theo thời gian, chọn đoạn ổn định nhất.
+* Tránh lấy đoạn đầu/cuối nếu thường chứa chuyển động máy hoặc cảnh chưa ổn định.
 
-### Tình huống 2: Clip ngắn hơn audio segment
+### 10.5. Trường hợp clip ngắn hơn audio segment
 
 Ví dụ:
 
@@ -451,66 +538,39 @@ Cách xử lý theo thứ tự ưu tiên:
 4. Dùng B-roll/fallback clip.
 5. Giữ frame cuối rất ngắn nếu thật sự cần.
 
-Không nên kéo chậm quá mạnh. Gợi ý speed nên nằm trong khoảng 0.75x–1.25x.
+Không nên kéo chậm quá mạnh. Gợi ý speed nên nằm trong khoảng:
 
-### Tình huống 3: Không có clip khớp nghĩa
+```text
+0.75x - 1.25x
+```
+
+### 10.6. Trường hợp không có clip khớp nghĩa
 
 Cách xử lý:
 
-* Dùng cảnh toàn
-* Dùng cảnh chuyển tiếp
-* Dùng cảnh người tham quan/người nghe
+* Dùng cảnh toàn / establishing shot
 * Dùng cảnh môi trường
+* Dùng cảnh người tham quan / người nghe / hoạt động chung
 * Dùng cảnh đẹp nhất có liên quan gần
+* Đánh dấu confidence thấp
 
-Đồng thời đánh dấu confidence thấp để người dùng kiểm tra trong UI.
-
-### Timeline JSON đề xuất
-
-```json
-[
-  {
-    "segment_id": "a001",
-    "audio_start": 0.0,
-    "audio_end": 6.2,
-    "text": "Đầu tiên, chúng ta bước vào khu vực trưng bày chính.",
-    "selected_clip_id": "v01_c003",
-    "video_source": "video_01.mp4",
-    "clip_start": 34.5,
-    "clip_end": 40.7,
-    "speed": 1.0,
-    "transition": "cut",
-    "effect": null,
-    "score": 0.82,
-    "confidence": "high",
-    "candidates_ref": "candidates_a001"
-  }
-]
-```
-
-### Ghi chú phát triển song song
-
-Timeline Planner có thể làm việc với dữ liệu giả trước. Chỉ cần thống nhất schema timeline là Renderer và UI có thể phát triển cùng lúc.
+Đây là điểm quan trọng vì hệ thống không thể tạo ra cảnh không có trong video nguồn.
 
 ---
 
-## 10. Giai đoạn 7 — UI review và chỉnh sửa bán tự động
+## 11. Giai đoạn 7 — UI review và chỉnh sửa bán tự động
 
-### Mục tiêu
+### 11.1. Mục tiêu
 
-Đây là phần giúp hệ thống không chỉ tạo video nháp, mà cho phép người dùng tinh chỉnh trực tiếp để video cuối tốt hơn.
+UI giúp người dùng kiểm tra và tinh chỉnh bản dựng mà không cần chuyển sang phần mềm hậu kỳ khác cho các chỉnh sửa cơ bản.
 
-Người dùng không cần mang video sang phần mềm chỉnh sửa khác nếu chỉ cần các thao tác cơ bản.
+Tuy nhiên, UI không nên phức tạp như Premiere, CapCut hay DaVinci Resolve.
 
-### Tư tưởng thiết kế UI
+Tư tưởng thiết kế nên là:
 
-UI không nên quá phức tạp như Premiere hay CapCut đầy đủ.
+> Timeline đơn giản + preview từng đoạn + chỉnh những tham số quan trọng nhất.
 
-Nên thiết kế theo hướng:
-
-> Timeline đơn giản + preview từng đoạn + chỉnh các tham số quan trọng.
-
-### Các chức năng UI nên có cho MVP
+### 11.2. Chức năng UI bắt buộc cho MVP
 
 #### 1. Xem timeline theo audio segment
 
@@ -518,108 +578,107 @@ Mỗi dòng tương ứng một audio segment:
 
 | Time  | Transcript       | Clip chọn | Score | Confidence | Action       |
 | ----- | ---------------- | --------- | ----- | ---------- | ------------ |
-| 0–6s  | Cổng chính...    | v01_c003  | 0.82  | Cao        | Xem / Đổi    |
-| 6–12s | Khu trưng bày... | v02_c008  | 0.54  | Thấp       | Cần kiểm tra |
+| 0-6s  | Cổng chính...    | v01_c003  | 0.82  | Cao        | Xem / Đổi    |
+| 6-12s | Khu trưng bày... | v02_c008  | 0.54  | Thấp       | Cần kiểm tra |
 
-#### 2. Chọn clip trong top-k
+#### 2. Xem preview đoạn đang chọn
+
+Người dùng cần xem được:
+
+* Transcript của đoạn audio
+* Clip đang được chọn
+* Preview hình/video ngắn
+* Confidence
+* Lý do đề xuất ngắn gọn
+
+#### 3. Chọn clip khác trong top-k
 
 Khi bấm vào một segment, UI hiển thị:
 
-* Clip đang chọn
-* Top-k clip đề xuất
-* Preview thumbnail/video ngắn
+* Clip hiện tại
+* Danh sách top-k clip thay thế
+* Thumbnail hoặc preview ngắn
 * Score từng clip
-* Nút chọn clip thay thế
+* Nút chọn clip
 
-Mặc định dùng clip tốt nhất. Người dùng chỉ can thiệp khi thấy chưa hợp.
+Hành vi:
 
-#### 3. Chỉnh tốc độ clip
+```text
+Nếu người dùng không chỉnh
+→ dùng clip rank 1
 
-Cho phép chỉnh:
+Nếu người dùng chọn clip khác
+→ cập nhật timeline JSON
+→ preview lại đoạn tương ứng
+→ render lại khi cần
+```
 
-* 0.75x
-* 1.0x
-* 1.25x
-* hoặc slider trong giới hạn an toàn
+#### 4. Highlight đoạn confidence thấp
 
-Không nên cho chỉnh quá rộng ở MVP vì dễ làm video xấu.
-
-#### 4. Chỉnh hiệu ứng chuyển cảnh
-
-MVP chỉ cần vài lựa chọn:
-
-* Cut
-* Fade
-* Crossfade
-* Dip to black nếu cần
-
-Không nên thêm quá nhiều hiệu ứng vì dễ làm sản phẩm rối.
-
-#### 5. Chỉnh crop/fit cơ bản
-
-Nếu video nguồn có nhiều tỉ lệ khác nhau, UI nên cho chọn:
-
-* Fit
-* Fill/Crop
-* Center crop
-* Blur background cho video dọc/ngang không khớp
-
-#### 6. Chỉnh âm thanh cơ bản
-
-Voice-over là audio chính.
-
-Cho phép:
-
-* Bật/tắt audio gốc của video
-* Giảm âm lượng audio gốc
-* Thêm fade in/fade out cơ bản
-* Giữ voice-over rõ nhất
-
-#### 7. Đánh dấu đoạn cần sửa
-
-Các đoạn confidence thấp nên được highlight để người dùng ưu tiên kiểm tra.
+Các đoạn có confidence thấp nên được đánh dấu rõ để người dùng ưu tiên kiểm tra.
 
 Ví dụ:
 
 ```text
-High confidence: không cần xem kỹ
+High confidence: có thể bỏ qua nếu muốn
 Medium confidence: nên xem lại
 Low confidence: cần kiểm tra
 ```
 
-### Output sau khi người dùng chỉnh
+### 11.3. Chức năng UI nên có nếu còn thời gian
 
-UI không sửa trực tiếp video. UI chỉ cập nhật timeline JSON.
+Các chức năng sau hữu ích nhưng không nên là trọng tâm đầu tiên:
 
-Ví dụ khi người dùng đổi clip:
+* Chỉnh speed bằng preset: 0.75x, 1.0x, 1.25x
+* Chọn transition cơ bản: cut, fade, crossfade
+* Chọn crop/fit: fit, fill, center crop, blur background
+* Bật/tắt audio gốc của video
+* Giảm âm lượng audio gốc
+
+### 11.4. Chức năng chưa nên làm trong MVP
+
+Không nên làm quá nhiều hiệu ứng nâng cao ở MVP, ví dụ:
+
+* Bộ hiệu ứng phong phú như app dựng video chuyên nghiệp
+* Keyframe animation phức tạp
+* Color grading
+* Multi-track timeline đầy đủ
+* Chỉnh sửa audio chi tiết
+* Template motion graphic nâng cao
+
+Các chức năng này dễ làm hệ thống phình to và khó hoàn thành đúng hạn.
+
+### 11.5. Output sau khi người dùng chỉnh
+
+UI không sửa trực tiếp video. UI chỉ cập nhật `timeline JSON`.
+
+Ví dụ:
 
 ```json
 {
   "segment_id": "a003",
-  "selected_clip_id": "v01_c004",
-  "speed": 1.1,
-  "transition": "fade",
-  "effect": "slight_zoom"
+  "visual_items": [
+    {
+      "clip_id": "v01_c004",
+      "clip_start": 20.0,
+      "clip_end": 25.0,
+      "speed": 1.1,
+      "transition": "fade",
+      "effect": null
+    }
+  ]
 }
 ```
 
-Sau đó Renderer sẽ đọc timeline JSON mới để render lại video.
-
-### Lợi ích của UI bán tự động
-
-* Giảm áp lực AI phải chọn đúng 100%.
-* Người dùng có quyền kiểm soát.
-* Dễ demo hơn vì có thể sửa lỗi trực tiếp.
-* Sản phẩm cuối có chất lượng tốt hơn.
-* Không cần qua ứng dụng hậu kỳ khác cho các chỉnh sửa cơ bản.
+Renderer sẽ đọc timeline mới để xuất video.
 
 ---
 
-## 11. Giai đoạn 8 — Render video hoàn chỉnh
+## 12. Giai đoạn 8 — Render video hoàn chỉnh
 
-### Mục tiêu
+### 12.1. Mục tiêu
 
-Từ timeline JSON đã được hệ thống tạo và người dùng chỉnh sửa, render ra video cuối cùng.
+Từ `timeline JSON`, video nguồn và audio thuyết minh, render ra video cuối cùng.
 
 ```text
 Timeline JSON
@@ -628,21 +687,21 @@ Timeline JSON
 → Final video .mp4
 ```
 
-### Renderer cần hỗ trợ
+### 12.2. Renderer cần hỗ trợ
 
-* Cắt clip theo start/end
+* Cắt clip theo `clip_start`, `clip_end`
 * Chỉnh speed
 * Scale/crop về đúng resolution
 * Thêm transition cơ bản
 * Ghép voice-over làm audio chính
-* Giảm hoặc tắt audio gốc
-* Xuất video cuối
+* Tắt hoặc giảm âm lượng audio gốc
+* Xuất video cuối dạng `.mp4`
 
-### Nguyên tắc quan trọng
+### 12.3. Nguyên tắc quan trọng
 
 Không nên render lại toàn bộ pipeline khi người dùng chỉ sửa timeline.
 
-Luồng đúng nên là:
+Luồng đúng:
 
 ```text
 Người dùng sửa timeline
@@ -661,9 +720,9 @@ Trừ khi người dùng thay đổi input hoặc yêu cầu phân tích lại.
 
 ---
 
-## 12. Thiết kế dữ liệu trung gian
+## 13. Thiết kế dữ liệu trung gian
 
-### File 1: audio_segments.json
+### 13.1. `audio_segments.json`
 
 ```json
 [
@@ -677,7 +736,7 @@ Trừ khi người dùng thay đổi input hoặc yêu cầu phân tích lại.
 ]
 ```
 
-### File 2: clip_metadata.json
+### 13.2. `clip_metadata.json`
 
 ```json
 [
@@ -687,13 +746,13 @@ Trừ khi người dùng thay đổi input hoặc yêu cầu phân tích lại.
     "start": 10.2,
     "end": 17.5,
     "duration": 7.3,
-    "keyframes": ["v01_c001_01.jpg"],
+    "keyframes": ["v01_c001_01.jpg", "v01_c001_02.jpg"],
     "quality_score": 0.81
   }
 ]
 ```
 
-### File 3: matching_candidates.json
+### 13.3. `matching_candidates.json`
 
 ```json
 [
@@ -716,7 +775,7 @@ Trừ khi người dùng thay đổi input hoặc yêu cầu phân tích lại.
 ]
 ```
 
-### File 4: timeline.json
+### 13.4. `timeline.json`
 
 ```json
 [
@@ -724,14 +783,20 @@ Trừ khi người dùng thay đổi input hoặc yêu cầu phân tích lại.
     "segment_id": "a001",
     "audio_start": 0.0,
     "audio_end": 5.2,
-    "selected_clip_id": "v01_c001",
-    "video_source": "video_01.mp4",
-    "clip_start": 10.2,
-    "clip_end": 15.4,
-    "speed": 1.0,
-    "transition": "cut",
-    "effect": null,
-    "confidence": "high"
+    "text": "Đây là khu vực cổng chính.",
+    "confidence": "high",
+    "visual_items": [
+      {
+        "clip_id": "v01_c001",
+        "video_source": "video_01.mp4",
+        "clip_start": 10.2,
+        "clip_end": 15.4,
+        "speed": 1.0,
+        "transition": "cut",
+        "effect": null
+      }
+    ],
+    "candidates_ref": "candidates_a001"
   }
 ]
 ```
@@ -740,7 +805,7 @@ Các file này là hợp đồng dữ liệu giữa các module. Khi đã thốn
 
 ---
 
-## 13. Kiến trúc hệ thống đề xuất
+## 14. Kiến trúc hệ thống đề xuất
 
 ```text
                                       ┌────────────────────┐
@@ -759,13 +824,12 @@ Các file này là hợp đồng dữ liệu giữa các module. Khi đã thốn
                                       │ Visual Embeddings  │
                                       └─────────┬──────────┘
                                                 │
-                                                │
                 ┌────────────────────┐          │
                 │   Voice-over Audio │          │
                 └─────────┬──────────┘          │
-                          │                     │        
-                          v                     │    
-                ┌────────────────────┐          │    
+                          │                     │
+                          v                     │
+                ┌────────────────────┐          │
                 │   Audio Analyzer   │          │
                 │ ASR/segment/query  │          │
                 └─────────┬──────────┘          │
@@ -774,11 +838,9 @@ Các file này là hợp đồng dữ liệu giữa các module. Khi đã thốn
                 ┌────────────────────┐          │
                 │  Audio Segments    │          │
                 └─────────┬──────────┘          │
-                          │                     │
-                          │                     │
                           │                     v
                           │   ┌────────────────────────────────┐
-                          │-->│        Matching Engine         │
+                          └──>│        Matching Engine         │
                               │  top-k retrieval + reranking   │
                               └───────────────┬────────────────┘
                                               v
@@ -789,7 +851,7 @@ Các file này là hợp đồng dữ liệu giữa các module. Khi đã thốn
                                               v
                               ┌────────────────────────────────┐
                               │          Review UI             │
-                              │ choose top-k/edit speed/effect │
+                              │ choose top-k / edit timeline   │
                               └───────────────┬────────────────┘
                                               v
                               ┌────────────────────────────────┐
@@ -800,23 +862,25 @@ Các file này là hợp đồng dữ liệu giữa các module. Khi đã thốn
 
 ---
 
-## 14. Phân công nhóm 5 người
+## 15. Phân công nhóm 5 người
 
-### Người 1 — Leader / System Integration
+### Người 1 — Leader / System Integration / Timeline Contract
 
 Phụ trách:
 
 * Thiết kế kiến trúc tổng thể
 * Thống nhất schema JSON
-* Tích hợp các module
 * Quản lý luồng dữ liệu
+* Tích hợp các module
 * Đảm bảo demo end-to-end chạy được
+* Phối hợp với renderer để đảm bảo timeline đúng
 
 Kết quả cần giao:
 
 * Cấu trúc project
 * Schema dữ liệu chung
 * Pipeline chạy từ input đến timeline/render
+* Dữ liệu mẫu cho các module khác test
 
 ---
 
@@ -853,7 +917,7 @@ Phụ trách:
 * Chuẩn hóa video
 * Scene detection
 * Tạo clip candidate
-* Trích keyframe
+* Trích nhiều keyframe cho mỗi clip
 * Tính quality score
 
 Kết quả cần giao:
@@ -862,9 +926,10 @@ Kết quả cần giao:
 [
   {
     "clip_id": "v01_c001",
+    "video_id": "video_01",
     "start": 10.2,
     "end": 17.5,
-    "keyframes": [...],
+    "keyframes": ["..."],
     "quality_score": 0.81
   }
 ]
@@ -880,7 +945,7 @@ Phụ trách:
 * Xây index tìm kiếm
 * Trả về top-k clip cho từng audio segment
 * Rerank bằng score tổng hợp
-* Giải thích lý do chọn clip
+* Gán confidence cho kết quả matching
 
 Kết quả cần giao:
 
@@ -888,6 +953,7 @@ Kết quả cần giao:
 {
   "audio_segment_id": "a003",
   "selected_clip_id": "v02_c008",
+  "confidence": "high",
   "candidates": [
     {
       "rank": 1,
@@ -905,29 +971,30 @@ Kết quả cần giao:
 
 ---
 
-### Người 5 — Timeline / Renderer / UI
+### Người 5 — UI Review / Renderer
 
 Phụ trách:
 
-* Tạo timeline JSON
-* Căn thời lượng clip với audio
-* Xử lý speed, transition, fallback
-* Xây UI review/chỉnh sửa cơ bản
-* Render video cuối
+* Xây UI review timeline
+* Hiển thị transcript, clip được chọn, confidence
+* Cho phép chọn clip khác trong top-k
+* Cập nhật timeline JSON sau khi người dùng chỉnh
+* Render video cuối từ timeline JSON
 
 Kết quả cần giao:
 
-* `timeline.json`
-* UI review timeline
-* Chức năng chọn clip trong top-k
-* Chức năng chỉnh speed/effect cơ bản
+* UI review cơ bản
+* Chức năng đổi clip
+* Chức năng render video cuối
 * `final_video.mp4`
+
+Lưu ý: phần Timeline Planner nên có sự hỗ trợ từ Leader để tránh Người 5 bị quá tải.
 
 ---
 
-## 15. Các phần có thể phát triển song song
+## 16. Các phần có thể phát triển song song
 
-### Có thể làm song song ngay từ đầu
+### 16.1. Có thể làm song song ngay từ đầu
 
 | Phần              | Điều kiện             |
 | ----------------- | --------------------- |
@@ -938,15 +1005,16 @@ Kết quả cần giao:
 | Schema thiết kế   | Làm ngay từ đầu       |
 | Evaluation metric | Có timeline/video mẫu |
 
-### Phụ thuộc một phần
+### 16.2. Phụ thuộc một phần
 
 | Phần              | Phụ thuộc                          |
 | ----------------- | ---------------------------------- |
 | Embedding Indexer | Cần keyframe từ Video Analyzer     |
 | Matching Engine   | Cần audio segment và clip metadata |
 | Timeline Planner  | Cần output từ Matching Engine      |
+| UI hoàn chỉnh     | Cần timeline và candidate schema   |
 
-### Cách giảm phụ thuộc
+### 16.3. Cách giảm phụ thuộc
 
 Nên tạo dữ liệu mẫu sớm:
 
@@ -955,104 +1023,125 @@ Nên tạo dữ liệu mẫu sớm:
 * `matching_candidates_sample.json`
 * `timeline_sample.json`
 
-Nhờ đó, các thành viên có thể code module của mình mà không cần chờ module khác hoàn thành hoàn toàn.
+Nhờ đó, các thành viên có thể phát triển module của mình mà không cần chờ module khác hoàn thành hoàn toàn.
 
 ---
 
-## 16. Rủi ro và cách giảm
+## 17. Rủi ro và cách giảm
 
-| Rủi ro                                   | Ảnh hưởng             | Cách giảm                                |
-| ---------------------------------------- | --------------------- | ---------------------------------------- |
-| ASR nhận sai transcript                  | Matching sai          | Cho người dùng sửa transcript            |
-| Footage thiếu cảnh phù hợp               | Video sai nghĩa       | Dùng fallback + đánh dấu confidence thấp |
-| Clip top 1 không hợp cảm nhận người dùng | Video chưa tốt        | Cho chọn clip trong top-k                |
-| Scene detection cắt sai                  | Clip candidate xấu    | Lọc clip quá ngắn, chia clip quá dài     |
-| CLIP hiểu sai tiếng Việt                 | Chọn sai hình         | Dịch/chuẩn hóa query sang tiếng Anh      |
-| Video cuối bị lặp cảnh                   | Thiếu tự nhiên        | Thêm repetition penalty                  |
-| Speed chỉnh quá mạnh                     | Video bị giả          | Giới hạn speed trong khoảng an toàn      |
-| UI quá phức tạp                          | Không kịp hoàn thành  | Chỉ làm các chỉnh sửa cơ bản cho MVP     |
-| Render lỗi codec                         | Không xuất được video | Chuẩn hóa video từ đầu                   |
-| Nhóm khó tích hợp                        | Trễ tiến độ           | Thống nhất JSON schema sớm               |
+| Rủi ro                                   | Ảnh hưởng             | Cách giảm                            |
+| ---------------------------------------- | --------------------- | ------------------------------------ |
+| ASR nhận sai transcript                  | Matching sai          | Cho người dùng sửa transcript        |
+| Video nguồn thiếu cảnh phù hợp           | Video sai nghĩa       | Dùng fallback + confidence thấp      |
+| Clip top 1 không hợp cảm nhận người dùng | Video chưa tốt        | Cho chọn clip trong top-k            |
+| Scene detection cắt sai                  | Clip candidate xấu    | Lọc clip quá ngắn, chia clip quá dài |
+| Keyframe không đại diện đúng clip        | Matching sai          | Dùng nhiều keyframe mỗi clip         |
+| CLIP hiểu sai tiếng Việt                 | Chọn sai hình         | Chuẩn hóa query, dịch nếu cần        |
+| Video cuối bị lặp cảnh                   | Thiếu tự nhiên        | Thêm repetition penalty              |
+| Speed chỉnh quá mạnh                     | Video bị giả          | Giới hạn speed 0.75x-1.25x           |
+| UI quá phức tạp                          | Không kịp hoàn thành  | Chỉ làm review + đổi clip cho MVP    |
+| Render lỗi codec                         | Không xuất được video | Chuẩn hóa video từ đầu               |
+| Nhóm khó tích hợp                        | Trễ tiến độ           | Thống nhất JSON schema sớm           |
 
 ---
 
-## 17. Bộ tiêu chí đánh giá
+## 18. Bộ tiêu chí đánh giá
 
-### Định lượng
+### 18.1. Định lượng
 
 | Metric                 | Ý nghĩa                             |
 | ---------------------- | ----------------------------------- |
-| Segment coverage       | Tỉ lệ audio segment được gán clip   |
+| Segment coverage       | Tỉ lệ audio segment được gán hình   |
 | Average semantic score | Điểm khớp nghĩa trung bình          |
 | Low-confidence rate    | Tỉ lệ đoạn hệ thống không chắc      |
-| Repetition rate        | Tỉ lệ clip bị dùng lặp              |
+| Repetition rate        | Tỉ lệ clip/cảnh bị dùng lặp         |
 | Duration error         | Sai lệch thời lượng audio/video     |
-| Processing time        | Thời gian xử lý                     |
+| Processing time        | Thời gian xử lý pipeline            |
 | Render time            | Thời gian xuất video                |
 | User edit count        | Người dùng phải chỉnh bao nhiêu lần |
 
-### Định tính
+### 18.2. Định tính
 
-Cho người xem hoặc người dùng chấm 1–5:
+Cho người xem hoặc người dùng chấm 1-5:
 
-| Tiêu chí           | Câu hỏi đánh giá                     |
-| ------------------ | ------------------------------------ |
-| Semantic alignment | Hình có đúng nội dung lời nói không? |
-| Visual quality     | Hình có rõ, sáng, dễ xem không?      |
-| Editing rhythm     | Nhịp cắt có tự nhiên không?          |
-| Ease of editing    | UI chỉnh sửa có dễ dùng không?       |
-| Final usefulness   | Video cuối có đủ tốt để dùng không?  |
+| Tiêu chí           | Câu hỏi đánh giá                       |
+| ------------------ | -------------------------------------- |
+| Semantic alignment | Hình có liên quan đến lời nói không?   |
+| Visual quality     | Hình có rõ, sáng, dễ xem không?        |
+| Editing rhythm     | Nhịp cắt có tự nhiên không?            |
+| Ease of editing    | UI chỉnh sửa có dễ dùng không?         |
+| Final usefulness   | Video cuối có đủ tốt để sử dụng không? |
 
 ---
 
-## 18. MVP nên làm đến đâu?
+## 19. MVP nên làm đến đâu?
 
-MVP nên tập trung vào các chức năng sau:
+MVP nên tập trung vào một luồng end-to-end chạy ổn định thay vì cố làm nhiều chức năng nâng cao.
+
+### 19.1. MVP bắt buộc
 
 ```text
-1. Upload video + audio
+1. Nhận video + audio đầu vào
 2. ASR tạo transcript + timestamp
 3. Chia audio thành segment
 4. Scene detection video nguồn
 5. Trích keyframe + quality score
-6. Tạo embedding
+6. Tạo embedding cho text/keyframe
 7. Tìm top-k clip cho từng audio segment
 8. Mặc định chọn clip tốt nhất
 9. Tạo timeline JSON
-10. UI cho xem timeline và đổi clip trong top-k
-11. UI chỉnh speed/transition cơ bản
-12. Render video cuối bằng timeline JSON
+10. UI xem timeline và đổi clip trong top-k
+11. Render video cuối bằng timeline JSON
 ```
 
-Không nên làm quá nhiều hiệu ứng nâng cao ở MVP.
+### 19.2. MVP nếu còn thời gian
 
-Nên ưu tiên:
+```text
+12. Highlight đoạn confidence thấp
+13. Chỉnh speed bằng preset
+14. Chọn transition cơ bản
+15. Bật/tắt hoặc giảm âm lượng audio gốc
+```
 
-* Đúng nghĩa
-* Dễ chỉnh
-* Dễ demo
-* Render ổn định
-* Có dữ liệu trung gian rõ ràng
+### 19.3. Không nên làm trong MVP
+
+```text
+- Hiệu ứng nâng cao
+- Timeline nhiều track như phần mềm dựng phim chuyên nghiệp
+- Color grading
+- Motion graphic/template phức tạp
+- Chỉnh audio chi tiết
+- Tự động tạo caption đẹp
+```
+
+Ưu tiên của MVP:
+
+* Có pipeline chạy được từ đầu đến cuối
+* Kết quả hình tương đối khớp lời thuyết minh
+* Người dùng đổi được clip chưa hợp
+* Render video ổn định
+* Có dữ liệu trung gian rõ ràng để debug và báo cáo
 
 ---
 
-## 19. Kết luận thiết kế nên chọn
+## 20. Kết luận thiết kế nên chọn
 
 Thiết kế phù hợp nhất là:
 
-> Một hệ thống dựng video bán tự động, trong đó AI/pipeline tự tạo bản dựng ban đầu, còn người dùng có thể kiểm tra và tinh chỉnh trực tiếp trên UI trước khi render video cuối.
+> Một hệ thống dựng video bán tự động, trong đó pipeline tự tạo bản dựng ban đầu từ video nguồn và audio thuyết minh, còn người dùng có thể kiểm tra, chọn clip thay thế và render lại video cuối trên UI.
 
 Điểm cốt lõi của thiết kế:
 
 * Không cố làm AI tự dựng hoàn hảo 100%.
-* Có timeline JSON làm trung tâm.
-* Matching không chỉ trả về 1 clip, mà trả về top-k clip.
-* Mặc định chọn clip tốt nhất, nhưng cho người dùng đổi clip nếu muốn.
-* UI cho phép chỉnh các yếu tố quan trọng như clip, tốc độ, transition, crop/fit và âm lượng cơ bản.
-* Các module được tách độc lập để nhóm có thể phát triển song song.
-* Renderer chỉ cần đọc timeline JSON để xuất video cuối.
+* Có `timeline JSON` làm trung tâm.
+* Matching trả về top-k clip thay vì chỉ top-1.
+* Timeline hỗ trợ một audio segment gồm một hoặc nhiều visual items.
+* UI tập trung vào review và chỉnh những lỗi quan trọng.
+* Renderer chỉ đọc timeline JSON để xuất video cuối.
+* Các module có input/output rõ ràng để phát triển song song.
+* Hệ thống có confidence/fallback để xử lý khi video nguồn thiếu cảnh phù hợp.
 
-Hướng này thực tế hơn vì:
+Hướng này thực tế vì:
 
 * Phù hợp với nhóm sinh viên 5 người.
 * Không cần train model lớn.
@@ -1061,3 +1150,7 @@ Hướng này thực tế hơn vì:
 * Dễ demo.
 * Có khả năng mở rộng.
 * Tạo ra video cuối tốt hơn nhờ có bước người dùng tinh chỉnh.
+
+Tóm lại, đề tài nên được định vị là:
+
+> Audio-Guided Video Montage bán tự động: hệ thống tự đề xuất bản dựng ban đầu dựa trên audio thuyết minh, sau đó cho phép người dùng kiểm tra và tinh chỉnh trên timeline đơn giản để tạo video hoàn chỉnh.
