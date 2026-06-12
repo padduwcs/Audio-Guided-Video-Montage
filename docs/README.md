@@ -18,33 +18,9 @@ Trước khi code, mỗi thành viên cần đọc các tài liệu liên quan t
 
 ## 2. Tổng quan dự án
 
-Dự án xây dựng một hệ thống dựng video bán tự động theo audio thuyết minh.
+Tóm tắt phạm vi, MVP và demo: [`details/00_project_scope.md`](details/00_project_scope.md).
 
-Đầu vào:
-
-* Một hoặc nhiều video nguồn có sẵn.
-* Một file audio thuyết minh / voice-over.
-
-Đầu ra:
-
-* Video hoàn chỉnh `final_video.mp4`.
-* Timeline dựng video `timeline.json`.
-* Các file trung gian phục vụ phân tích, matching, review và render.
-
-Luồng xử lý tổng quát:
-
-```text
-Video nguồn + Audio thuyết minh
-→ Input Processing
-→ Audio Analysis + Video Analysis
-→ Tạo embedding / đặc trưng
-→ Matching audio segment với top-k clip
-→ Tạo timeline JSON
-→ Review và chỉnh sửa trên UI
-→ Render video cuối
-```
-
-Dự án không nhằm tạo video mới từ đầu bằng AI. Hệ thống chỉ sử dụng các cảnh có sẵn trong video nguồn để tạo ra bản dựng mới phù hợp nhất với audio thuyết minh.
+Pipeline và module: [`details/01_system_architecture.md`](details/01_system_architecture.md) §2.
 
 ## 3. Cấu trúc tài liệu
 
@@ -178,119 +154,20 @@ Mọi thành viên cần đọc kỹ file này trước khi code.
 
 Không tự ý đổi schema hoặc tên field nếu chưa thống nhất với leader.
 
-#### `03_stage_1_input_processing.md`
+#### Stage spec (`03`–`10`)
 
-Tài liệu chi tiết cho Stage 1: Input Processing.
+Mỗi file stage spec theo template 12 mục (mục tiêu, pipeline, trách nhiệm, I/O, contract fields, quy trình, test, …). Owner module đọc file tương ứng trước khi code.
 
-Stage này phụ trách:
-
-* Kiểm tra video/audio đầu vào.
-* Chuẩn hóa định dạng nếu cần.
-* Lấy metadata.
-* Tạo `media_metadata.json`.
-
-Người phụ trách input processing cần đọc kỹ file này.
-
-#### `04_stage_2_audio_analysis.md`
-
-Tài liệu chi tiết cho Stage 2: Audio Analysis.
-
-Stage này phụ trách:
-
-* Chạy ASR.
-* Tạo transcript có timestamp.
-* Chia audio thành segment.
-* Tạo query cho matching.
-* Xuất `audio_segments.json`.
-
-Người phụ trách audio/NLP cần đọc kỹ file này.
-
-#### `05_stage_3_video_analysis.md`
-
-Tài liệu chi tiết cho Stage 3: Video Analysis.
-
-Stage này phụ trách:
-
-* Scene detection / shot detection.
-* Tạo clip candidate.
-* Trích keyframe.
-* Tính quality score.
-* Xuất `clip_metadata.json`.
-
-Người phụ trách video/computer vision cần đọc kỹ file này.
-
-#### `06_stage_4_embedding_indexing.md`
-
-Tài liệu chi tiết cho Stage 4: Embedding and Indexing.
-
-Stage này phụ trách:
-
-* Tạo text embedding cho audio segment.
-* Tạo image/video embedding cho keyframe hoặc clip.
-* Lưu embedding/index.
-* Xuất `embedding_metadata.json`.
-
-Người phụ trách embedding/retrieval cần đọc kỹ file này.
-
-#### `07_stage_5_matching_engine.md`
-
-Tài liệu chi tiết cho Stage 5: Matching Engine.
-
-Stage này phụ trách:
-
-* So khớp audio segment với clip candidate.
-* Tính semantic score.
-* Kết hợp `visual_quality_score` từ quality của clip, duration fit, diversity, continuity nếu có.
-* Trả về top-k clip.
-* Gán confidence.
-* Xuất `matching_candidates.json`.
-
-Người phụ trách matching cần đọc kỹ file này.
-
-#### `08_stage_6_timeline_planning.md`
-
-Tài liệu chi tiết cho Stage 6: Timeline Planning.
-
-Stage này phụ trách:
-
-* Chọn clip mặc định cho từng audio segment.
-* Xử lý clip dài hơn hoặc ngắn hơn audio.
-* Cho phép một audio segment có nhiều visual items.
-* Thêm speed, transition, fallback nếu cần.
-* Xuất `timeline.json`.
-
-Người phụ trách timeline hoặc integration cần đọc kỹ file này.
-
-#### `09_stage_7_review_ui.md`
-
-Tài liệu chi tiết cho Stage 7: Review UI.
-
-Stage này phụ trách:
-
-* Hiển thị timeline.
-* Hiển thị transcript.
-* Hiển thị clip đang chọn.
-* Hiển thị top-k candidate.
-* Cho phép người dùng đổi clip.
-* Cho phép chỉnh một số tham số cơ bản.
-* Cập nhật `timeline.json`.
-
-Người phụ trách UI cần đọc kỹ file này.
-
-#### `10_stage_8_rendering.md`
-
-Tài liệu chi tiết cho Stage 8: Rendering.
-
-Stage này phụ trách:
-
-* Đọc `timeline.json`.
-* Cắt clip theo timeline.
-* Scale/crop video.
-* Ghép transition cơ bản.
-* Ghép audio thuyết minh làm audio chính.
-* Xuất `final_video.mp4`.
-
-Người phụ trách renderer cần đọc kỹ file này.
+| File | Module | Output chính |
+| ---- | ------ | ------------ |
+| [`03_stage_1_input_processing.md`](details/03_stage_1_input_processing.md) | `input_processor/` | `media_metadata.json` |
+| [`04_stage_2_audio_analysis.md`](details/04_stage_2_audio_analysis.md) | `audio_analyzer/` | `audio_segments.json` |
+| [`05_stage_3_video_analysis.md`](details/05_stage_3_video_analysis.md) | `video_analyzer/` | `clip_metadata.json` |
+| [`06_stage_4_embedding_indexing.md`](details/06_stage_4_embedding_indexing.md) | `embedding_indexer/` | `embedding_metadata.json` |
+| [`07_stage_5_matching_engine.md`](details/07_stage_5_matching_engine.md) | `matching_engine/` | `matching_candidates.json` |
+| [`08_stage_6_timeline_planning.md`](details/08_stage_6_timeline_planning.md) | `timeline_planner/` | `timeline.json` |
+| [`09_stage_7_review_ui.md`](details/09_stage_7_review_ui.md) | `review_ui/` | `timeline.json` (cập nhật) |
+| [`10_stage_8_rendering.md`](details/10_stage_8_rendering.md) | `renderer/` | `final_video.mp4`, `render_log.json` |
 
 #### `11_team_assignment.md`
 
@@ -464,11 +341,61 @@ Tất cả thành viên nên đọc theo thứ tự:
 3. `details/00_project_scope.md`
 4. `details/01_system_architecture.md`
 5. `details/02_data_contract.md`
-6. Stage spec của module phụ trách
+6. Stage spec của module phụ trách (xem §7.2 nếu là owner stage)
 7. `details/11_team_assignment.md`
 8. `details/12_integration_plan.md`
 
-### 7.2. Với leader / người tích hợp
+### 7.2. Nếu phụ trách Stage X (thành viên mới)
+
+Đây là thứ tự **bắt buộc tối thiểu** trước khi code module của mình.
+
+| Bước | Tài liệu | Cách đọc |
+| ---- | -------- | -------- |
+| 1 | [`details/00_project_scope.md`](details/00_project_scope.md) | Toàn bộ — hiểu MVP và phạm vi |
+| 2 | [`details/01_system_architecture.md`](details/01_system_architecture.md) | Toàn bộ — pipeline, module, ranh giới |
+| 3 | [`details/02_data_contract.md`](details/02_data_contract.md) | Toàn bộ — **đọc kỹ** trước khi định nghĩa output |
+| 4 | File stage mình phụ trách (`03`–`10`) | **Toàn bộ** — logic, test, acceptance, checklist |
+| 5 | Stage liền kề (trước + sau) | **Chỉ** §4 Input · §5 Output · §9 Handoff |
+
+Mỗi stage spec dùng cùng template 12 mục; §4 = input, §5 = output, §9 = điều kiện bàn giao.
+
+**Bổ sung sau bước 1–5:** schema + sample JSON của file output stage mình (`docs/schemas/`, `docs/samples/`); README module (`<folder>/README.md`).
+
+#### Bảng stage → file spec → stage liền kề
+
+| Stage | Module | File spec (bước 4 — đọc full) | Stage trước (bước 5 — §4/§5/§9) | Stage sau (bước 5 — §4/§5/§9) |
+| ----- | ------ | ------------------------------- | -------------------------------- | ----------------------------- |
+| 1 | `input_processor/` | [`03_stage_1_input_processing.md`](details/03_stage_1_input_processing.md) | — | [`04_stage_2_audio_analysis.md`](details/04_stage_2_audio_analysis.md) |
+| 2 | `audio_analyzer/` | [`04_stage_2_audio_analysis.md`](details/04_stage_2_audio_analysis.md) | [`03_stage_1_input_processing.md`](details/03_stage_1_input_processing.md) | [`05_stage_3_video_analysis.md`](details/05_stage_3_video_analysis.md) |
+| 3 | `video_analyzer/` | [`05_stage_3_video_analysis.md`](details/05_stage_3_video_analysis.md) | [`04_stage_2_audio_analysis.md`](details/04_stage_2_audio_analysis.md) | [`06_stage_4_embedding_indexing.md`](details/06_stage_4_embedding_indexing.md) |
+| 4 | `embedding_indexer/` | [`06_stage_4_embedding_indexing.md`](details/06_stage_4_embedding_indexing.md) | [`05_stage_3_video_analysis.md`](details/05_stage_3_video_analysis.md) | [`07_stage_5_matching_engine.md`](details/07_stage_5_matching_engine.md) |
+| 5 | `matching_engine/` | [`07_stage_5_matching_engine.md`](details/07_stage_5_matching_engine.md) | [`06_stage_4_embedding_indexing.md`](details/06_stage_4_embedding_indexing.md) | [`08_stage_6_timeline_planning.md`](details/08_stage_6_timeline_planning.md) |
+| 6 | `timeline_planner/` | [`08_stage_6_timeline_planning.md`](details/08_stage_6_timeline_planning.md) | [`07_stage_5_matching_engine.md`](details/07_stage_5_matching_engine.md) | [`09_stage_7_review_ui.md`](details/09_stage_7_review_ui.md) |
+| 7 | `review_ui/` | [`09_stage_7_review_ui.md`](details/09_stage_7_review_ui.md) | [`08_stage_6_timeline_planning.md`](details/08_stage_6_timeline_planning.md) | [`10_stage_8_rendering.md`](details/10_stage_8_rendering.md) |
+| 8 | `renderer/` | [`10_stage_8_rendering.md`](details/10_stage_8_rendering.md) | [`09_stage_7_review_ui.md`](details/09_stage_7_review_ui.md) | — |
+
+**Ghi chú pipeline:**
+
+* Stage 2 (Audio) và Stage 3 (Video) chạy **song song** sau Stage 1 — không phụ thuộc lẫn nhau; bước 5 chỉ cần stage liền kề theo bảng.
+* Stage 4 đọc output từ **cả** Stage 2 và Stage 3. Ngoài bước 5, nên đọc thêm [`04_stage_2_audio_analysis.md`](details/04_stage_2_audio_analysis.md) §4/§5/§9.
+* Stage 1 không có stage trước; owner Stage 1 nên đọc thêm [`05_stage_3_video_analysis.md`](details/05_stage_3_video_analysis.md) §4/§5/§9 (Video Analyzer cũng nhận output Stage 1, song song với Audio).
+* Stage 8 không có stage sau.
+* Leader / integration: đọc toàn bộ stage spec `03`–`10` (§7.3).
+
+**Ví dụ — owner Stage 5 (Matching Engine):**
+
+```text
+1. details/00_project_scope.md
+2. details/01_system_architecture.md
+3. details/02_data_contract.md
+4. details/07_stage_5_matching_engine.md          (full)
+5a. details/06_stage_4_embedding_indexing.md    (§4, §5, §9)
+5b. details/08_stage_6_timeline_planning.md     (§4, §5, §9)
++ schemas/matching_candidates.schema.md
++ samples/matching_candidates_sample.json
+```
+
+### 7.3. Với leader / người tích hợp
 
 Leader nên đọc và nắm toàn bộ:
 
@@ -494,7 +421,7 @@ samples/
 
 Leader chịu trách nhiệm giữ cho tài liệu, schema và code integration không bị lệch nhau.
 
-### 7.3. Với người làm Audio Analyzer
+### 7.4. Với người làm Audio Analyzer
 
 Nên đọc:
 
@@ -517,7 +444,7 @@ Output chính cần tạo:
 audio_segments.json
 ```
 
-### 7.4. Với người làm Video Analyzer
+### 7.5. Với người làm Video Analyzer
 
 Nên đọc:
 
@@ -540,7 +467,7 @@ Output chính cần tạo:
 clip_metadata.json
 ```
 
-### 7.5. Với người làm Embedding / Matching
+### 7.6. Với người làm Embedding / Matching
 
 Nên đọc:
 
@@ -568,7 +495,7 @@ embedding_metadata.json
 matching_candidates.json
 ```
 
-### 7.6. Với người làm Timeline Planner
+### 7.7. Với người làm Timeline Planner
 
 Nên đọc:
 
@@ -593,7 +520,7 @@ Output chính cần tạo:
 timeline.json
 ```
 
-### 7.7. Với người làm Review UI
+### 7.8. Với người làm Review UI
 
 Nên đọc:
 
@@ -620,7 +547,7 @@ Output chính cần tạo hoặc cập nhật:
 timeline.json (ghi đè data/intermediate/timeline.json, cập nhật updated_at)
 ```
 
-### 7.8. Với người làm Renderer
+### 7.9. Với người làm Renderer
 
 Nên đọc:
 
@@ -695,87 +622,9 @@ Không đưa dữ liệu mẫu sai schema vào repo, vì UI, renderer hoặc mod
 
 ## 9. Quy ước dữ liệu quan trọng
 
-### 9.1. Thời gian
+Toàn bộ quy ước (thời gian, score, confidence, ID, path, mapping, validate): [`details/02_data_contract.md`](details/02_data_contract.md) §2 và §13–14.
 
-Tất cả thời gian trong JSON dùng đơn vị giây.
-
-Ví dụ:
-
-```json
-{
-  "start": 12.5,
-  "end": 18.2,
-  "duration": 5.7
-}
-```
-
-### 9.2. Score
-
-Tất cả score nằm trong khoảng `0.0` đến `1.0`.
-
-Ví dụ:
-
-```json
-{
-  "semantic_score": 0.82,
-  "visual_quality_score": 0.76,
-  "final_score": 0.79
-}
-```
-
-Nếu chưa tính được score, dùng `null`, không tự đặt giá trị giả gây hiểu nhầm.
-
-### 9.3. Confidence
-
-Confidence dùng ba mức:
-
-```text
-high
-medium
-low
-```
-
-Ý nghĩa:
-
-* `high`: hệ thống khá chắc.
-* `medium`: nên kiểm tra lại.
-* `low`: cần người dùng kiểm tra.
-
-### 9.4. ID
-
-ID cần ổn định, dễ đọc và không chứa khoảng trắng.
-
-Ví dụ:
-
-```text
-video_01
-audio_01
-a001
-v01_c003
-v01_c003_k01
-candidates_a001
-t001_i01
-```
-
-### 9.5. Path
-
-Path nên là đường dẫn tương đối, không dùng đường dẫn tuyệt đối của máy cá nhân.
-
-Ví dụ nên dùng:
-
-```json
-{
-  "path": "data/normalized/video_01.mp4"
-}
-```
-
-Không nên dùng:
-
-```json
-{
-  "path": "C:/Users/Name/Desktop/project/video_01.mp4"
-}
-```
+Khi mâu thuẫn: **Data Contract → schemas → samples → stage spec → README module**.
 
 ## 10. Quy tắc kiểm tra trước khi tích hợp
 
@@ -831,7 +680,7 @@ Trước khi báo hoàn thành, cần có:
 
 Bộ tài liệu đã thống nhất cho triển khai MVP:
 
-* Phạm vi, kiến trúc, Data Contract, 8 stage spec, phân công nhóm và kế hoạch tích hợp.
+* Phạm vi, kiến trúc, Data Contract, 8 stage spec (template 12 mục, tham chiếu `02`/schemas/samples), phân công nhóm và kế hoạch tích hợp.
 * Schema và mẫu JSON trong `samples/` (kiểm tra bằng `scripts/validate_json.py`).
 
 `evaluation_report.json` có schema; sample sẽ bổ sung khi làm đánh giá demo.

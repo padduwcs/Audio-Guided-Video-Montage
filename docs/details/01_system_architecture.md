@@ -500,109 +500,19 @@ Evaluation có thể làm sau MVP, nhưng nên giữ vị trí trong kiến trú
 
 ## 5. Các file dữ liệu trung gian
 
-## 5.1. `media_metadata.json`
+Định nghĩa field, mapping và validate: [`02_data_contract.md`](./02_data_contract.md) · `docs/schemas/` · `docs/samples/`.
 
-Do Input Processor tạo.
-
-Chứa thông tin về video/audio đầu vào:
-
-* ID media.
-* Đường dẫn file.
-* Duration.
-* FPS.
-* Resolution.
-* Codec.
-* Audio sample rate.
-* Trạng thái chuẩn hóa.
-
-## 5.2. `audio_segments.json`
-
-Do Audio Analyzer tạo.
-
-Chứa danh sách audio segment:
-
-* `segment_id`
-* `start`
-* `end`
-* `text`
-* `query`
-* thông tin confidence của ASR nếu có
-
-## 5.3. `clip_metadata.json`
-
-Do Video Analyzer tạo.
-
-Chứa danh sách clip candidate:
-
-* `clip_id`
-* `video_id`
-* `start`
-* `end`
-* `duration`
-* `keyframes`
-* `quality_score`
-* `quality.blur_score`, `quality.brightness_score`, `quality.motion_score`, `quality.stability_score` nếu có
-
-## 5.4. `embedding_metadata.json`
-
-Do Embedding Indexer tạo.
-
-Chứa thông tin mapping giữa clip/keyframe/query và embedding tương ứng.
-
-## 5.5. `matching_candidates.json`
-
-Do Matching Engine tạo.
-
-Chứa top-k clip cho từng audio segment:
-
-* `audio_segment_id`
-* `selected_clip_id`
-* `confidence`
-* danh sách `candidates`
-* score thành phần
-* reason ngắn nếu có
-
-## 5.6. `timeline.json`
-
-Do Timeline Planner tạo, sau đó Review UI có thể cập nhật.
-
-Chứa bản dựng cuối cùng ở dạng dữ liệu:
-
-* Audio segment.
-* Transcript.
-* Visual items.
-* Clip source.
-* Clip start/end.
-* Speed.
-* Transition.
-* Effect.
-* Confidence.
-* Candidate reference.
-
-## 5.7. `render_config.json`
-
-Do người dùng hoặc hệ thống tạo.
-
-Chứa cấu hình render:
-
-* Resolution.
-* FPS.
-* Output format.
-* Audio mix setting.
-* Default transition.
-* Crop mode.
-
-## 5.8. `render_log.json`
-
-Do Renderer tạo.
-
-Chứa thông tin quá trình render:
-
-* Trạng thái render.
-* Output path.
-* Duration output.
-* Render time.
-* Warning/error nếu có.
+| File | Module tạo | Vai trò tóm tắt |
+| ---- | ---------- | ---------------- |
+| `media_metadata.json` | Input Processor | Video/audio normalized, duration, fps, status |
+| `audio_segments.json` | Audio Analyzer | Transcript, segment, query |
+| `clip_metadata.json` | Video Analyzer | Clip candidate, keyframe, quality |
+| `embedding_metadata.json` | Embedding Indexer | Mapping segment/clip ↔ vector/index |
+| `matching_candidates.json` | Matching Engine | Top-k clip, score, confidence |
+| `timeline.json` | Timeline Planner / Review UI | Bản dựng — **trung tâm hệ thống** |
+| `render_config.json` | User/System | Cấu hình render (optional) |
+| `render_log.json` | Renderer | Log render |
+| `evaluation_report.json` | Evaluation | Metric demo (sau MVP) |
 
 ## 6. Luồng chạy chính của hệ thống
 
