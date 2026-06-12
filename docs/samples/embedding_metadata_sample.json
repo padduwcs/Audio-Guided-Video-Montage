@@ -1,0 +1,78 @@
+{
+  "schema_version": "1.0",
+  "project_id": "demo_01",
+  "model": {
+    "name": "clip-vit-base-patch32",
+    "type": "multimodal",
+    "dimension": 512
+  },
+  "created_at": "2026-06-11T10:15:00Z",
+  "text_embeddings": [
+    {
+      "embedding_id": "emb_text_a001",
+      "segment_id": "a001",
+      "source_text": "main entrance of tourist area",
+      "vector_path": "data/intermediate/embeddings/emb_text_a001.npy"
+    },
+    {
+      "embedding_id": "emb_text_a002",
+      "segment_id": "a002",
+      "source_text": "exhibition area with notable artifacts",
+      "vector_path": "data/intermediate/embeddings/emb_text_a002.npy"
+    },
+    {
+      "embedding_id": "emb_text_a003",
+      "segment_id": "a003",
+      "source_text": "visitors moving to the next experience area",
+      "vector_path": "data/intermediate/embeddings/emb_text_a003.npy"
+    }
+  ],
+  "visual_embeddings": [
+    {
+      "embedding_id": "emb_visual_v01_c003_k01",
+      "clip_id": "v01_c003",
+      "keyframe_id": "v01_c003_k01",
+      "vector_path": "data/intermediate/embeddings/emb_visual_v01_c003_k01.npy"
+    },
+    {
+      "embedding_id": "emb_visual_v01_c003_k02",
+      "clip_id": "v01_c003",
+      "keyframe_id": "v01_c003_k02",
+      "vector_path": "data/intermediate/embeddings/emb_visual_v01_c003_k02.npy"
+    },
+    {
+      "embedding_id": "emb_visual_v01_c004_k01",
+      "clip_id": "v01_c004",
+      "keyframe_id": "v01_c004_k01",
+      "vector_path": "data/intermediate/embeddings/emb_visual_v01_c004_k01.npy"
+    },
+    {
+      "embedding_id": "emb_visual_v01_c005_k01",
+      "clip_id": "v01_c005",
+      "keyframe_id": "v01_c005_k01",
+      "vector_path": "data/intermediate/embeddings/emb_visual_v01_c005_k01.npy"
+    },
+    {
+      "embedding_id": "emb_visual_v02_c001_k01",
+      "clip_id": "v02_c001",
+      "keyframe_id": "v02_c001_k01",
+      "vector_path": "data/intermediate/embeddings/emb_visual_v02_c001_k01.npy"
+    },
+    {
+      "embedding_id": "emb_visual_v02_c002_k01",
+      "clip_id": "v02_c002",
+      "keyframe_id": "v02_c002_k01",
+      "vector_path": "data/intermediate/embeddings/emb_visual_v02_c002_k01.npy"
+    },
+    {
+      "embedding_id": "emb_visual_v02_c003_k01",
+      "clip_id": "v02_c003",
+      "keyframe_id": "v02_c003_k01",
+      "vector_path": "data/intermediate/embeddings/emb_visual_v02_c003_k01.npy"
+    }
+  ],
+  "index": {
+    "type": "faiss",
+    "path": "data/intermediate/index/visual.index"
+  }
+}

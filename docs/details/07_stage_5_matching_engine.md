@@ -21,7 +21,7 @@ Mục tiêu chính:
 * Chọn clip rank 1 làm `selected_clip_id` mặc định nếu đủ điều kiện.
 * Gán `confidence` cho candidate set.
 * Đánh dấu fallback nếu không có clip khớp tốt.
-* Xuất `matching_candidates.json` đúng Data Contract đã chốt.
+* Xuất `matching_candidates.json` đúng Data Contract hiện hành.
 * Xuất log phụ để debug scoring, ranking và fallback nếu cần.
 
 ## 2. Vị trí trong pipeline
@@ -49,8 +49,8 @@ Matching Engine
         |-- matching_engine_log.json
         |
         |--> Timeline Planner
-        |--> Review UI
-        |--> Evaluation
+        |--> Review UI (later, after Timeline Planner)
+        |--> Evaluation (later)
 ```
 
 Matching Engine không render video và không tạo timeline. Stage này chỉ tạo danh sách candidate clip cho từng audio segment.
@@ -912,6 +912,10 @@ Nếu `matching_candidates.json` và `matching_engine_log.json` có thông tin m
 
 ## 13. Ví dụ `matching_candidates.json`
 
+**Mẫu chuẩn:** `docs/samples/matching_candidates_sample.json`.
+
+Ví dụ rút gọn một candidate set:
+
 ```json
 {
   "schema_version": "1.0",
@@ -1039,9 +1043,9 @@ Evaluation có thể dùng `matching_candidates.json` để:
 * Tính repetition rate.
 * Ghi nhận số lượng candidate mỗi segment.
 
-## 15. Điều kiện handoff sang stage sau
+## 15. Điều kiện handoff output
 
-Stage 5 được phép bàn giao cho Timeline Planner và Review UI khi thỏa các điều kiện sau:
+Stage 5 được phép bàn giao `matching_candidates.json` cho Timeline Planner; Review UI có thể dùng cùng output này sau khi Timeline Planner tạo timeline khi thỏa các điều kiện sau:
 
 ```text
 matching_candidates.json parse được
@@ -1155,7 +1159,7 @@ Vai trò từng file:
 | `ranker.py` | Gộp keyframe về clip, sort và lấy top-k |
 | `fallback_handler.py` | Xử lý fallback khi không có match tốt |
 | `matching_candidates_writer.py` | Tạo và ghi `matching_candidates.json` |
-| `validator.py` | Kiểm tra input và output theo quy tắc đã chốt |
+| `validator.py` | Kiểm tra input và output theo quy tắc hiện hành |
 
 Nếu nhóm dùng ngôn ngữ hoặc framework khác, vẫn cần giữ nguyên trách nhiệm logic tương đương.
 
@@ -1326,7 +1330,7 @@ Module Matching Engine được xem là đạt yêu cầu MVP khi:
 18. Clip `error` không xuất hiện trong candidates.
 19. Clip `too_short` không được chọn mặc định trong MVP.
 20. Fallback được đánh dấu rõ bằng `fallback_used`.
-21. Tạo `matching_candidates.json` đúng schema đã chốt.
+21. Tạo `matching_candidates.json` đúng schema hiện hành.
 22. Tạo `matching_engine_log.json` để hỗ trợ debug.
 23. Timeline Planner có thể dùng `selected_clip_id` để tạo timeline.
 24. Review UI có thể hiển thị top-k clip thay thế.
@@ -1368,7 +1372,7 @@ Trước khi bàn giao, người phụ trách Stage 5 cần tự kiểm tra:
 [ ] Không hard-code path cá nhân
 [ ] Có quy tắc --overwrite hoặc cơ chế tương đương khi chạy lại
 [ ] Có test với dữ liệu mẫu nhỏ
-[ ] Output có thể đưa cho Timeline Planner và Review UI chạy tiếp
+[ ] Output có thể đưa cho Timeline Planner chạy tiếp; Review UI có thể dùng sau khi Timeline Planner tạo timeline
 ```
 
 ## 23. Ghi chú triển khai MVP

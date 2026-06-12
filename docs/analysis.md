@@ -70,7 +70,7 @@ Pipeline:
 1. Chuẩn hóa dữ liệu đầu vào
 2. Phân tích audio
 3. Phân tích video nguồn
-4. Trích đặc trưng và đánh chỉ mục video
+4. Tạo embedding cho audio segment và clip/keyframe, lưu metadata/index
 5. So khớp audio segment với top-k clip phù hợp
 6. Lập timeline dựng video
 7. UI review và chỉnh sửa bán tự động
@@ -125,8 +125,8 @@ Cách làm này giúp nhóm giảm phụ thuộc lẫn nhau.
 
 Ví dụ:
 
-* Người làm UI có thể dùng `timeline_sample.json`.
-* Người làm renderer có thể dùng timeline giả để test FFmpeg.
+* Người làm UI có thể dùng `timeline_sample.json`, `matching_candidates_sample.json`, `clip_metadata_sample.json`, `audio_segments_sample.json` và `media_metadata_sample.json`.
+* Người làm renderer có thể dùng `timeline_sample.json`, `media_metadata_sample.json`, `render_config_sample.json` và media source mẫu để test FFmpeg.
 * Người làm matching có thể xuất `matching_candidates.json`.
 * Người làm audio và video có thể xử lý hai nhánh độc lập trước khi ghép lại.
 
@@ -156,17 +156,39 @@ Input video/audio
 
 ### 5.3. Output đề xuất
 
+Output chính là `media_metadata.json` theo Data Contract. Ví dụ rút gọn:
+
 ```json
 {
-  "media_id": "video_01",
-  "path": "videos/normalized/video_01.mp4",
-  "duration": 125.4,
-  "fps": 30,
-  "width": 1920,
-  "height": 1080,
-  "has_audio": true
+  "schema_version": "1.0",
+  "project_id": "demo_01",
+  "created_at": "2026-06-11T10:00:00Z",
+  "videos": [
+    {
+      "video_id": "video_01",
+      "original_path": "data/raw/video_01.mp4",
+      "normalized_path": "data/normalized/video_01.mp4",
+      "duration": 125.4,
+      "fps": 30,
+      "width": 1920,
+      "height": 1080,
+      "has_audio": true,
+      "status": "ready"
+    }
+  ],
+  "audio": {
+    "audio_id": "audio_01",
+    "original_path": "data/raw/voiceover.mp3",
+    "normalized_path": "data/normalized/voiceover.wav",
+    "duration": 16.0,
+    "sample_rate": 16000,
+    "channels": 1,
+    "status": "ready"
+  }
 }
 ```
+
+Chi tiết field bắt buộc/optional xem `docs/details/02_data_contract.md` và `docs/samples/media_metadata_sample.json`.
 
 Module này có thể phát triển sớm vì các module khác chỉ cần thống nhất format metadata là có thể dùng dữ liệu giả để test.
 
@@ -188,23 +210,36 @@ Audio
 
 ### 6.2. Output đề xuất
 
+Ví dụ cấu trúc (transcript trong sample dùng ASCII):
+
 ```json
-[
-  {
-    "segment_id": "a001",
-    "start": 0.0,
-    "end": 5.2,
-    "text": "Đây là khu vực cổng chính của khu tham quan.",
-    "query": "main entrance of tourist area"
-  },
-  {
-    "segment_id": "a002",
-    "start": 5.2,
-    "end": 10.8,
-    "text": "Sau đó, đoàn di chuyển vào khu trưng bày.",
-    "query": "people walking into exhibition area"
-  }
-]
+{
+  "schema_version": "1.0",
+  "project_id": "demo_01",
+  "audio_id": "audio_01",
+  "language": "vi",
+  "created_at": "2026-06-11T10:05:00Z",
+  "items": [
+    {
+      "segment_id": "a001",
+      "start": 0.0,
+      "end": 5.2,
+      "duration": 5.2,
+      "text": "Đây là khu vực cổng chính của khu tham quan.",
+      "query": "main entrance of tourist area",
+      "asr_confidence": 0.91
+    },
+    {
+      "segment_id": "a002",
+      "start": 5.2,
+      "end": 10.8,
+      "duration": 5.6,
+      "text": "Sau đó, đoàn di chuyển vào khu trưng bày.",
+      "query": "people walking into exhibition area",
+      "asr_confidence": 0.87
+    }
+  ]
+}
 ```
 
 ### 6.3. Cách chia segment
@@ -262,22 +297,28 @@ Video nguồn
   "end": 31.2,
   "duration": 6.7,
   "keyframes": [
-    "keyframes/v01_c003_01.jpg",
-    "keyframes/v01_c003_02.jpg"
+    {
+      "keyframe_id": "v01_c003_k01",
+      "timestamp": 24.8,
+      "path": "data/keyframes/v01_c003_k01.jpg"
+    }
   ],
   "quality": {
     "blur_score": 0.83,
-    "brightness": 0.71,
-    "motion": 0.45,
+    "brightness_score": 0.71,
+    "motion_score": 0.45,
+    "stability_score": 0.76,
     "quality_score": 0.78
-  }
+  },
+  "quality_score": 0.78,
+  "status": "usable"
 }
 ```
 
 ### 7.3. Quy tắc xử lý
 
-* Bỏ clip quá ngắn, ví dụ dưới 1.5 giây.
-* Clip quá dài, ví dụ trên 15-20 giây, nên chia nhỏ thêm.
+* Bỏ clip quá ngắn, ví dụ dưới `1.5` giây (MVP default trong Stage 3).
+* Clip quá dài nên chia nhỏ; MVP default `max_clip_duration = 8.0` giây (xem `docs/details/05_stage_3_video_analysis.md`).
 * Không nhất thiết render vật lý từng clip ngay từ đầu.
 * Nên lưu `video_id`, `start`, `end` để renderer cắt từ video gốc.
 * Mỗi clip nên có nhiều keyframe, không chỉ một keyframe duy nhất.
@@ -294,7 +335,7 @@ Nên ưu tiên:
 
 ---
 
-## 8. Giai đoạn 4 — Trích đặc trưng và đánh chỉ mục video
+## 8. Giai đoạn 4 — Embedding và đánh chỉ mục
 
 ### 8.1. Mục tiêu
 
@@ -334,17 +375,42 @@ Vì vậy, hệ thống cần kết hợp nhiều điểm số khác nhau, khôn
 
 ### 8.4. Output đề xuất
 
+Output chính là `embedding_metadata.json`. Vector/index lưu riêng; file metadata chỉ giữ mapping. Ví dụ rút gọn:
+
 ```json
 {
-  "clip_id": "v01_c003",
-  "embedding_id": "emb_v01_c003",
-  "keyframe_embeddings": [
-    "emb_v01_c003_01",
-    "emb_v01_c003_02"
+  "schema_version": "1.0",
+  "project_id": "demo_01",
+  "model": {
+    "name": "clip-vit-base-patch32",
+    "type": "multimodal",
+    "dimension": 512
+  },
+  "created_at": "2026-06-11T10:15:00Z",
+  "text_embeddings": [
+    {
+      "embedding_id": "emb_text_a001",
+      "segment_id": "a001",
+      "source_text": "main entrance of tourist area",
+      "vector_path": "data/intermediate/embeddings/emb_text_a001.npy"
+    }
   ],
-  "index_status": "ready"
+  "visual_embeddings": [
+    {
+      "embedding_id": "emb_visual_v01_c003_k01",
+      "clip_id": "v01_c003",
+      "keyframe_id": "v01_c003_k01",
+      "vector_path": "data/intermediate/embeddings/emb_visual_v01_c003_k01.npy"
+    }
+  ],
+  "index": {
+    "type": "faiss",
+    "path": "data/intermediate/index/visual.index"
+  }
 }
 ```
+
+Chi tiết xem `docs/details/02_data_contract.md` và `docs/samples/embedding_metadata_sample.json`.
 
 ---
 
@@ -372,15 +438,19 @@ Ví dụ:
 
 ### 9.3. Hàm điểm đề xuất
 
+Trọng số MVP mặc định (có thể cấu hình trong Matching Engine, xem `docs/details/07_stage_5_matching_engine.md`):
+
 ```text
-score = 0.45 * semantic_score
-      + 0.20 * visual_quality_score
-      + 0.15 * duration_fit_score
-      + 0.10 * continuity_score
-      + 0.10 * diversity_score
-      - repetition_penalty
-      - bad_clip_penalty
+base_score = 0.60 * semantic_score
+           + 0.15 * visual_quality_score
+           + 0.15 * duration_fit_score
+           + 0.05 * continuity_score
+           + 0.05 * diversity_score
+
+final_score = base_score - repetition_penalty - bad_clip_penalty
 ```
+
+`repetition_penalty` và `bad_clip_penalty` lưu trong JSON dưới dạng số không âm trong `[0.0, 1.0]`, rồi được trừ khỏi `base_score`.
 
 Ý nghĩa:
 
@@ -396,28 +466,32 @@ score = 0.45 * semantic_score
 
 ### 9.4. Output top-k candidate
 
+Ví dụ rút gọn (canonical: `docs/samples/matching_candidates_sample.json`):
+
 ```json
 {
-  "audio_segment_id": "a003",
-  "selected_clip_id": "v02_c008",
+  "candidate_set_id": "candidates_a001",
+  "audio_segment_id": "a001",
+  "selected_clip_id": "v01_c003",
+  "confidence": "high",
   "candidates": [
     {
       "rank": 1,
-      "clip_id": "v02_c008",
+      "clip_id": "v01_c003",
       "final_score": 0.84,
       "semantic_score": 0.88,
-      "quality_score": 0.80,
-      "duration_fit_score": 0.76,
+      "visual_quality_score": 0.78,
+      "duration_fit_score": 0.80,
       "reason": "Khớp nội dung tốt, chất lượng hình ổn, đủ thời lượng."
     },
     {
       "rank": 2,
-      "clip_id": "v01_c004",
-      "final_score": 0.79,
-      "semantic_score": 0.81,
-      "quality_score": 0.86,
-      "duration_fit_score": 0.70,
-      "reason": "Hình đẹp hơn nhưng khớp nghĩa thấp hơn một chút."
+      "clip_id": "v02_c001",
+      "final_score": 0.70,
+      "semantic_score": 0.62,
+      "visual_quality_score": 0.82,
+      "duration_fit_score": 0.76,
+      "reason": "Wide indoor shot có thể dùng làm establishing scene."
     }
   ]
 }
@@ -470,37 +544,61 @@ Vì vậy, timeline nên hỗ trợ:
 ### 10.3. Timeline JSON đề xuất
 
 ```json
-[
-  {
-    "segment_id": "a001",
-    "audio_start": 0.0,
-    "audio_end": 10.0,
-    "text": "Đầu tiên, chúng ta bước vào khu vực trưng bày chính.",
-    "confidence": "high",
-    "score": 0.82,
-    "visual_items": [
-      {
-        "clip_id": "v01_c003",
-        "video_source": "video_01.mp4",
-        "clip_start": 34.5,
-        "clip_end": 39.5,
-        "speed": 1.0,
-        "transition": "cut",
-        "effect": null
-      },
-      {
-        "clip_id": "v02_c008",
-        "video_source": "video_02.mp4",
-        "clip_start": 12.0,
-        "clip_end": 17.0,
-        "speed": 1.0,
-        "transition": "fade",
-        "effect": null
-      }
-    ],
-    "candidates_ref": "candidates_a001"
-  }
-]
+{
+  "schema_version": "1.0",
+  "project_id": "demo_01",
+  "audio_id": "audio_01",
+  "created_at": "2026-06-11T10:25:00Z",
+  "updated_at": "2026-06-11T10:30:00Z",
+  "render_settings": {
+    "width": 1920,
+    "height": 1080,
+    "fps": 30,
+    "format": "mp4",
+    "default_transition": "cut",
+    "crop_mode": "center_crop"
+  },
+  "items": [
+    {
+      "segment_id": "a001",
+      "audio_start": 0.0,
+      "audio_end": 10.0,
+      "duration": 10.0,
+      "text": "Đầu tiên, chúng ta bước vào khu vực trưng bày chính.",
+      "confidence": "high",
+      "score": 0.82,
+      "visual_items": [
+        {
+          "timeline_item_id": "t001_i01",
+          "clip_id": "v01_c003",
+          "video_id": "video_01",
+          "source_path": "data/normalized/video_01.mp4",
+          "clip_start": 24.5,
+          "clip_end": 29.5,
+          "timeline_start": 0.0,
+          "timeline_end": 5.0,
+          "speed": 1.0,
+          "transition": "cut",
+          "effect": null
+        },
+        {
+          "timeline_item_id": "t001_i02",
+          "clip_id": "v02_c001",
+          "video_id": "video_02",
+          "source_path": "data/normalized/video_02.mp4",
+          "clip_start": 8.0,
+          "clip_end": 13.0,
+          "timeline_start": 5.0,
+          "timeline_end": 10.0,
+          "speed": 1.0,
+          "transition": "fade",
+          "effect": null
+        }
+      ],
+      "candidates_ref": "candidates_a001"
+    }
+  ]
+}
 ```
 
 Cấu trúc này linh hoạt hơn vì một audio segment có thể dùng nhiều cảnh.
@@ -578,8 +676,8 @@ Mỗi dòng tương ứng một audio segment:
 
 | Time  | Transcript       | Clip chọn | Score | Confidence | Action       |
 | ----- | ---------------- | --------- | ----- | ---------- | ------------ |
-| 0-6s  | Cổng chính...    | v01_c003  | 0.82  | Cao        | Xem / Đổi    |
-| 6-12s | Khu trưng bày... | v02_c008  | 0.54  | Thấp       | Cần kiểm tra |
+| 0-5.2s | Cổng chính...    | v01_c003  | 0.84  | Cao        | Xem / Đổi    |
+| 5.2-10.8s | Khu trưng bày... | v02_c001  | 0.79  | Trung bình | Nên xem lại  |
 
 #### 2. Xem preview đoạn đang chọn
 
@@ -631,7 +729,7 @@ Các chức năng sau hữu ích nhưng không nên là trọng tâm đầu tiê
 
 * Chỉnh speed bằng preset: 0.75x, 1.0x, 1.25x
 * Chọn transition cơ bản: cut, fade, crossfade
-* Chọn crop/fit: fit, fill, center crop, blur background
+* Chọn crop/fit: `fit`, `fill`, `center_crop`, `blur_background`
 * Bật/tắt audio gốc của video
 * Giảm âm lượng audio gốc
 
@@ -722,86 +820,35 @@ Trừ khi người dùng thay đổi input hoặc yêu cầu phân tích lại.
 
 ## 13. Thiết kế dữ liệu trung gian
 
-### 13.1. `audio_segments.json`
+Contract và mẫu JSON triển khai nằm tại `docs/details/02_data_contract.md`, `docs/schemas/` và `docs/samples/`.
 
-```json
-[
-  {
-    "segment_id": "a001",
-    "start": 0.0,
-    "end": 5.2,
-    "text": "Đây là khu vực cổng chính.",
-    "query": "main entrance"
-  }
-]
+| File | Mẫu chuẩn |
+| ---- | ---------- |
+| `media_metadata.json` | `docs/samples/media_metadata_sample.json` |
+| `audio_segments.json` | `docs/samples/audio_segments_sample.json` |
+| `clip_metadata.json` | `docs/samples/clip_metadata_sample.json` |
+| `embedding_metadata.json` | `docs/samples/embedding_metadata_sample.json` |
+| `matching_candidates.json` | `docs/samples/matching_candidates_sample.json` |
+| `timeline.json` | `docs/samples/timeline_sample.json` |
+| `render_config.json` | `docs/samples/render_config_sample.json` |
+| `render_log.json` | `docs/samples/render_log_sample.json` |
+
+Các ví dụ JSON trong tài liệu này chỉ minh họa cấu trúc.
+
+### 13.1. Ghi chú mapping quan trọng
+
+```text
+audio_segments.items[].segment_id
+  → matching_candidates.items[].audio_segment_id
+  → timeline.items[].segment_id
+
+clip_metadata.items[].clip_id
+  → matching_candidates.items[].candidates[].clip_id
+  → timeline.items[].visual_items[].clip_id
+
+matching_candidates.items[].candidate_set_id
+  → timeline.items[].candidates_ref
 ```
-
-### 13.2. `clip_metadata.json`
-
-```json
-[
-  {
-    "clip_id": "v01_c001",
-    "video_id": "video_01",
-    "start": 10.2,
-    "end": 17.5,
-    "duration": 7.3,
-    "keyframes": ["v01_c001_01.jpg", "v01_c001_02.jpg"],
-    "quality_score": 0.81
-  }
-]
-```
-
-### 13.3. `matching_candidates.json`
-
-```json
-[
-  {
-    "audio_segment_id": "a001",
-    "selected_clip_id": "v01_c001",
-    "candidates": [
-      {
-        "clip_id": "v01_c001",
-        "rank": 1,
-        "score": 0.84
-      },
-      {
-        "clip_id": "v02_c004",
-        "rank": 2,
-        "score": 0.78
-      }
-    ]
-  }
-]
-```
-
-### 13.4. `timeline.json`
-
-```json
-[
-  {
-    "segment_id": "a001",
-    "audio_start": 0.0,
-    "audio_end": 5.2,
-    "text": "Đây là khu vực cổng chính.",
-    "confidence": "high",
-    "visual_items": [
-      {
-        "clip_id": "v01_c001",
-        "video_source": "video_01.mp4",
-        "clip_start": 10.2,
-        "clip_end": 15.4,
-        "speed": 1.0,
-        "transition": "cut",
-        "effect": null
-      }
-    ],
-    "candidates_ref": "candidates_a001"
-  }
-]
-```
-
-Các file này là hợp đồng dữ liệu giữa các module. Khi đã thống nhất schema, các thành viên có thể làm song song dễ hơn.
 
 ---
 
@@ -897,15 +944,24 @@ Phụ trách:
 Kết quả cần giao:
 
 ```json
-[
-  {
-    "segment_id": "a001",
-    "start": 0.0,
-    "end": 5.2,
-    "text": "...",
-    "query": "..."
-  }
-]
+{
+  "schema_version": "1.0",
+  "project_id": "demo_01",
+  "audio_id": "audio_01",
+  "language": "vi",
+  "created_at": "2026-06-11T10:05:00Z",
+  "items": [
+    {
+      "segment_id": "a001",
+      "start": 0.0,
+      "end": 5.2,
+      "duration": 5.2,
+      "text": "...",
+      "query": "...",
+      "asr_confidence": null
+    }
+  ]
+}
 ```
 
 ---
@@ -922,48 +978,58 @@ Phụ trách:
 
 Kết quả cần giao:
 
-```json
-[
-  {
-    "clip_id": "v01_c001",
-    "video_id": "video_01",
-    "start": 10.2,
-    "end": 17.5,
-    "keyframes": ["..."],
-    "quality_score": 0.81
-  }
-]
+```text
+clip_metadata.json
 ```
+
+Ví dụ tối thiểu xem `docs/samples/clip_metadata_sample.json` và `docs/details/02_data_contract.md`.
 
 ---
 
-### Người 4 — Matching / Retrieval
+### Người 4 — Embedding / Matching / Retrieval
 
 Phụ trách:
 
-* Tạo embedding cho text và keyframe
+* Tạo embedding cho text và keyframe (`embedding_indexer/`)
 * Xây index tìm kiếm
-* Trả về top-k clip cho từng audio segment
+* Trả về top-k clip cho từng audio segment (`matching_engine/`)
 * Rerank bằng score tổng hợp
 * Gán confidence cho kết quả matching
 
 Kết quả cần giao:
 
+```text
+embedding_metadata.json
+embedding/index files
+matching_candidates.json
+```
+
+Ví dụ rút gọn `matching_candidates.json`:
+
 ```json
 {
-  "audio_segment_id": "a003",
-  "selected_clip_id": "v02_c008",
-  "confidence": "high",
-  "candidates": [
+  "schema_version": "1.0",
+  "project_id": "demo_01",
+  "top_k": 5,
+  "created_at": "2026-06-11T10:20:00Z",
+  "items": [
     {
-      "rank": 1,
-      "clip_id": "v02_c008",
-      "score": 0.84
-    },
-    {
-      "rank": 2,
-      "clip_id": "v01_c004",
-      "score": 0.76
+      "candidate_set_id": "candidates_a003",
+      "audio_segment_id": "a003",
+      "selected_clip_id": "v01_c005",
+      "confidence": "low",
+      "candidates": [
+        {
+          "rank": 1,
+          "clip_id": "v01_c005",
+          "final_score": 0.63
+        },
+        {
+          "rank": 2,
+          "clip_id": "v02_c002",
+          "final_score": 0.60
+        }
+      ]
     }
   ]
 }
@@ -1000,8 +1066,8 @@ Lưu ý: phần Timeline Planner nên có sự hỗ trợ từ Leader để trá
 | ----------------- | --------------------- |
 | Audio Analyzer    | Có file audio mẫu     |
 | Video Analyzer    | Có video mẫu          |
-| UI Review         | Có timeline JSON mẫu  |
-| Renderer          | Có timeline JSON mẫu  |
+| UI Review         | Có timeline, matching, clip, audio và media metadata mẫu |
+| Renderer          | Có timeline, media metadata, render config và media source mẫu |
 | Schema thiết kế   | Làm ngay từ đầu       |
 | Evaluation metric | Có timeline/video mẫu |
 
@@ -1009,8 +1075,8 @@ Lưu ý: phần Timeline Planner nên có sự hỗ trợ từ Leader để trá
 
 | Phần              | Phụ thuộc                          |
 | ----------------- | ---------------------------------- |
-| Embedding Indexer | Cần keyframe từ Video Analyzer     |
-| Matching Engine   | Cần audio segment và clip metadata |
+| Embedding Indexer | Cần audio segments, clip metadata và keyframe từ Video Analyzer |
+| Matching Engine   | Cần audio segments, clip metadata, embedding metadata và vector/index files |
 | Timeline Planner  | Cần output từ Matching Engine      |
 | UI hoàn chỉnh     | Cần timeline và candidate schema   |
 
@@ -1019,9 +1085,14 @@ Lưu ý: phần Timeline Planner nên có sự hỗ trợ từ Leader để trá
 Nên tạo dữ liệu mẫu sớm:
 
 * `audio_segments_sample.json`
+* `media_metadata_sample.json`
 * `clip_metadata_sample.json`
+* `embedding_metadata_sample.json`
+* `embedding_index_sample/`
 * `matching_candidates_sample.json`
 * `timeline_sample.json`
+* `render_config_sample.json`
+* `render_log_sample.json`
 
 Nhờ đó, các thành viên có thể phát triển module của mình mà không cần chờ module khác hoàn thành hoàn toàn.
 
@@ -1137,7 +1208,7 @@ Thiết kế phù hợp nhất là:
 * Matching trả về top-k clip thay vì chỉ top-1.
 * Timeline hỗ trợ một audio segment gồm một hoặc nhiều visual items.
 * UI tập trung vào review và chỉnh những lỗi quan trọng.
-* Renderer chỉ đọc timeline JSON để xuất video cuối.
+* Renderer render theo timeline JSON hợp lệ và media source đã chuẩn hóa để xuất video cuối.
 * Các module có input/output rõ ràng để phát triển song song.
 * Hệ thống có confidence/fallback để xử lý khi video nguồn thiếu cảnh phù hợp.
 

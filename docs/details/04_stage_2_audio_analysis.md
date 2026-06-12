@@ -16,7 +16,7 @@ Mục tiêu chính:
 * Gán `segment_type` nếu xác định được.
 * Gán `asr_confidence` nếu ASR cung cấp độ tin cậy.
 * Đánh dấu `needs_review` cho những đoạn transcript hoặc segment có rủi ro.
-* Xuất `audio_segments.json` đúng Data Contract đã chốt.
+* Xuất `audio_segments.json` đúng Data Contract hiện hành.
 * Xuất log phụ để debug quá trình ASR và segmentation nếu cần.
 
 ## 2. Vị trí trong pipeline
@@ -36,10 +36,10 @@ Audio Analyzer
         |-- audio_analysis_log.json
         |
         |--> Embedding Indexer
-        |--> Matching Engine
-        |--> Timeline Planner
-        |--> Review UI
-        |--> Evaluation
+        |--> Matching Engine (later, after Embedding Indexer)
+        |--> Timeline Planner (later, after Matching Engine)
+        |--> Review UI (later, after Timeline Planner)
+        |--> Evaluation (later)
 ```
 
 Audio Analyzer không cần đọc video nguồn. Stage này chỉ cần audio đã chuẩn hóa và metadata liên quan đến audio.
@@ -92,14 +92,15 @@ Audio Analyzer đọc:
 
 ```text
 data/intermediate/media_metadata.json
-data/normalized/voiceover.wav
 ```
 
-Trong đó, đường dẫn audio phải lấy từ:
+Audio path thực tế lấy từ:
 
 ```text
 media_metadata.json -> audio.normalized_path
 ```
+
+(Ví dụ sample: `data/normalized/voiceover.wav`.)
 
 Không hard-code đường dẫn audio trong module.
 
@@ -499,13 +500,13 @@ Với các câu trừu tượng:
 
 ```text
 text: "Chuyến đi này để lại rất nhiều kỷ niệm đáng nhớ."
-query: "kỷ niệm chuyến đi không khí vui vẻ"
+query: "kỷ niệm đáng nhớ chuyến đi"
 segment_type: "abstract"
 ```
 
 Ghi chú:
 
-* Với segment trừu tượng, query có thể dùng các từ khóa hình ảnh gần nghĩa như "không khí vui vẻ", "mọi người tham quan", nhưng không nên bịa ra địa điểm hoặc hành động cụ thể không xuất hiện trong audio.
+* Với segment trừu tượng, query nên giữ lại ý chính có trong transcript như "kỷ niệm", "trải nghiệm", "đáng nhớ"; không nên bịa ra địa điểm, cảm xúc cụ thể hoặc hành động cụ thể không xuất hiện trong audio.
 * Nếu query không đủ thông tin để matching tốt, đánh dấu `needs_review = true`.
 
 ### 9.8. Bước 8 - Trích keywords
@@ -738,7 +739,7 @@ Ví dụ:
 
 ```text
 text: "Đây là trải nghiệm rất đáng nhớ với cả đoàn."
-query: "trải nghiệm đáng nhớ cả đoàn không khí vui vẻ"
+query: "trải nghiệm đáng nhớ cả đoàn"
 segment_type: "abstract"
 needs_review: true
 ```
@@ -822,8 +823,8 @@ Nên dùng file này để ghi:
   },
   "input": {
     "audio_path": "data/normalized/voiceover.wav",
-    "metadata_duration": 92.7,
-    "probed_duration": 92.69
+    "metadata_duration": 16.0,
+    "probed_duration": 16.0
   },
   "summary": {
     "segment_count": 12,
@@ -849,6 +850,8 @@ Nếu `audio_segments.json` và `audio_analysis_log.json` có thông tin mâu th
 
 ## 14. Ví dụ `audio_segments.json`
 
+Mẫu chuẩn: `docs/samples/audio_segments_sample.json`.
+
 ```json
 {
   "schema_version": "1.0",
@@ -862,10 +865,9 @@ Nếu `audio_segments.json` và `audio_analysis_log.json` có thông tin mâu th
       "start": 0.0,
       "end": 5.2,
       "duration": 5.2,
-      "text": "Đây là khu vực cổng chính của khu tham quan.",
-      "query": "khu vực cổng chính khu tham quan",
+      "text": "Day la khu vuc cong chinh cua khu tham quan.",
+      "query": "khu vuc cong chinh khu tham quan",
       "translated_query": "main entrance of tourist area",
-      "keywords": ["cổng chính", "khu tham quan"],
       "segment_type": "description",
       "asr_confidence": 0.91,
       "needs_review": false
@@ -875,27 +877,24 @@ Nếu `audio_segments.json` và `audio_analysis_log.json` có thông tin mâu th
       "start": 5.2,
       "end": 10.8,
       "duration": 5.6,
-      "text": "Sau đó, đoàn di chuyển vào khu trưng bày.",
-      "query": "đoàn di chuyển vào khu trưng bày",
-      "translated_query": "group walking into exhibition area",
-      "keywords": ["đoàn", "di chuyển", "khu trưng bày"],
-      "segment_type": "transition",
-      "asr_confidence": 0.87,
+      "text": "Ben trong la khu trung bay voi nhieu hien vat noi bat.",
+      "query": "khu trung bay hien vat noi bat",
+      "translated_query": "exhibition area with notable artifacts",
+      "segment_type": "description",
+      "asr_confidence": 0.84,
       "needs_review": false
     },
     {
       "segment_id": "a003",
       "start": 10.8,
-      "end": 16.4,
-      "duration": 5.6,
-      "text": "Chuyến đi này để lại rất nhiều kỷ niệm đáng nhớ.",
-      "query": "kỷ niệm chuyến đi không khí vui vẻ",
-      "translated_query": "memorable trip happy atmosphere",
-      "keywords": ["kỷ niệm", "chuyến đi"],
-      "segment_type": "abstract",
-      "asr_confidence": 0.76,
-      "needs_review": true,
-      "notes": "Nội dung trừu tượng, cần review clip fallback."
+      "end": 16.0,
+      "duration": 5.2,
+      "text": "Khach tham quan di chuyen sang khu trai nghiem tiep theo.",
+      "query": "khach tham quan di chuyen khu trai nghiem",
+      "translated_query": "visitors moving to the next experience area",
+      "segment_type": "action",
+      "asr_confidence": 0.66,
+      "needs_review": true
     }
   ]
 }
@@ -985,9 +984,9 @@ Evaluation có thể dùng `audio_segments.json` để:
 * Đánh giá duration error.
 * So sánh matching quality theo từng segment type.
 
-## 16. Điều kiện handoff sang stage sau
+## 16. Điều kiện handoff output
 
-Stage 2 được phép bàn giao cho Embedding Indexer, Matching Engine, Timeline Planner và Review UI khi thỏa các điều kiện sau:
+Stage 2 được phép bàn giao `audio_segments.json` cho Embedding Indexer; các module về sau như Matching Engine, Timeline Planner và Review UI có thể dùng cùng output này khi thỏa các điều kiện sau:
 
 ```text
 audio_segments.json parse được
@@ -1118,7 +1117,7 @@ Vai trò từng file:
 | `segmenter.py` | Chia transcript thành audio segment |
 | `query_builder.py` | Sinh query, keywords, translated_query |
 | `audio_segments_writer.py` | Tạo và ghi `audio_segments.json` |
-| `validator.py` | Kiểm tra input và output theo quy tắc đã chốt |
+| `validator.py` | Kiểm tra input và output theo quy tắc hiện hành |
 
 Nếu nhóm dùng ngôn ngữ hoặc framework khác, vẫn cần giữ nguyên trách nhiệm logic tương đương.
 
@@ -1257,7 +1256,7 @@ Module Audio Analyzer được xem là đạt yêu cầu MVP khi:
 4. Dừng đúng khi audio có `status = error`.
 5. Tạo được transcript có timestamp.
 6. Chia được audio thành segment có ý nghĩa.
-7. Tạo `audio_segments.json` đúng schema đã chốt.
+7. Tạo `audio_segments.json` đúng schema hiện hành.
 8. Mỗi segment có `segment_id`, `start`, `end`, `duration`, `text`, `query`, `asr_confidence`.
 9. Tất cả thời gian dùng giây.
 10. Segment không overlap và được sắp xếp theo thời gian.
@@ -1301,7 +1300,7 @@ Trước khi bàn giao, người phụ trách Stage 2 cần tự kiểm tra:
 [ ] Không hard-code path cá nhân
 [ ] Có quy tắc --overwrite hoặc cơ chế tương đương khi chạy lại
 [ ] Có test với audio mẫu ngắn
-[ ] Output có thể đưa cho Matching Engine, Timeline Planner và Review UI chạy tiếp
+[ ] Output có thể đưa cho Embedding Indexer chạy tiếp; Matching Engine, Timeline Planner và Review UI có thể dùng ở các bước sau
 ```
 
 ## 24. Ghi chú triển khai MVP

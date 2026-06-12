@@ -4,7 +4,7 @@
 
 Stage 8 - Renderer có nhiệm vụ xuất video cuối cùng từ `timeline.json` đã được Timeline Planner tạo và Review UI chỉnh sửa.
 
-Renderer là stage thực thi bản dựng. Renderer không chọn clip, không tính score và không quyết định clip nào phù hợp với audio. Renderer chỉ đọc timeline hợp lệ, cắt clip, chỉnh speed, scale/crop, ghép các đoạn video, xử lý audio và xuất `final_video.mp4`.
+Renderer là stage thực thi bản dựng. Renderer không chọn clip, không tính score và không quyết định clip nào phù hợp với audio. Renderer render theo timeline hợp lệ và media source đã chuẩn hóa, cắt clip, chỉnh speed, scale/crop, ghép các đoạn video, xử lý audio và xuất `final_video.mp4`.
 
 Mục tiêu chính:
 
@@ -28,32 +28,18 @@ Mục tiêu chính:
 Stage này nằm sau Review UI và trước Evaluation:
 
 ```text
-Review UI
-        |
-        |-- updated timeline.json
-        |
-Input Processor
-        |
-        |-- media_metadata.json
-        |-- normalized video files
-        |-- normalized audio file
-        |
-Video Analyzer
-        |
-        |-- clip_metadata.json
-        |
-User/System
-        |
-        |-- render_config.json
-        |
-        v
-Renderer
-        |
-        |-- final_video.mp4
-        |-- render_log.json
-        |
-        v
-Evaluation
+Review UI       -- timeline.json (đã cập nhật) --\
+Input Processor -- media_metadata.json ---------\
+Input Processor -- normalized video files ------\
+Input Processor -- normalized audio file -------+--> Renderer
+Video Analyzer  -- clip_metadata.json ----------/
+User/System     -- render_config.json (optional)/
+                                                   |
+                                                   |-- final_video.mp4
+                                                   |-- render_log.json
+                                                   |
+                                                   v
+                                                Evaluation
 ```
 
 Renderer là module cuối cùng tạo artifact video. Các module trước có thể tạo dữ liệu chưa hoàn hảo, nhưng Renderer chỉ nên render khi timeline đạt điều kiện kỹ thuật tối thiểu.
@@ -113,18 +99,15 @@ Renderer đọc:
 data/intermediate/timeline.json
 data/intermediate/media_metadata.json
 data/intermediate/clip_metadata.json
-data/intermediate/render_config.json
-data/normalized/*.mp4
-data/normalized/*.wav
+data/intermediate/render_config.json (optional)
 ```
 
-Trong đó:
+Media thực tế:
 
-* `timeline.json` là input bắt buộc và là nguồn quyết định bản dựng.
-* `media_metadata.json` dùng để lấy audio thuyết minh và resolve normalized media nếu cần.
-* `clip_metadata.json` dùng để validate `clip_start`, `clip_end`, `clip_id`, `video_id`.
-* `render_config.json` là optional nếu muốn tách config render khỏi `timeline.render_settings`.
-* Normalized video/audio files là media source thực tế.
+```text
+timeline.items[].visual_items[].source_path   (video)
+media_metadata.audio.normalized_path            (voice-over, hoặc render_config / CLI — xem Stage 8)
+```
 
 ### 4.2. Input bắt buộc tối thiểu
 
@@ -132,7 +115,7 @@ MVP Renderer có thể chạy với tối thiểu:
 
 ```text
 timeline.json
-normalized video files referenced by timeline.visual_items[].source_path
+normalized video files referenced by timeline.items[].visual_items[].source_path
 normalized voice-over audio file
 ```
 
@@ -220,6 +203,8 @@ data/intermediate/render_log.json
 
 `render_log.json` dùng để debug quá trình render.
 
+**Mẫu chuẩn:** `docs/samples/render_log_sample.json`.
+
 Ví dụ:
 
 ```json
@@ -230,7 +215,7 @@ Ví dụ:
   "finished_at": "2026-06-11T10:42:30Z",
   "status": "success",
   "output_path": "data/final/final_video.mp4",
-  "duration": 92.7,
+  "duration": 16.0,
   "render_time": 150.0,
   "warnings": [],
   "errors": []
@@ -260,7 +245,7 @@ data/temp/render_segments/*.mp4
 data/temp/render_lists/*.txt
 ```
 
-File tạm không thuộc Data Contract chính.
+File tạm dùng nội bộ khi render.
 
 Quy tắc:
 
@@ -273,6 +258,8 @@ Quy tắc:
 ### 6.1. Nguồn cấu hình
 
 Trong MVP, `timeline.render_settings` là nguồn chính.
+
+**Mẫu chuẩn:** `docs/samples/render_config_sample.json` (optional).
 
 Nếu có `render_config.json`, Renderer có thể dùng để override hoặc bổ sung:
 
@@ -868,7 +855,7 @@ Ví dụ mở rộng:
   "finished_at": "2026-06-11T10:42:30Z",
   "status": "success",
   "output_path": "data/final/final_video.mp4",
-  "duration": 92.7,
+  "duration": 16.0,
   "render_time": 150.0,
   "settings": {
     "width": 1920,
@@ -879,8 +866,8 @@ Ví dụ mở rộng:
     "keep_original_audio": false
   },
   "summary": {
-    "timeline_items": 18,
-    "visual_items": 22,
+    "timeline_items": 3,
+    "visual_items": 4,
     "warnings_count": 1,
     "errors_count": 0
   },

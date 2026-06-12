@@ -17,7 +17,7 @@ Mục tiêu chính:
 * Trích keyframe đại diện cho mỗi clip.
 * Tính quality score cơ bản cho clip và keyframe.
 * Sinh `clip_id` và `keyframe_id` ổn định.
-* Xuất `clip_metadata.json` đúng Data Contract đã chốt.
+* Xuất `clip_metadata.json` đúng Data Contract hiện hành.
 * Xuất ảnh keyframe vào thư mục thống nhất.
 * Xuất log phụ để debug quá trình phân tích video nếu cần.
 
@@ -39,11 +39,11 @@ Video Analyzer
         |-- video_analysis_log.json
         |
         |--> Embedding Indexer
-        |--> Matching Engine
-        |--> Timeline Planner
-        |--> Review UI
-        |--> Renderer
-        |--> Evaluation
+        |--> Matching Engine (later, after Embedding Indexer)
+        |--> Timeline Planner (later, after Matching Engine)
+        |--> Review UI (later, after Timeline Planner)
+        |--> Renderer (later, after timeline is ready)
+        |--> Evaluation (later)
 ```
 
 Video Analyzer không cần đọc audio thuyết minh. Stage này chỉ cần video đã chuẩn hóa và metadata liên quan đến video.
@@ -95,15 +95,15 @@ Video Analyzer đọc:
 
 ```text
 data/intermediate/media_metadata.json
-data/normalized/video_01.mp4
-data/normalized/video_02.mp4
 ```
 
-Trong đó, đường dẫn video phải lấy từ:
+Video paths thực tế lấy từ:
 
 ```text
 media_metadata.json -> videos[*].normalized_path
 ```
+
+(Ví dụ sample: `data/normalized/video_01.mp4`, `data/normalized/video_02.mp4`.)
 
 Không hard-code đường dẫn video trong module.
 
@@ -527,9 +527,11 @@ Có thể chia thành:
 
 ```text
 v01_c003: 24.0s -> 30.0s
-v01_c004: 30.0s -> 36.0s
-v01_c005: 36.0s -> 42.0s
+v01_c010: 30.0s -> 36.0s
+v01_c011: 36.0s -> 42.0s
 ```
+
+(Ví dụ logic chia clip; timestamp thật xem `docs/samples/clip_metadata_sample.json`.)
 
 ### 9.8. Bước 8 - Trích keyframe
 
@@ -551,13 +553,14 @@ Quy tắc timestamp keyframe:
 * Nếu clip quá ngắn, có thể chỉ trích 1 keyframe ở giữa.
 * Keyframe timestamp phải nằm trong `[clip.start, clip.end]`.
 
-Output keyframe:
+Output keyframe (ví dụ `v01_c003`; mẫu chuẩn có `k01`, `k02` — xem `clip_metadata_sample.json`):
 
 ```text
 data/keyframes/v01_c003_k01.jpg
 data/keyframes/v01_c003_k02.jpg
-data/keyframes/v01_c003_k03.jpg
 ```
+
+MVP mục tiêu 3 keyframe (`start` / `middle` / `end`) khi clip đủ dài; clip ngắn có thể chỉ 1–2 keyframe.
 
 Path trong JSON phải là relative path.
 
@@ -862,6 +865,10 @@ Nếu `clip_metadata.json` và `video_analysis_log.json` có thông tin mâu thu
 
 ## 14. Ví dụ `clip_metadata.json`
 
+**Mẫu chuẩn:** `docs/samples/clip_metadata_sample.json`.
+
+Ví dụ rút gọn một clip (sample có thêm `v01_c004`, `v01_c005`, `v02_c001`, ...):
+
 ```json
 {
   "schema_version": "1.0",
@@ -890,13 +897,6 @@ Nếu `clip_metadata.json` và `video_analysis_log.json` có thông tin mâu thu
           "position": "middle",
           "path": "data/keyframes/v01_c003_k02.jpg",
           "quality_score": 0.83
-        },
-        {
-          "keyframe_id": "v01_c003_k03",
-          "timestamp": 30.9,
-          "position": "end",
-          "path": "data/keyframes/v01_c003_k03.jpg",
-          "quality_score": 0.79
         }
       ],
       "quality": {
@@ -908,7 +908,7 @@ Nếu `clip_metadata.json` và `video_analysis_log.json` có thông tin mâu thu
       },
       "quality_score": 0.78,
       "content_tags": ["entrance", "outdoor", "people"],
-      "caption": "Cảnh cổng vào khu tham quan với nhiều người đi qua.",
+      "caption": "Main entrance area with people passing by.",
       "status": "usable"
     }
   ]
@@ -1013,9 +1013,9 @@ Evaluation có thể dùng `clip_metadata.json` để:
 * Tính repetition rate theo `clip_id`.
 * Phân tích matching quality theo `quality_score`.
 
-## 16. Điều kiện handoff sang stage sau
+## 16. Điều kiện handoff output
 
-Stage 3 được phép bàn giao cho Embedding Indexer, Matching Engine, Timeline Planner và Review UI khi thỏa các điều kiện sau:
+Stage 3 được phép bàn giao `clip_metadata.json` cho Embedding Indexer; các module về sau như Matching Engine, Timeline Planner và Review UI có thể dùng cùng output này khi thỏa các điều kiện sau:
 
 ```text
 clip_metadata.json parse được
@@ -1135,7 +1135,7 @@ Vai trò từng file:
 | `keyframe_extractor.py` | Trích keyframe image files |
 | `quality_scorer.py` | Tính quality score cho keyframe/clip |
 | `clip_metadata_writer.py` | Tạo và ghi `clip_metadata.json` |
-| `validator.py` | Kiểm tra input và output theo quy tắc đã chốt |
+| `validator.py` | Kiểm tra input và output theo quy tắc hiện hành |
 
 Nếu nhóm dùng ngôn ngữ hoặc framework khác, vẫn cần giữ nguyên trách nhiệm logic tương đương.
 
@@ -1302,7 +1302,7 @@ Module Video Analyzer được xem là đạt yêu cầu MVP khi:
 3. Chạy được với video có `status = ready` hoặc `warning`.
 4. Bỏ qua đúng video có `status = error`.
 5. Tạo được clip candidate từ video nguồn.
-6. Tạo `clip_metadata.json` đúng schema đã chốt.
+6. Tạo `clip_metadata.json` đúng schema hiện hành.
 7. Mỗi clip có `clip_id`, `video_id`, `start`, `end`, `duration`, `keyframes`, `quality_score`.
 8. Tất cả thời gian dùng giây.
 9. Clip và keyframe timestamp hợp lệ.
@@ -1353,7 +1353,7 @@ Trước khi bàn giao, người phụ trách Stage 3 cần tự kiểm tra:
 [ ] Không hard-code path cá nhân
 [ ] Có quy tắc --overwrite hoặc cơ chế tương đương khi chạy lại
 [ ] Có test với video mẫu ngắn
-[ ] Output có thể đưa cho Embedding Indexer, Matching Engine, Timeline Planner và Review UI chạy tiếp
+[ ] Output có thể đưa cho Embedding Indexer chạy tiếp; Matching Engine, Timeline Planner và Review UI có thể dùng ở các bước sau
 ```
 
 ## 24. Ghi chú triển khai MVP

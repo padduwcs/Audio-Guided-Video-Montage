@@ -1,0 +1,233 @@
+{
+  "schema_version": "1.0",
+  "project_id": "demo_01",
+  "top_k": 5,
+  "created_at": "2026-06-11T10:20:00Z",
+  "items": [
+    {
+      "candidate_set_id": "candidates_a001",
+      "audio_segment_id": "a001",
+      "selected_clip_id": "v01_c003",
+      "confidence": "high",
+      "reason": "Clip rank 1 matches the entrance segment and has usable visual quality.",
+      "fallback_used": false,
+      "candidates": [
+        {
+          "rank": 1,
+          "clip_id": "v01_c003",
+          "final_score": 0.84,
+          "semantic_score": 0.88,
+          "visual_quality_score": 0.78,
+          "duration_fit_score": 0.80,
+          "continuity_score": 0.70,
+          "diversity_score": 0.75,
+          "repetition_penalty": 0.0,
+          "bad_clip_penalty": 0.0,
+          "reason": "Good semantic match and usable duration."
+        },
+        {
+          "rank": 2,
+          "clip_id": "v02_c001",
+          "final_score": 0.70,
+          "semantic_score": 0.62,
+          "visual_quality_score": 0.82,
+          "duration_fit_score": 0.76,
+          "continuity_score": 0.64,
+          "diversity_score": 0.80,
+          "repetition_penalty": 0.0,
+          "bad_clip_penalty": 0.0,
+          "reason": "Wide indoor shot can work as a fallback establishing scene."
+        },
+        {
+          "rank": 3,
+          "clip_id": "v01_c004",
+          "final_score": 0.62,
+          "semantic_score": 0.55,
+          "visual_quality_score": 0.74,
+          "duration_fit_score": 0.73,
+          "continuity_score": 0.60,
+          "diversity_score": 0.72,
+          "repetition_penalty": 0.0,
+          "bad_clip_penalty": 0.0,
+          "reason": "Related indoor scene but less specific than the entrance clip."
+        },
+        {
+          "rank": 4,
+          "clip_id": "v01_c005",
+          "final_score": 0.51,
+          "semantic_score": 0.43,
+          "visual_quality_score": 0.69,
+          "duration_fit_score": 0.86,
+          "continuity_score": 0.58,
+          "diversity_score": 0.70,
+          "repetition_penalty": 0.0,
+          "bad_clip_penalty": 0.0,
+          "reason": "Shows visitors but does not clearly show the entrance."
+        },
+        {
+          "rank": 5,
+          "clip_id": "v02_c002",
+          "final_score": 0.47,
+          "semantic_score": 0.40,
+          "visual_quality_score": 0.72,
+          "duration_fit_score": 0.69,
+          "continuity_score": 0.52,
+          "diversity_score": 0.78,
+          "repetition_penalty": 0.0,
+          "bad_clip_penalty": 0.0,
+          "reason": "Usable people movement clip if no entrance shot is available."
+        }
+      ]
+    },
+    {
+      "candidate_set_id": "candidates_a002",
+      "audio_segment_id": "a002",
+      "selected_clip_id": "v02_c001",
+      "confidence": "medium",
+      "reason": "Top clips show exhibition content, but the exact artifact mentioned is not guaranteed.",
+      "fallback_used": false,
+      "candidates": [
+        {
+          "rank": 1,
+          "clip_id": "v02_c001",
+          "final_score": 0.79,
+          "semantic_score": 0.78,
+          "visual_quality_score": 0.82,
+          "duration_fit_score": 0.80,
+          "continuity_score": 0.66,
+          "diversity_score": 0.82,
+          "repetition_penalty": 0.0,
+          "bad_clip_penalty": 0.0,
+          "reason": "Wide shot of exhibition room fits the segment."
+        },
+        {
+          "rank": 2,
+          "clip_id": "v01_c004",
+          "final_score": 0.76,
+          "semantic_score": 0.81,
+          "visual_quality_score": 0.74,
+          "duration_fit_score": 0.82,
+          "continuity_score": 0.65,
+          "diversity_score": 0.74,
+          "repetition_penalty": 0.0,
+          "bad_clip_penalty": 0.0,
+          "reason": "Artifact scene is semantically close but slightly lower quality."
+        },
+        {
+          "rank": 3,
+          "clip_id": "v01_c003",
+          "final_score": 0.58,
+          "semantic_score": 0.48,
+          "visual_quality_score": 0.78,
+          "duration_fit_score": 0.76,
+          "continuity_score": 0.60,
+          "diversity_score": 0.70,
+          "repetition_penalty": 0.0,
+          "bad_clip_penalty": 0.0,
+          "reason": "Entrance scene can work as context but not as direct exhibition content."
+        },
+        {
+          "rank": 4,
+          "clip_id": "v02_c002",
+          "final_score": 0.54,
+          "semantic_score": 0.46,
+          "visual_quality_score": 0.72,
+          "duration_fit_score": 0.75,
+          "continuity_score": 0.57,
+          "diversity_score": 0.76,
+          "repetition_penalty": 0.0,
+          "bad_clip_penalty": 0.0,
+          "reason": "Experience area is related but less direct."
+        },
+        {
+          "rank": 5,
+          "clip_id": "v02_c003",
+          "final_score": 0.39,
+          "semantic_score": 0.38,
+          "visual_quality_score": 0.55,
+          "duration_fit_score": 0.70,
+          "continuity_score": 0.50,
+          "diversity_score": 0.68,
+          "repetition_penalty": 0.0,
+          "bad_clip_penalty": 0.12,
+          "reason": "Low-quality crowd motion should be used only if better clips fail."
+        }
+      ]
+    },
+    {
+      "candidate_set_id": "candidates_a003",
+      "audio_segment_id": "a003",
+      "selected_clip_id": "v01_c005",
+      "confidence": "low",
+      "reason": "The segment is action-oriented and available footage only partially matches the movement.",
+      "fallback_used": false,
+      "candidates": [
+        {
+          "rank": 1,
+          "clip_id": "v01_c005",
+          "final_score": 0.63,
+          "semantic_score": 0.66,
+          "visual_quality_score": 0.69,
+          "duration_fit_score": 0.88,
+          "continuity_score": 0.57,
+          "diversity_score": 0.74,
+          "repetition_penalty": 0.0,
+          "bad_clip_penalty": 0.0,
+          "reason": "Shows visitors walking, but the destination is not clear."
+        },
+        {
+          "rank": 2,
+          "clip_id": "v02_c002",
+          "final_score": 0.60,
+          "semantic_score": 0.63,
+          "visual_quality_score": 0.72,
+          "duration_fit_score": 0.70,
+          "continuity_score": 0.55,
+          "diversity_score": 0.76,
+          "repetition_penalty": 0.0,
+          "bad_clip_penalty": 0.0,
+          "reason": "Shows visitors entering an experience area."
+        },
+        {
+          "rank": 3,
+          "clip_id": "v02_c003",
+          "final_score": 0.45,
+          "semantic_score": 0.50,
+          "visual_quality_score": 0.55,
+          "duration_fit_score": 0.86,
+          "continuity_score": 0.45,
+          "diversity_score": 0.70,
+          "repetition_penalty": 0.0,
+          "bad_clip_penalty": 0.14,
+          "reason": "Contains motion but visual quality is low."
+        },
+        {
+          "rank": 4,
+          "clip_id": "v02_c001",
+          "final_score": 0.42,
+          "semantic_score": 0.36,
+          "visual_quality_score": 0.82,
+          "duration_fit_score": 0.80,
+          "continuity_score": 0.54,
+          "diversity_score": 0.80,
+          "repetition_penalty": 0.08,
+          "bad_clip_penalty": 0.0,
+          "reason": "Good quality but static exhibition context."
+        },
+        {
+          "rank": 5,
+          "clip_id": "v01_c004",
+          "final_score": 0.40,
+          "semantic_score": 0.34,
+          "visual_quality_score": 0.74,
+          "duration_fit_score": 0.82,
+          "continuity_score": 0.52,
+          "diversity_score": 0.70,
+          "repetition_penalty": 0.0,
+          "bad_clip_penalty": 0.0,
+          "reason": "Exhibition artifact shot is less suitable for movement."
+        }
+      ]
+    }
+  ]
+}

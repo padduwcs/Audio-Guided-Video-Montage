@@ -74,7 +74,7 @@ Ví dụ:
 ```json
 {
   "semantic_score": 0.84,
-  "quality_score": 0.76,
+  "visual_quality_score": 0.76,
   "final_score": 0.81
 }
 ```
@@ -144,16 +144,24 @@ Trong tài liệu này:
 
 Nếu module chưa tính được field optional thì có thể bỏ qua hoặc để `null`.
 
+Một số field optional (ví dụ `clip_metadata.items[].status`, `source_path`) bắt buộc trong MVP — chi tiết ở stage spec tương ứng.
+
+### 2.8. Mẫu dữ liệu và thứ tự ưu tiên
+
+Mẫu JSON tích hợp: `docs/samples/*_sample.json`. Kiểm tra cross-file: `python scripts/validate_json.py`.
+
+Khi tài liệu mâu thuẫn, ưu tiên: **Data Contract → schemas → samples → stage spec → README module**. `docs/analysis.md` tham khảo ý tưởng, không phải contract triển khai.
+
 ## 3. Tổng quan các file dữ liệu
 
 | File                       | Module tạo                   | Module dùng                                 |
 | -------------------------- | ---------------------------- | ------------------------------------------- |
-| `media_metadata.json`      | Input Processor              | Audio, Video, Renderer, Integration         |
-| `audio_segments.json`      | Audio Analyzer               | Matching, Timeline, UI, Evaluation          |
-| `clip_metadata.json`       | Video Analyzer               | Embedding, Matching, Timeline, UI, Renderer |
-| `embedding_metadata.json`  | Embedding Indexer            | Matching                                    |
+| `media_metadata.json`      | Input Processor              | Audio, Video, Timeline, UI, Renderer, Integration |
+| `audio_segments.json`      | Audio Analyzer               | Embedding, Matching, Timeline, UI, Evaluation |
+| `clip_metadata.json`       | Video Analyzer               | Embedding, Matching, Timeline, UI, Renderer, Evaluation |
+| `embedding_metadata.json`  | Embedding Indexer            | Matching, Evaluation (optional)             |
 | `matching_candidates.json` | Matching Engine              | Timeline, UI, Evaluation                    |
-| `timeline.json`            | Timeline Planner / Review UI | Renderer, Evaluation                        |
+| `timeline.json`            | Timeline Planner / Review UI | UI, Renderer, Evaluation                    |
 | `render_config.json`       | User/System                  | Renderer                                    |
 | `render_log.json`          | Renderer                     | Integration, Evaluation                     |
 | `evaluation_report.json`   | Evaluation                   | Report/Demo                                 |
@@ -230,7 +238,11 @@ Required fields:
 | `channels`        | integer | Số kênh audio                     |
 | `status`          | string  | Trạng thái xử lý                  |
 
+`audio.duration` phải khớp (≈) tổng thời lượng các segment trong `audio_segments.json` và tổng timeline output. Renderer dùng giá trị này để kiểm tra video cuối.
+
 ### 4.5. Ví dụ
+
+**Mẫu chuẩn:** `docs/samples/media_metadata_sample.json`.
 
 ```json
 {
@@ -249,13 +261,25 @@ Required fields:
       "has_audio": true,
       "codec": "h264",
       "status": "ready"
+    },
+    {
+      "video_id": "video_02",
+      "original_path": "data/raw/video_02.mp4",
+      "normalized_path": "data/normalized/video_02.mp4",
+      "duration": 88.0,
+      "fps": 30,
+      "width": 1920,
+      "height": 1080,
+      "has_audio": true,
+      "codec": "h264",
+      "status": "ready"
     }
   ],
   "audio": {
     "audio_id": "audio_01",
     "original_path": "data/raw/voiceover.mp3",
     "normalized_path": "data/normalized/voiceover.wav",
-    "duration": 92.7,
+    "duration": 16.0,
     "sample_rate": 16000,
     "channels": 1,
     "status": "ready"
@@ -320,6 +344,8 @@ unknown
 
 ### 5.4. Ví dụ
 
+**Mẫu chuẩn:** `docs/samples/audio_segments_sample.json`. Ví dụ rút gọn một segment:
+
 ```json
 {
   "schema_version": "1.0",
@@ -333,10 +359,10 @@ unknown
       "start": 0.0,
       "end": 5.2,
       "duration": 5.2,
-      "text": "Đây là khu vực cổng chính của khu tham quan.",
+      "text": "Day la khu vuc cong chinh cua khu tham quan.",
       "query": "khu vực cổng chính khu tham quan",
       "translated_query": "main entrance of tourist area",
-      "keywords": ["cổng chính", "khu tham quan"],
+      "keywords": ["cong chinh", "khu tham quan"],
       "segment_type": "description",
       "asr_confidence": 0.91,
       "needs_review": false
@@ -390,6 +416,8 @@ Optional fields:
 | `status`       | string        | Trạng thái clip                    |
 | `notes`        | string        | Ghi chú                            |
 
+Trong MVP, Video Analyzer **nên ghi** `status` và `source_path` cho mọi clip (handoff tích hợp); sample canonical có đủ hai field này.
+
 Allowed `status`:
 
 ```text
@@ -438,6 +466,8 @@ Optional fields:
 | `quality_score`    | number/null | Điểm tổng hợp   |
 
 ### 6.6. Ví dụ
+
+**Mẫu chuẩn:** `docs/samples/clip_metadata_sample.json`.
 
 ```json
 {
@@ -549,6 +579,8 @@ Required fields:
 
 ### 7.6. Ví dụ
 
+**Mẫu chuẩn:** `docs/samples/embedding_metadata_sample.json`.
+
 ```json
 {
   "schema_version": "1.0",
@@ -641,11 +673,13 @@ Optional fields:
 | `duration_fit_score`   | number/null | Điểm khớp thời lượng |
 | `continuity_score`     | number/null | Điểm nối cảnh        |
 | `diversity_score`      | number/null | Điểm đa dạng         |
-| `repetition_penalty`   | number/null | Điểm phạt lặp        |
-| `bad_clip_penalty`     | number/null | Điểm phạt clip xấu   |
+| `repetition_penalty`   | number/null | Mức phạt lặp (trừ khỏi base score khi tính `final_score`) |
+| `bad_clip_penalty`     | number/null | Mức phạt clip xấu (trừ khỏi base score khi tính `final_score`) |
 | `reason`               | string      | Lý do đề xuất        |
 
 ### 8.5. Ví dụ
+
+**Mẫu chuẩn:** `docs/samples/matching_candidates_sample.json`.
 
 ```json
 {
@@ -689,7 +723,13 @@ Lưu bản dựng video ở dạng dữ liệu.
 
 Đây là file trung tâm của hệ thống.
 
-Timeline Planner tạo bản đầu tiên. Review UI có thể cập nhật file này. Renderer đọc file này để xuất video cuối.
+Timeline Planner tạo bản đầu tiên. Review UI cập nhật **cùng file** `timeline.json` (path mặc định `data/intermediate/timeline.json`), đồng thời cập nhật `updated_at`. Renderer đọc file này để xuất video cuối.
+
+Quy ước path:
+
+* MVP mặc định: một file `timeline.json` duy nhất, Timeline Planner tạo lần đầu, Review UI ghi đè sau khi người dùng chỉnh.
+* MVP ghi đè `data/intermediate/timeline.json`. Có thể xuất `timeline_updated.json` làm backup; integration phải truyền đúng path cho Renderer.
+* Thuật ngữ "updated timeline" trong sơ đồ chỉ mô tả nội dung sau review, không phải tên file bắt buộc.
 
 ### 9.2. Cấu trúc
 
@@ -758,7 +798,7 @@ Required fields:
 | `audio_start`    | number        | Bắt đầu audio segment                    |
 | `audio_end`      | number        | Kết thúc audio segment                   |
 | `duration`       | number        | Thời lượng segment                       |
-| `text`           | string        | Transcript                               |
+| `text`           | string        | Transcript (phải khớp chính xác `audio_segments.items[].text` cùng `segment_id`) |
 | `confidence`     | string        | Confidence của lựa chọn hình             |
 | `score`          | number/null   | Điểm tổng hợp                            |
 | `visual_items`   | array[object] | Danh sách hình ảnh/clip dùng cho segment |
@@ -773,7 +813,12 @@ Optional fields:
 | `user_edited`   | boolean | Người dùng đã chỉnh chưa         |
 | `notes`         | string  | Ghi chú                          |
 
-### 9.5. Visual item
+Quy tắc đồng bộ với `audio_segments.json` (cùng `segment_id`):
+
+* `text` phải copy chính xác từ segment audio (Timeline Planner không tự paraphrase).
+* `audio_start` = `start`, `audio_end` = `end`, `duration` = `end - start`.
+* Segment trên timeline phải cover liên tục toàn bộ voice-over, không bỏ khoảng trống giữa các segment.
+* `visual_items` có thể là `[]` khi Timeline Planner không chọn được clip (fallback lỗi); khi đó thường `needs_review = true`. Renderer MVP **fail** nếu gặp segment có `visual_items = []` — Review UI cần chọn clip trước khi render.
 
 Required fields:
 
@@ -824,6 +869,8 @@ none
 
 ### 9.6. Ví dụ
 
+**Mẫu chuẩn:** `docs/samples/timeline_sample.json`.
+
 ```json
 {
   "schema_version": "1.0",
@@ -847,7 +894,7 @@ none
       "audio_start": 0.0,
       "audio_end": 5.2,
       "duration": 5.2,
-      "text": "Đây là khu vực cổng chính của khu tham quan.",
+      "text": "Day la khu vuc cong chinh cua khu tham quan.",
       "confidence": "high",
       "score": 0.84,
       "needs_review": false,
@@ -888,6 +935,8 @@ Trong MVP, có thể đặt render settings trực tiếp trong `timeline.json`.
 
 ### 10.2. Ví dụ
 
+**Mẫu chuẩn:** `docs/samples/render_config_sample.json`.
+
 ```json
 {
   "schema_version": "1.0",
@@ -921,6 +970,8 @@ Dùng để debug khi render lỗi.
 
 ### 11.2. Ví dụ
 
+**Mẫu chuẩn:** `docs/samples/render_log_sample.json`.
+
 ```json
 {
   "schema_version": "1.0",
@@ -929,7 +980,7 @@ Dùng để debug khi render lỗi.
   "finished_at": "2026-06-11T10:42:30Z",
   "status": "success",
   "output_path": "data/final/final_video.mp4",
-  "duration": 92.7,
+  "duration": 16.0,
   "render_time": 150.0,
   "warnings": [],
   "errors": []
@@ -1072,6 +1123,7 @@ Cần đảm bảo:
 Cần đảm bảo:
 
 * Mỗi `segment_id` tồn tại trong `audio_segments.json`.
+* `text` khớp **chính xác** với `audio_segments.items[].text` cùng `segment_id`.
 * `audio_start`, `audio_end` khớp với audio segment.
 * Mỗi `visual_items[].clip_id` tồn tại trong `clip_metadata.json`.
 * `clip_start`, `clip_end` nằm trong khoảng của video nguồn.
@@ -1080,6 +1132,7 @@ Cần đảm bảo:
 * Tổng timeline gần bằng duration audio.
 * `source_path` tồn tại.
 * `transition` thuộc danh sách cho phép.
+* Segment có `visual_items = []` được coi là chưa render-ready; Renderer MVP phải báo lỗi thay vì bỏ qua im lặng.
 
 ## 15. Quy tắc khi UI chỉnh timeline
 
@@ -1094,6 +1147,8 @@ UI được phép chỉnh:
 * `user_edited`.
 * `locked`.
 * `updated_at`.
+
+Review UI ghi đè `data/intermediate/timeline.json`. Backup optional: `timeline_updated.json`.
 
 UI không nên chỉnh:
 
@@ -1147,15 +1202,15 @@ Trong MVP đầu tiên, bắt buộc cần ổn định các file sau:
 media_metadata.json
 audio_segments.json
 clip_metadata.json
+embedding_metadata.json
 matching_candidates.json
 timeline.json
+render_log.json
 ```
 
 Các file có thể làm sau:
 
 ```text
-embedding_metadata.json
-render_log.json
 evaluation_report.json
 ```
 

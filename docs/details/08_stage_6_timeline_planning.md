@@ -21,7 +21,7 @@ Mục tiêu chính:
 * Gán `timeline_start`, `timeline_end`, `clip_start`, `clip_end`.
 * Gán `speed`, `transition`, `crop_mode`, `volume`.
 * Đánh dấu `needs_review`, `fallback_used`, `confidence`.
-* Tạo `timeline.json` đúng Data Contract đã chốt.
+* Tạo `timeline.json` đúng Data Contract hiện hành.
 * Tạo log phụ để debug quyết định lập timeline nếu cần.
 
 ## 2. Vị trí trong pipeline
@@ -29,31 +29,17 @@ Mục tiêu chính:
 Stage này nằm sau Matching Engine và trước Review UI:
 
 ```text
-Audio Analyzer
-        |
-        |-- audio_segments.json
-        |
-Video Analyzer
-        |
-        |-- clip_metadata.json
-        |
-Matching Engine
-        |
-        |-- matching_candidates.json
-        |
-Input Processor
-        |
-        |-- media_metadata.json
-        |
-        v
-Timeline Planner
-        |
-        |-- timeline.json
-        |-- timeline_planning_log.json
-        |
-        |--> Review UI
-        |--> Renderer
-        |--> Evaluation
+Audio Analyzer  -- audio_segments.json ------\
+Video Analyzer  -- clip_metadata.json -------\
+Matching Engine -- matching_candidates.json --+--> Timeline Planner
+Input Processor -- media_metadata.json ------/
+                                                |
+                                                |-- timeline.json
+                                                |-- timeline_planning_log.json
+                                                |
+                                                |--> Review UI
+                                                |--> Renderer (if timeline is renderer-ready)
+                                                |--> Evaluation (later)
 ```
 
 Timeline Planner không quyết định lại clip nào phù hợp về mặt ngữ nghĩa. Quyết định ngữ nghĩa nằm ở Matching Engine. Timeline Planner chỉ biến candidate đã chọn thành timeline có thể dựng được.
@@ -935,7 +921,7 @@ Nếu video không có audio gốc:
 
 ## 12. Output phụ `timeline_planning_log.json`
 
-File log phụ không thuộc Data Contract chính, nhưng nên có để debug tích hợp.
+Log debug; khuyến nghị có khi tích hợp.
 
 Đường dẫn đề xuất:
 
@@ -985,110 +971,48 @@ Không nên đưa vector embedding, transcript dài hoặc dữ liệu nặng v�
 
 ## 13. Ví dụ `timeline.json`
 
-Ví dụ một timeline có hai segment, trong đó segment thứ hai dùng hai visual items:
+**Mẫu chuẩn:** `docs/samples/timeline_sample.json`. Segment `a003` minh họa một audio segment với nhiều visual items.
 
 ```json
 {
-  "schema_version": "1.0",
-  "project_id": "demo_01",
-  "audio_id": "audio_01",
-  "created_at": "2026-06-11T10:25:00Z",
-  "updated_at": "2026-06-11T10:25:00Z",
-  "render_settings": {
-    "width": 1920,
-    "height": 1080,
-    "fps": 30,
-    "format": "mp4",
-    "default_transition": "cut",
-    "crop_mode": "center_crop",
-    "keep_original_audio": false,
-    "original_audio_volume": 0.0
-  },
-  "items": [
+  "segment_id": "a003",
+  "audio_start": 10.8,
+  "audio_end": 16.0,
+  "duration": 5.2,
+  "text": "Khach tham quan di chuyen sang khu trai nghiem tiep theo.",
+  "confidence": "low",
+  "score": 0.63,
+  "candidates_ref": "candidates_a003",
+  "visual_items": [
     {
-      "segment_id": "a001",
-      "audio_start": 0.0,
-      "audio_end": 5.2,
-      "duration": 5.2,
-      "text": "Đây là khu vực cổng chính của khu tham quan.",
-      "confidence": "high",
-      "score": 0.84,
-      "needs_review": false,
-      "fallback_used": false,
-      "user_edited": false,
-      "candidates_ref": "candidates_a001",
-      "visual_items": [
-        {
-          "timeline_item_id": "t001_i01",
-          "clip_id": "v01_c003",
-          "video_id": "video_01",
-          "source_path": "data/normalized/video_01.mp4",
-          "clip_start": 24.5,
-          "clip_end": 29.7,
-          "timeline_start": 0.0,
-          "timeline_end": 5.2,
-          "speed": 1.0,
-          "transition": "cut",
-          "effect": null,
-          "crop_mode": "center_crop",
-          "volume": 0.0,
-          "source_candidate_rank": 1,
-          "locked": false
-        }
-      ]
+      "timeline_item_id": "t003_i01",
+      "clip_id": "v01_c005",
+      "clip_start": 55.0,
+      "clip_end": 57.6,
+      "timeline_start": 10.8,
+      "timeline_end": 13.4,
+      "speed": 1.0,
+      "source_candidate_rank": 1
     },
     {
-      "segment_id": "a002",
-      "audio_start": 5.2,
-      "audio_end": 12.0,
-      "duration": 6.8,
-      "text": "Tiếp theo là khu vực sân trung tâm và lối đi chính.",
-      "confidence": "medium",
-      "score": 0.69,
-      "needs_review": false,
-      "fallback_used": false,
-      "user_edited": false,
-      "candidates_ref": "candidates_a002",
-      "visual_items": [
-        {
-          "timeline_item_id": "t002_i01",
-          "clip_id": "v01_c006",
-          "video_id": "video_01",
-          "source_path": "data/normalized/video_01.mp4",
-          "clip_start": 42.0,
-          "clip_end": 45.5,
-          "timeline_start": 5.2,
-          "timeline_end": 8.7,
-          "speed": 1.0,
-          "transition": "cut",
-          "effect": null,
-          "crop_mode": "center_crop",
-          "volume": 0.0,
-          "source_candidate_rank": 1,
-          "locked": false
-        },
-        {
-          "timeline_item_id": "t002_i02",
-          "clip_id": "v02_c004",
-          "video_id": "video_02",
-          "source_path": "data/normalized/video_02.mp4",
-          "clip_start": 10.0,
-          "clip_end": 13.3,
-          "timeline_start": 8.7,
-          "timeline_end": 12.0,
-          "speed": 1.0,
-          "transition": "cut",
-          "effect": null,
-          "crop_mode": "center_crop",
-          "volume": 0.0,
-          "source_candidate_rank": 2,
-          "locked": false
-        }
-      ]
+      "timeline_item_id": "t003_i02",
+      "clip_id": "v02_c002",
+      "clip_start": 20.0,
+      "clip_end": 22.6,
+      "timeline_start": 13.4,
+      "timeline_end": 16.0,
+      "speed": 1.0,
+      "source_candidate_rank": 2
     }
   ]
 }
 ```
+
+Quy tắc bắt buộc khi tạo timeline:
+
+* `text` copy chính xác từ `audio_segments.json` (cùng `segment_id`).
+* Tổng `timeline_end - timeline_start` của các visual item trong segment = `duration` segment.
+* `(clip_end - clip_start) / speed` = `timeline_end - timeline_start` cho từng visual item.
 
 ## 14. Quan hệ với các module khác
 
@@ -1220,7 +1144,7 @@ Nếu còn item có `visual_items = []`, UI vẫn có thể mở, nhưng Rendere
 
 ## 16. Ràng buộc kỹ thuật
 
-### 16.1. Không thay đổi schema đã chốt
+### 16.1. Không thay đổi schema hiện hành
 
 Timeline Planner phải xuất `timeline.json` theo Data Contract hiện tại.
 

@@ -1,0 +1,2 @@
+# Runtime dependencies will be added by each module owner as implementation starts.
+# Keep this file minimal until the MVP stack is confirmed.

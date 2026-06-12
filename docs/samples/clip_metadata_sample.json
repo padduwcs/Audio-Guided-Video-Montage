@@ -1,0 +1,188 @@
+{
+  "schema_version": "1.0",
+  "project_id": "demo_01",
+  "created_at": "2026-06-11T10:10:00Z",
+  "items": [
+    {
+      "clip_id": "v01_c003",
+      "video_id": "video_01",
+      "source_path": "data/normalized/video_01.mp4",
+      "scene_index": 3,
+      "start": 24.5,
+      "end": 31.2,
+      "duration": 6.7,
+      "keyframes": [
+        {
+          "keyframe_id": "v01_c003_k01",
+          "timestamp": 24.8,
+          "position": "start",
+          "path": "data/keyframes/v01_c003_k01.jpg",
+          "quality_score": 0.78
+        },
+        {
+          "keyframe_id": "v01_c003_k02",
+          "timestamp": 27.8,
+          "position": "middle",
+          "path": "data/keyframes/v01_c003_k02.jpg",
+          "quality_score": 0.83
+        }
+      ],
+      "quality": {
+        "blur_score": 0.83,
+        "brightness_score": 0.71,
+        "motion_score": 0.45,
+        "stability_score": 0.76,
+        "quality_score": 0.78
+      },
+      "quality_score": 0.78,
+      "content_tags": ["entrance", "outdoor", "people"],
+      "caption": "Main entrance area with people passing by.",
+      "status": "usable"
+    },
+    {
+      "clip_id": "v01_c004",
+      "video_id": "video_01",
+      "source_path": "data/normalized/video_01.mp4",
+      "scene_index": 4,
+      "start": 40.0,
+      "end": 47.0,
+      "duration": 7.0,
+      "keyframes": [
+        {
+          "keyframe_id": "v01_c004_k01",
+          "timestamp": 43.5,
+          "position": "middle",
+          "path": "data/keyframes/v01_c004_k01.jpg",
+          "quality_score": 0.74
+        }
+      ],
+      "quality": {
+        "blur_score": 0.76,
+        "brightness_score": 0.70,
+        "motion_score": 0.35,
+        "stability_score": 0.80,
+        "quality_score": 0.74
+      },
+      "quality_score": 0.74,
+      "content_tags": ["exhibition", "artifact", "indoor"],
+      "caption": "Indoor exhibition area with visible artifacts.",
+      "status": "usable"
+    },
+    {
+      "clip_id": "v01_c005",
+      "video_id": "video_01",
+      "source_path": "data/normalized/video_01.mp4",
+      "scene_index": 5,
+      "start": 55.0,
+      "end": 61.0,
+      "duration": 6.0,
+      "keyframes": [
+        {
+          "keyframe_id": "v01_c005_k01",
+          "timestamp": 58.0,
+          "position": "middle",
+          "path": "data/keyframes/v01_c005_k01.jpg",
+          "quality_score": 0.69
+        }
+      ],
+      "quality": {
+        "blur_score": 0.70,
+        "brightness_score": 0.68,
+        "motion_score": 0.61,
+        "stability_score": 0.62,
+        "quality_score": 0.69
+      },
+      "quality_score": 0.69,
+      "content_tags": ["visitors", "walking", "hallway"],
+      "caption": "Visitors walking through a hallway.",
+      "status": "usable"
+    },
+    {
+      "clip_id": "v02_c001",
+      "video_id": "video_02",
+      "source_path": "data/normalized/video_02.mp4",
+      "scene_index": 1,
+      "start": 8.0,
+      "end": 15.0,
+      "duration": 7.0,
+      "keyframes": [
+        {
+          "keyframe_id": "v02_c001_k01",
+          "timestamp": 11.5,
+          "position": "middle",
+          "path": "data/keyframes/v02_c001_k01.jpg",
+          "quality_score": 0.82
+        }
+      ],
+      "quality": {
+        "blur_score": 0.84,
+        "brightness_score": 0.78,
+        "motion_score": 0.40,
+        "stability_score": 0.81,
+        "quality_score": 0.82
+      },
+      "quality_score": 0.82,
+      "content_tags": ["exhibition", "wide shot", "indoor"],
+      "caption": "Wide shot of the exhibition room.",
+      "status": "usable"
+    },
+    {
+      "clip_id": "v02_c002",
+      "video_id": "video_02",
+      "source_path": "data/normalized/video_02.mp4",
+      "scene_index": 2,
+      "start": 20.0,
+      "end": 27.5,
+      "duration": 7.5,
+      "keyframes": [
+        {
+          "keyframe_id": "v02_c002_k01",
+          "timestamp": 23.5,
+          "position": "middle",
+          "path": "data/keyframes/v02_c002_k01.jpg",
+          "quality_score": 0.72
+        }
+      ],
+      "quality": {
+        "blur_score": 0.72,
+        "brightness_score": 0.74,
+        "motion_score": 0.58,
+        "stability_score": 0.65,
+        "quality_score": 0.72
+      },
+      "quality_score": 0.72,
+      "content_tags": ["activity", "visitors", "experience area"],
+      "caption": "Visitors entering an experience area.",
+      "status": "usable"
+    },
+    {
+      "clip_id": "v02_c003",
+      "video_id": "video_02",
+      "source_path": "data/normalized/video_02.mp4",
+      "scene_index": 3,
+      "start": 32.0,
+      "end": 36.5,
+      "duration": 4.5,
+      "keyframes": [
+        {
+          "keyframe_id": "v02_c003_k01",
+          "timestamp": 34.0,
+          "position": "middle",
+          "path": "data/keyframes/v02_c003_k01.jpg",
+          "quality_score": 0.55
+        }
+      ],
+      "quality": {
+        "blur_score": 0.48,
+        "brightness_score": 0.63,
+        "motion_score": 0.78,
+        "stability_score": 0.44,
+        "quality_score": 0.55
+      },
+      "quality_score": 0.55,
+      "content_tags": ["crowd", "motion", "indoor"],
+      "caption": "Crowd movement with some camera shake.",
+      "status": "low_quality"
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "schema_version": "1.0",
+  "project_id": "demo_01",
+  "created_at": "2026-06-11T10:00:00Z",
+  "videos": [
+    {
+      "video_id": "video_01",
+      "original_path": "data/raw/video_01.mp4",
+      "normalized_path": "data/normalized/video_01.mp4",
+      "duration": 125.4,
+      "fps": 30,
+      "width": 1920,
+      "height": 1080,
+      "has_audio": true,
+      "codec": "h264",
+      "status": "ready"
+    },
+    {
+      "video_id": "video_02",
+      "original_path": "data/raw/video_02.mp4",
+      "normalized_path": "data/normalized/video_02.mp4",
+      "duration": 88.0,
+      "fps": 30,
+      "width": 1920,
+      "height": 1080,
+      "has_audio": true,
+      "codec": "h264",
+      "status": "ready"
+    }
+  ],
+  "audio": {
+    "audio_id": "audio_01",
+    "original_path": "data/raw/voiceover.mp3",
+    "normalized_path": "data/normalized/voiceover.wav",
+    "duration": 16.0,
+    "sample_rate": 16000,
+    "channels": 1,
+    "status": "ready"
+  }
+}

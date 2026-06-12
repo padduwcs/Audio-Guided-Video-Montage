@@ -10,7 +10,7 @@ Kiến trúc hệ thống cần đảm bảo các mục tiêu sau:
 * Hạn chế phụ thuộc trực tiếp giữa các phần code của từng thành viên.
 * Cho phép thay thế hoặc cải thiện từng module mà không phá vỡ toàn bộ hệ thống.
 * Cho phép UI chỉnh sửa timeline mà không cần chạy lại toàn bộ pipeline.
-* Renderer chỉ cần đọc `timeline.json` để xuất video cuối.
+* Renderer render theo `timeline.json` và media source đã chuẩn hóa để xuất video cuối.
 
 Kiến trúc được thiết kế theo hướng pipeline nhiều bước, trong đó các module trao đổi với nhau thông qua các file dữ liệu trung gian.
 
@@ -21,8 +21,7 @@ Pipeline tổng thể:
 ```text
 Input video/audio
 → Input Processor
-→ Audio Analyzer
-→ Video Analyzer
+→ Audio Analyzer + Video Analyzer
 → Embedding Indexer
 → Matching Engine
 → Timeline Planner
@@ -59,6 +58,7 @@ audio_segments.json             clip_metadata.json
                        │
                        v
               embedding/index files
+              embedding_metadata.json
                        │
                        v
               Matching Engine
@@ -76,7 +76,7 @@ audio_segments.json             clip_metadata.json
                   Review UI
                        │
                        v
-          updated timeline.json
+          timeline.json (cập nhật, cùng path)
                        │
                        v
                    Renderer
@@ -138,7 +138,7 @@ Phần render chỉ gồm:
 * Ghép audio.
 * Xuất video.
 
-Tách như vậy giúp renderer hoạt động ổn định và dễ test bằng `timeline_sample.json`.
+Tách như vậy giúp renderer hoạt động ổn định và dễ test bằng `timeline_sample.json`, `media_metadata_sample.json`, `render_config_sample.json` và media source mẫu.
 
 ### 3.4. Tách UI và renderer
 
@@ -163,8 +163,8 @@ Ví dụ:
 
 * `audio_analyzer/` có thể test bằng một audio ngắn.
 * `video_analyzer/` có thể test bằng một video ngắn.
-* `matching_engine/` có thể test bằng `audio_segments_sample.json` và `clip_metadata_sample.json`.
-* `renderer/` có thể test bằng `timeline_sample.json`.
+* `matching_engine/` có thể test bằng `audio_segments_sample.json`, `clip_metadata_sample.json`, `embedding_metadata_sample.json` và embedding/index sample files.
+* `renderer/` có thể test bằng `timeline_sample.json`, `media_metadata_sample.json`, `render_config_sample.json` và media source mẫu.
 
 ## 4. Các module chính
 
@@ -201,6 +201,8 @@ normalized audio file
 
 * Audio Analyzer.
 * Video Analyzer.
+* Timeline Planner.
+* Review UI.
 * Renderer.
 * Integration pipeline.
 
@@ -233,6 +235,7 @@ audio_segments.json
 
 ### Module sử dụng output
 
+* Embedding Indexer.
 * Matching Engine.
 * Timeline Planner.
 * Review UI.
@@ -275,6 +278,7 @@ keyframe image files
 * Timeline Planner.
 * Review UI.
 * Renderer.
+* Evaluation.
 
 ## 4.4. Embedding Indexer
 
@@ -319,6 +323,7 @@ Tìm top-k clip phù hợp nhất cho từng audio segment.
 ```text
 audio_segments.json
 clip_metadata.json
+embedding_metadata.json
 embedding/index files
 ```
 
@@ -394,6 +399,7 @@ timeline.json
 matching_candidates.json
 clip_metadata.json
 audio_segments.json
+media_metadata.json
 media files
 ```
 
@@ -412,7 +418,7 @@ media files
 ### Output
 
 ```text
-updated timeline.json
+timeline.json (ghi đè cùng path sau khi người dùng chỉnh)
 ```
 
 ### Module sử dụng output
@@ -429,9 +435,11 @@ Render video cuối từ timeline đã được tạo hoặc chỉnh sửa.
 
 ```text
 timeline.json
+media_metadata.json
+clip_metadata.json (optional for validation)
 normalized video files
 normalized audio file
-render_config.json
+render_config.json (optional)
 ```
 
 ### Xử lý chính
@@ -464,9 +472,11 @@ render_log.json
 ```text
 audio_segments.json
 clip_metadata.json
+embedding_metadata.json (optional)
 matching_candidates.json
 timeline.json
 final_video.mp4
+render_log.json
 ```
 
 ### Xử lý chính
@@ -531,7 +541,7 @@ Chứa danh sách clip candidate:
 * `duration`
 * `keyframes`
 * `quality_score`
-* thông tin blur, brightness, motion nếu có
+* `quality.blur_score`, `quality.brightness_score`, `quality.motion_score`, `quality.stability_score` nếu có
 
 ## 5.4. `embedding_metadata.json`
 
@@ -582,6 +592,18 @@ Chứa cấu hình render:
 * Default transition.
 * Crop mode.
 
+## 5.8. `render_log.json`
+
+Do Renderer tạo.
+
+Chứa thông tin quá trình render:
+
+* Trạng thái render.
+* Output path.
+* Duration output.
+* Render time.
+* Warning/error nếu có.
+
 ## 6. Luồng chạy chính của hệ thống
 
 ## 6.1. Luồng tạo bản dựng ban đầu
@@ -589,9 +611,9 @@ Chứa cấu hình render:
 ```text
 1. Người dùng cung cấp video nguồn và audio thuyết minh.
 2. Input Processor kiểm tra và chuẩn hóa dữ liệu.
-3. Audio Analyzer tạo audio_segments.json.
-4. Video Analyzer tạo clip_metadata.json và keyframe.
-5. Embedding Indexer tạo embedding/index.
+3. Audio Analyzer và Video Analyzer chạy song song sau khi có dữ liệu chuẩn hóa.
+4. Audio Analyzer tạo audio_segments.json; Video Analyzer tạo clip_metadata.json và keyframe.
+5. Embedding Indexer tạo embedding_metadata.json và embedding/index files.
 6. Matching Engine tạo matching_candidates.json.
 7. Timeline Planner tạo timeline.json.
 8. Review UI mở timeline để người dùng kiểm tra.
@@ -627,9 +649,9 @@ Renderer không phụ thuộc trực tiếp vào Matching Engine hoặc Audio An
 
 ```text
 1. Người dùng chỉnh timeline trên UI.
-2. UI lưu updated timeline.json.
-3. Renderer đọc updated timeline.json.
-4. Renderer xuất lại final_video.mp4.
+2. UI ghi đè `data/intermediate/timeline.json` và cập nhật `updated_at`.
+3. Renderer đọc cùng file `timeline.json`.
+4. Renderer xuất lại `final_video.mp4`.
 ```
 
 Không chạy lại:
@@ -651,9 +673,9 @@ Các module có thể phát triển sớm bằng dữ liệu mẫu:
 | ---------------- | -------------------------------------------------------------- |
 | Audio Analyzer   | Có audio mẫu                                                   |
 | Video Analyzer   | Có video mẫu                                                   |
-| Review UI        | Có `timeline_sample.json` và `matching_candidates_sample.json` |
-| Renderer         | Có `timeline_sample.json`                                      |
-| Timeline Planner | Có `matching_candidates_sample.json`                           |
+| Review UI        | Có `timeline_sample.json`, `matching_candidates_sample.json`, `clip_metadata_sample.json`, `audio_segments_sample.json` và `media_metadata_sample.json` |
+| Renderer         | Có `timeline_sample.json`, `media_metadata_sample.json`, `render_config_sample.json` và media source mẫu |
+| Timeline Planner | Có `audio_segments_sample.json`, `clip_metadata_sample.json`, `matching_candidates_sample.json` và `media_metadata_sample.json` |
 | Schema/Validator | Có data contract                                               |
 | Evaluation       | Có timeline/video mẫu                                          |
 
@@ -661,11 +683,11 @@ Các module có thể phát triển sớm bằng dữ liệu mẫu:
 
 | Module                    | Phụ thuộc                                      |
 | ------------------------- | ---------------------------------------------- |
-| Embedding Indexer         | Cần keyframe hoặc clip metadata                |
+| Embedding Indexer         | Cần audio segments, clip metadata và keyframe  |
 | Matching Engine           | Cần audio segments, clip metadata và embedding |
-| Timeline Planner bản thật | Cần matching candidates                        |
-| UI bản đầy đủ             | Cần timeline và candidate schema               |
-| Renderer bản đầy đủ       | Cần timeline và media source                   |
+| Timeline Planner bản thật | Cần audio segments, clip metadata, media metadata và matching candidates |
+| UI bản đầy đủ             | Cần timeline, matching candidates, clip metadata, audio segments và media metadata |
+| Renderer bản đầy đủ       | Cần timeline, media metadata, clip metadata nếu validate, render config nếu dùng file cấu hình riêng và media source |
 
 ## 7.3. Cách giảm phụ thuộc
 
@@ -673,9 +695,14 @@ Cần tạo sớm bộ dữ liệu mẫu:
 
 ```text
 docs/samples/audio_segments_sample.json
+docs/samples/media_metadata_sample.json
 docs/samples/clip_metadata_sample.json
+docs/samples/embedding_metadata_sample.json
+docs/samples/embedding_index_sample/
 docs/samples/matching_candidates_sample.json
 docs/samples/timeline_sample.json
+docs/samples/render_config_sample.json
+docs/samples/render_log_sample.json
 ```
 
 Nhờ vậy:
@@ -794,7 +821,7 @@ Mục tiêu:
 
 * UI đọc được timeline mẫu.
 * Renderer render được video mẫu.
-* Timeline Planner đọc được matching mẫu.
+* Timeline Planner đọc được audio segment mẫu, clip metadata mẫu, media metadata mẫu và matching mẫu.
 
 ### Lớp 2: Module thật nhưng chạy độc lập
 
@@ -804,6 +831,7 @@ Mục tiêu:
 
 * Audio module xuất `audio_segments.json`.
 * Video module xuất `clip_metadata.json`.
+* Embedding module xuất `embedding_metadata.json` và embedding/index files.
 * Matching module xuất `matching_candidates.json`.
 * Timeline module xuất `timeline.json`.
 
@@ -814,10 +842,11 @@ Ghép các module bằng script hoặc integration pipeline.
 Mục tiêu:
 
 ```text
-audio_segments.json + clip_metadata.json
+audio_segments.json + clip_metadata.json + embedding_metadata.json + embedding/index files
 → matching_candidates.json
 → timeline.json
-→ final_video.mp4
+timeline.json + media_metadata.json + normalized media files
+→ final_video.mp4 + render_log.json
 ```
 
 ### Lớp 4: UI review
@@ -887,30 +916,32 @@ a003
 
 Định danh một clip candidate được tách từ video nguồn.
 
-Ví dụ:
+Ví dụ format (padding clip index 3 chữ số):
 
 ```text
 v01_c001
-v01_c002
-v02_c003
+v01_c003
+v02_c002
 ```
+
+Mẫu clip ID tích hợp: `docs/samples/clip_metadata_sample.json`.
 
 ## 11.4. Mapping quan trọng
 
 Các mapping cần giữ nhất quán:
 
 ```text
-audio_segments.segment_id
-→ matching_candidates.audio_segment_id
-→ timeline.segment_id
+audio_segments.items[].segment_id
+→ matching_candidates.items[].audio_segment_id
+→ timeline.items[].segment_id
 
-clip_metadata.clip_id
-→ matching_candidates.candidates[].clip_id
-→ timeline.visual_items[].clip_id
+clip_metadata.items[].clip_id
+→ matching_candidates.items[].candidates[].clip_id
+→ timeline.items[].visual_items[].clip_id
 
-media_metadata.video_id
-→ clip_metadata.video_id
-→ timeline.visual_items[].video_source
+media_metadata.videos[].video_id
+→ clip_metadata.items[].video_id
+→ timeline.items[].visual_items[].video_id
 ```
 
 Nếu các ID không khớp, pipeline sẽ lỗi khi tích hợp.
@@ -975,7 +1006,7 @@ Kiến trúc này hỗ trợ nhóm phát triển song song theo cách sau:
 * Người làm audio chỉ cần bám `audio_segments.json`.
 * Người làm video chỉ cần bám `clip_metadata.json`.
 * Người làm matching chỉ cần đọc audio segment, clip metadata và embedding.
-* Người làm timeline chỉ cần đọc matching candidates.
+* Người làm timeline cần đọc audio segments, clip metadata, media metadata và matching candidates.
 * Người làm UI có thể dùng sample timeline để làm trước.
 * Người làm renderer có thể dùng sample timeline để render trước.
 * Leader quản lý schema, sample data và integration.

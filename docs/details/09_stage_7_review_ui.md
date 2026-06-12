@@ -18,50 +18,33 @@ Mục tiêu chính:
 * Hiển thị visual item hiện tại của từng segment.
 * Hiển thị top-k candidate clip thay thế.
 * Cho phép người dùng đổi clip cho segment.
-* Cho phép chỉnh `clip_start`, `clip_end`, `speed`, `transition`, `crop_mode`, `volume` ở mức MVP.
+* Cho phép chỉnh `clip_start`, `clip_end`, `speed`, `transition`, `crop_mode`, `volume` ở mức MVP nếu các chức năng chỉnh tham số này được bật theo phạm vi đã thống nhất.
 * Cho phép đánh dấu `locked`.
 * Cập nhật `user_edited = true` khi người dùng chỉnh.
 * Cập nhật `updated_at` khi lưu.
 * Validate timeline trước khi lưu.
-* Xuất lại `timeline.json` đúng Data Contract đã chốt.
+* Xuất lại `timeline.json` đúng Data Contract hiện hành.
 
 ## 2. Vị trí trong pipeline
 
 Stage này nằm sau Timeline Planner và trước Renderer:
 
 ```text
-Timeline Planner
-        |
-        |-- timeline.json
-        |
-Matching Engine
-        |
-        |-- matching_candidates.json
-        |
-Video Analyzer
-        |
-        |-- clip_metadata.json
-        |
-Audio Analyzer
-        |
-        |-- audio_segments.json
-        |
-Input Processor
-        |
-        |-- media_metadata.json
-        |-- normalized media files
-        |
-        v
-Review UI
-        |
-        |-- updated timeline.json
-        |-- review_ui_log.json
-        |
-        v
-Renderer
+Timeline Planner -- timeline.json ------------\
+Matching Engine  -- matching_candidates.json --\
+Video Analyzer   -- clip_metadata.json -------\
+Audio Analyzer   -- audio_segments.json ------+--> Review UI
+Input Processor  -- media_metadata.json ------/
+Input Processor  -- normalized media files ---/
+                                                |
+                                                |-- timeline.json (ghi đè, cùng path)
+                                                |-- review_ui_log.json
+                                                |
+                                                v
+                                             Renderer
 ```
 
-Review UI là stage cho người dùng can thiệp vào bản dựng. Sau khi UI lưu timeline, Renderer chỉ cần đọc `timeline.json` đã cập nhật để xuất `final_video.mp4`.
+Review UI là stage cho người dùng can thiệp vào bản dựng. Sau khi UI lưu timeline, Renderer render theo `timeline.json` đã cập nhật và media source đã chuẩn hóa để xuất `final_video.mp4`.
 
 ## 3. Phạm vi trách nhiệm
 
@@ -205,15 +188,9 @@ Nếu input lỗi nghiêm trọng:
 
 ### 5.1. Output chính
 
-Review UI tạo output chính:
+Review UI ghi đè `data/intermediate/timeline.json` (cập nhật `updated_at` sau khi người dùng chỉnh). Renderer đọc file này để render.
 
-```text
-data/intermediate/timeline.json
-```
-
-Đây là `timeline.json` đã được cập nhật sau khi người dùng chỉnh.
-
-Renderer sẽ đọc file này để render video cuối.
+Mẫu chuẩn: `docs/samples/timeline_sample.json`.
 
 ### 5.2. Output phụ
 
@@ -223,7 +200,7 @@ Review UI có thể tạo output phụ:
 data/intermediate/review_ui_log.json
 ```
 
-File này không thuộc Data Contract chính, nhưng hữu ích để debug ai đã chỉnh gì.
+File log debug; không bắt buộc cho pipeline.
 
 Ví dụ:
 
@@ -238,7 +215,7 @@ Ví dụ:
       "action": "replace_clip",
       "segment_id": "a001",
       "before_clip_id": "v01_c003",
-      "after_clip_id": "v02_c004",
+      "after_clip_id": "v02_c001",
       "source_candidate_rank": 2
     }
   ]
@@ -333,7 +310,7 @@ UI được phép chỉnh:
 | Field | Ý nghĩa |
 | ----- | ------- |
 | `updated_at` | Cập nhật khi lưu |
-| `render_settings` | Chỉ các setting render cơ bản nếu UI có màn cấu hình |
+| `render_settings` | Chỉ các setting render cơ bản nếu UI có màn cấu hình và phần này đã được thống nhất trong Data Contract hoặc cấu hình dự án |
 
 UI không nên chỉnh:
 
@@ -903,7 +880,7 @@ Khuyến nghị khi lưu lần đầu trong phiên review:
 data/intermediate/timeline.before_review.json
 ```
 
-File backup không thuộc Data Contract chính.
+File backup optional.
 
 Mục đích:
 

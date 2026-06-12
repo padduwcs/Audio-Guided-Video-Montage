@@ -160,6 +160,9 @@ Các file trung gian phục vụ debug và tích hợp:
 media_metadata.json
 audio_segments.json
 clip_metadata.json
+embedding_metadata.json
+embedding/index files
+render_log.json
 ```
 
 ## 8. Phạm vi MVP
@@ -193,7 +196,7 @@ Các chức năng nên có nhưng không bắt buộc ở MVP đầu tiên:
 * Highlight đoạn confidence thấp.
 * Chỉnh speed bằng preset, ví dụ `0.75x`, `1.0x`, `1.25x`.
 * Chọn transition cơ bản, ví dụ `cut`, `fade`, `crossfade`.
-* Chọn crop mode, ví dụ `fit`, `fill`, `center crop`.
+* Chọn crop mode, ví dụ `fit`, `fill`, `center_crop`.
 * Bật/tắt audio gốc của video nguồn.
 * Giảm âm lượng audio gốc.
 
@@ -233,7 +236,7 @@ Một số ràng buộc kỹ thuật cần thống nhất:
 * Score nằm trong khoảng `0.0` đến `1.0`.
 * Confidence dùng ba mức: `high`, `medium`, `low`.
 * Mỗi module phải xuất output đúng schema.
-* Renderer chỉ đọc timeline để render, không chạy lại toàn bộ pipeline.
+* Renderer render theo timeline và media source đã chuẩn hóa, không chạy lại toàn bộ pipeline.
 * UI chỉ chỉnh timeline, không chỉnh trực tiếp video nguồn.
 * Các file video/audio nặng không nên commit lên GitHub.
 
@@ -263,10 +266,14 @@ Kịch bản demo tối thiểu:
 
 2. Hệ thống xử lý và tạo:
 
+   * `media_metadata.json`
    * `audio_segments.json`
    * `clip_metadata.json`
+   * `embedding_metadata.json`
+   * embedding/index files
    * `matching_candidates.json`
    * `timeline.json`
+   * `render_log.json`
 
 3. Người dùng mở UI review:
 

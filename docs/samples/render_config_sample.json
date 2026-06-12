@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "project_id": "demo_01",
+  "output": {
+    "path": "data/final/final_video.mp4",
+    "width": 1920,
+    "height": 1080,
+    "fps": 30,
+    "format": "mp4"
+  },
+  "audio": {
+    "voiceover_path": "data/normalized/voiceover.wav",
+    "keep_original_audio": false,
+    "original_audio_volume": 0.0
+  },
+  "video": {
+    "crop_mode": "center_crop",
+    "default_transition": "cut"
+  }
+}

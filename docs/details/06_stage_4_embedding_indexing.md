@@ -17,7 +17,7 @@ Mục tiêu chính:
 * Lưu vector ra file riêng hoặc index riêng, không nhét vector lớn trực tiếp vào JSON.
 * Tạo index tìm kiếm visual embedding nếu cần.
 * Sinh `embedding_id` ổn định.
-* Xuất `embedding_metadata.json` đúng Data Contract đã chốt.
+* Xuất `embedding_metadata.json` đúng Data Contract hiện hành.
 * Xuất log phụ để debug model, vector, index và mapping nếu cần.
 
 ## 2. Vị trí trong pipeline
@@ -789,6 +789,10 @@ Nếu `embedding_metadata.json` và `embedding_indexing_log.json` có thông tin
 
 ## 14. Ví dụ `embedding_metadata.json`
 
+**Mẫu chuẩn:** `docs/samples/embedding_metadata_sample.json`.
+
+Ví dụ rút gọn:
+
 ```json
 {
   "schema_version": "1.0",
@@ -809,7 +813,7 @@ Nếu `embedding_metadata.json` và `embedding_indexing_log.json` có thông tin
     {
       "embedding_id": "emb_text_a002",
       "segment_id": "a002",
-      "source_text": "group walking into exhibition area",
+      "source_text": "exhibition area with notable artifacts",
       "vector_path": "data/intermediate/embeddings/emb_text_a002.npy"
     }
   ],
@@ -1042,7 +1046,7 @@ Vai trò từng file:
 | `vector_store.py` | Lưu vector files |
 | `index_builder.py` | Tạo visual index nếu cần |
 | `embedding_metadata_writer.py` | Tạo và ghi `embedding_metadata.json` |
-| `validator.py` | Kiểm tra input và output theo quy tắc đã chốt |
+| `validator.py` | Kiểm tra input và output theo quy tắc hiện hành |
 
 Nếu nhóm dùng ngôn ngữ hoặc framework khác, vẫn cần giữ nguyên trách nhiệm logic tương đương.
 
@@ -1203,7 +1207,7 @@ Module Embedding Indexer được xem là đạt yêu cầu MVP khi:
 6. Tạo được visual embedding cho keyframe hợp lệ.
 7. Không tạo embedding cho clip `too_short` hoặc `error` trong MVP.
 8. Clip `low_quality` vẫn có thể được tạo embedding.
-9. Tạo `embedding_metadata.json` đúng schema đã chốt.
+9. Tạo `embedding_metadata.json` đúng schema hiện hành.
 10. `model` có `name`, `type`, `dimension`.
 11. `embedding_id` không trùng và ổn định.
 12. `segment_id`, `clip_id`, `keyframe_id` map đúng về input.

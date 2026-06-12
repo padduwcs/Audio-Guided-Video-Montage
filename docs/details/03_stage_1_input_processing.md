@@ -13,7 +13,7 @@ Mục tiêu chính:
 * Trích metadata cơ bản của từng file media.
 * Chuẩn hóa video/audio về dạng dễ xử lý trong pipeline.
 * Sinh ID ổn định cho video và audio.
-* Xuất `media_metadata.json` đúng Data Contract đã chốt.
+* Xuất `media_metadata.json` đúng Data Contract hiện hành.
 * Lưu các file normalized vào cấu trúc thư mục thống nhất để các module sau sử dụng.
 
 ## 2. Vị trí trong pipeline
@@ -33,8 +33,10 @@ Input Processor
         |
         |--> Audio Analyzer
         |--> Video Analyzer
-        |--> Renderer
-        |--> Integration pipeline
+        |--> Timeline Planner (later consumer)
+        |--> Review UI (later consumer)
+        |--> Renderer (later consumer)
+        |--> Integration pipeline (later consumer)
 ```
 
 Các module phía sau không nên đọc trực tiếp file raw nếu không cần thiết. Thay vào đó, các module nên ưu tiên dùng đường dẫn trong `media_metadata.json`, đặc biệt là `normalized_path`.
@@ -407,7 +409,7 @@ Metadata audio cần lấy:
 * codec nếu cần ghi vào log nội bộ
 * bitrate nếu cần ghi vào log nội bộ
 
-Metadata gốc nên được lưu vào `input_processing_log.json` để debug. Không đưa `original_metadata` vào `media_metadata.json` trong MVP, vì `media_metadata.json` là contract chính cho các module sau và nên giữ gọn theo schema đã chốt.
+Metadata gốc nên được lưu vào `input_processing_log.json` để debug. Không đưa `original_metadata` vào `media_metadata.json` trong MVP, vì `media_metadata.json` là contract chính cho các module sau và nên giữ gọn theo schema hiện hành.
 
 ### 9.4. Bước 4 - Chuẩn hóa video
 
@@ -597,7 +599,7 @@ Nên dùng file này để ghi:
   "created_at": "2026-06-11T10:00:00Z",
   "items": [
     {
-      "media_id": "video_01",
+      "video_id": "video_01",
       "media_type": "video",
       "original_path": "data/raw/video_01.mp4",
       "normalized_path": "data/normalized/video_01.mp4",
@@ -648,6 +650,10 @@ Nếu `media_metadata.json` và `input_processing_log.json` có thông tin mâu 
 
 ## 12. Ví dụ `media_metadata.json`
 
+**Mẫu chuẩn:** `docs/samples/media_metadata_sample.json`.
+
+Ví dụ dưới đây khớp sample dùng cho validate/tích hợp (`audio.duration = 16.0s` = tổng thời lượng `audio_segments`):
+
 ```json
 {
   "schema_version": "1.0",
@@ -664,31 +670,26 @@ Nếu `media_metadata.json` và `input_processing_log.json` có thông tin mâu 
       "height": 1080,
       "has_audio": true,
       "codec": "h264",
-      "bitrate": 4500000,
-      "rotation": 0,
       "status": "ready"
     },
     {
       "video_id": "video_02",
-      "original_path": "data/raw/video_02.mov",
+      "original_path": "data/raw/video_02.mp4",
       "normalized_path": "data/normalized/video_02.mp4",
-      "duration": 84.8,
+      "duration": 88.0,
       "fps": 30,
       "width": 1920,
       "height": 1080,
-      "has_audio": false,
+      "has_audio": true,
       "codec": "h264",
-      "bitrate": 3900000,
-      "rotation": 0,
-      "status": "ready",
-      "notes": "Video source does not contain original audio, but visual stream is usable."
+      "status": "ready"
     }
   ],
   "audio": {
     "audio_id": "audio_01",
     "original_path": "data/raw/voiceover.mp3",
     "normalized_path": "data/normalized/voiceover.wav",
-    "duration": 92.7,
+    "duration": 16.0,
     "sample_rate": 16000,
     "channels": 1,
     "status": "ready"
@@ -696,9 +697,9 @@ Nếu `media_metadata.json` và `input_processing_log.json` có thông tin mâu 
 }
 ```
 
-## 13. Điều kiện handoff sang stage sau
+## 13. Điều kiện handoff output
 
-Stage 1 được phép bàn giao cho Audio Analyzer, Video Analyzer và Integration pipeline khi thỏa các điều kiện sau:
+Stage 1 được phép bàn giao `media_metadata.json` cho Audio Analyzer và Video Analyzer; các module về sau như Timeline Planner, Review UI, Renderer và Integration pipeline có thể dùng cùng output này khi thỏa các điều kiện sau:
 
 ```text
 audio.status != error
@@ -895,7 +896,7 @@ Vai trò từng file:
 | `media_probe.py`     | Lấy metadata bằng FFprobe hoặc thư viện tương đương |
 | `normalizer.py`      | Chuẩn hóa video/audio                           |
 | `metadata_writer.py` | Tạo và ghi `media_metadata.json`                |
-| `validator.py`       | Kiểm tra input và output theo quy tắc đã chốt   |
+| `validator.py`       | Kiểm tra input và output theo quy tắc hiện hành |
 
 Nếu nhóm dùng ngôn ngữ hoặc framework khác, vẫn cần giữ nguyên trách nhiệm logic tương đương.
 
@@ -1060,7 +1061,7 @@ Module Input Processor được xem là đạt yêu cầu MVP khi:
 1. Chạy được với ít nhất một video và một audio hợp lệ.
 2. Chạy được với nhiều video nguồn.
 3. Tạo đúng file normalized cho video và audio.
-4. Tạo `media_metadata.json` đúng schema đã chốt.
+4. Tạo `media_metadata.json` đúng schema hiện hành.
 5. Tạo `input_processing_log.json` để hỗ trợ debug.
 6. Tất cả thời gian trong JSON dùng giây.
 7. Tất cả path trong JSON là relative path.

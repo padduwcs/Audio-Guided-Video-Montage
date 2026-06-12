@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "project_id": "demo_01",
+  "started_at": "2026-06-11T10:40:00Z",
+  "finished_at": "2026-06-11T10:42:30Z",
+  "status": "success",
+  "output_path": "data/final/final_video.mp4",
+  "duration": 16.0,
+  "render_time": 150.0,
+  "warnings": [],
+  "errors": []
+}
