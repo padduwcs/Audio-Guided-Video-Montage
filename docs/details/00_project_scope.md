@@ -97,7 +97,7 @@ Yêu cầu:
 * Định dạng phổ biến: `.wav`, `.mp3`, `.m4a`.
 * Audio có thể là tiếng Việt trong phạm vi MVP.
 * Audio cần được chuyển thành transcript có timestamp.
-* Người dùng nên có khả năng sửa transcript nếu ASR nhận sai.
+* **Trong MVP:** sửa transcript khi ASR sai thực hiện **ngoài Review UI** (file correction nội bộ → chạy lại Audio Analyzer). Sửa transcript trực tiếp trên UI thuộc phạm vi sau MVP (xem [`04_stage_2_audio_analysis.md`](04_stage_2_audio_analysis.md) §7.13).
 
 ### 6.3. Tham số cấu hình cơ bản
 
@@ -199,6 +199,7 @@ Các chức năng nên có nhưng không bắt buộc ở MVP đầu tiên:
 * Chọn crop mode, ví dụ `fit`, `fill`, `center_crop`.
 * Bật/tắt audio gốc của video nguồn.
 * Giảm âm lượng audio gốc.
+* Sửa transcript trên Review UI (workaround MVP: file correction + chạy lại Stage 2 — xem [`04_stage_2_audio_analysis.md`](04_stage_2_audio_analysis.md) §7.13).
 
 ## 9. Ngoài phạm vi MVP
 

@@ -33,6 +33,11 @@ data/normalized/voiceover.wav
 - Schema: `docs/schemas/media_metadata.schema.md`
 - Mẫu: `docs/samples/media_metadata_sample.json`
 
+## Cách test (sẽ bổ sung khi có code)
+
+- Input mẫu: `docs/samples/media_metadata_sample.json`
+- Validate output: `python scripts/validate_json.py --input-dir data/intermediate`
+
 ## Ranh giới
 
 - Không chạy ASR hoặc tách clip candidate.

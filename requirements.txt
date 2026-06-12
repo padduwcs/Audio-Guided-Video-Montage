@@ -1,2 +1,22 @@
 # Runtime dependencies will be added by each module owner as implementation starts.
-# Keep this file minimal until the MVP stack is confirmed.
+# Suggested MVP stack (pin versions when modules are implemented):
+#
+# System:
+#   ffmpeg
+#
+# input_processor / video_analyzer:
+#   opencv-python
+#
+# audio_analyzer:
+#   faster-whisper   # or openai-whisper
+#
+# embedding_indexer / matching_engine:
+#   numpy
+#   faiss-cpu        # or alternative index
+#   open-clip-torch  # or sentence-transformers — per team choice
+#
+# review_ui:
+#   flask or fastapi + frontend stack of choice
+#
+# renderer:
+#   ffmpeg-python    # optional wrapper; ffmpeg CLI is sufficient for MVP

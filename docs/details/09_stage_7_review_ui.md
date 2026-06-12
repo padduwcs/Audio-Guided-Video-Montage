@@ -24,7 +24,7 @@ UI **không** phải editor phim đầy đủ. MVP: xem từng audio segment, cl
 * Validate trước khi lưu; cập nhật `user_edited`, `updated_at`.
 * **Ghi đè** `data/intermediate/timeline.json` (cùng path Timeline Planner tạo).
 
-**Không phải mục tiêu:** ASR, matching lại, render `final_video.mp4`, sửa `matching_candidates.json` (→ §3.2).
+**Không phải mục tiêu:** ASR, matching lại, render `final_video.mp4`, sửa `matching_candidates.json`, **sửa transcript** (MVP: correction ngoài UI — xem [`04_stage_2_audio_analysis.md`](04_stage_2_audio_analysis.md) §7.13, [`00_project_scope.md`](00_project_scope.md) §6.2) (→ §3.2).
 
 ---
 

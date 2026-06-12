@@ -199,7 +199,9 @@ Leader và các thành viên chuẩn bị merge module vào pipeline chung cần
 
 ## 5. Tài liệu schema trong `schemas/`
 
-Thư mục `schemas/` mô tả bản schema tối thiểu của từng file dữ liệu quan trọng theo Data Contract.
+Thư mục `schemas/` mô tả bản schema **tối thiểu** (field bắt buộc) của từng file dữ liệu quan trọng theo Data Contract.
+
+Field optional đầy đủ: [`details/02_data_contract.md`](details/02_data_contract.md) (section tương ứng) và [`samples/`](samples/) `*_sample.json`.
 
 Các file schema giúp thành viên kiểm tra output của module mình.
 
@@ -303,6 +305,8 @@ Dùng bởi:
 
 Thư mục `samples/` chứa mẫu JSON theo Data Contract. Tám file lõi được kiểm tra cross-file bằng `python scripts/validate_json.py`.
 
+Mẫu trong `docs/samples/` được kiểm tra bằng `python scripts/validate_json.py` (mặc định). Output runtime trong `data/intermediate/` dùng cùng schema: `python scripts/validate_json.py --input-dir data/intermediate`.
+
 Mục đích:
 
 * Giúp thành viên hiểu output cần tạo ra.
@@ -347,39 +351,39 @@ Tất cả thành viên nên đọc theo thứ tự:
 
 ### 7.2. Nếu phụ trách Stage X (thành viên mới)
 
-Đây là thứ tự **bắt buộc tối thiểu** trước khi code module của mình.
+Đây là thứ tự **bắt buộc tối thiểu** trước khi code module của mình. Lộ trình đầy đủ hơn (gồm `11`, `12`): xem §7.1.
 
 | Bước | Tài liệu | Cách đọc |
 | ---- | -------- | -------- |
+| 0 | [`problem.md`](problem.md), [`analysis.md`](analysis.md) | Toàn bộ — **khuyến nghị** (~20 phút), hiểu bài toán và lý do thiết kế |
 | 1 | [`details/00_project_scope.md`](details/00_project_scope.md) | Toàn bộ — hiểu MVP và phạm vi |
 | 2 | [`details/01_system_architecture.md`](details/01_system_architecture.md) | Toàn bộ — pipeline, module, ranh giới |
 | 3 | [`details/02_data_contract.md`](details/02_data_contract.md) | Toàn bộ — **đọc kỹ** trước khi định nghĩa output |
 | 4 | File stage mình phụ trách (`03`–`10`) | **Toàn bộ** — logic, test, acceptance, checklist |
-| 5 | Stage liền kề (trước + sau) | **Chỉ** §4 Input · §5 Output · §9 Handoff |
+| 5 | Stage liền kề (theo bảng dưới) | **Chỉ** §4 Input · §5 Output · §9 Handoff |
 
 Mỗi stage spec dùng cùng template 12 mục; §4 = input, §5 = output, §9 = điều kiện bàn giao.
 
-**Bổ sung sau bước 1–5:** schema + sample JSON của file output stage mình (`docs/schemas/`, `docs/samples/`); README module (`<folder>/README.md`).
+**Bổ sung sau bước 0–5:** schema + sample JSON của file output stage mình (`docs/schemas/`, `docs/samples/`); README module (`<folder>/README.md`).
 
 #### Bảng stage → file spec → stage liền kề
 
-| Stage | Module | File spec (bước 4 — đọc full) | Stage trước (bước 5 — §4/§5/§9) | Stage sau (bước 5 — §4/§5/§9) |
-| ----- | ------ | ------------------------------- | -------------------------------- | ----------------------------- |
-| 1 | `input_processor/` | [`03_stage_1_input_processing.md`](details/03_stage_1_input_processing.md) | — | [`04_stage_2_audio_analysis.md`](details/04_stage_2_audio_analysis.md) |
-| 2 | `audio_analyzer/` | [`04_stage_2_audio_analysis.md`](details/04_stage_2_audio_analysis.md) | [`03_stage_1_input_processing.md`](details/03_stage_1_input_processing.md) | [`05_stage_3_video_analysis.md`](details/05_stage_3_video_analysis.md) |
-| 3 | `video_analyzer/` | [`05_stage_3_video_analysis.md`](details/05_stage_3_video_analysis.md) | [`04_stage_2_audio_analysis.md`](details/04_stage_2_audio_analysis.md) | [`06_stage_4_embedding_indexing.md`](details/06_stage_4_embedding_indexing.md) |
-| 4 | `embedding_indexer/` | [`06_stage_4_embedding_indexing.md`](details/06_stage_4_embedding_indexing.md) | [`05_stage_3_video_analysis.md`](details/05_stage_3_video_analysis.md) | [`07_stage_5_matching_engine.md`](details/07_stage_5_matching_engine.md) |
-| 5 | `matching_engine/` | [`07_stage_5_matching_engine.md`](details/07_stage_5_matching_engine.md) | [`06_stage_4_embedding_indexing.md`](details/06_stage_4_embedding_indexing.md) | [`08_stage_6_timeline_planning.md`](details/08_stage_6_timeline_planning.md) |
-| 6 | `timeline_planner/` | [`08_stage_6_timeline_planning.md`](details/08_stage_6_timeline_planning.md) | [`07_stage_5_matching_engine.md`](details/07_stage_5_matching_engine.md) | [`09_stage_7_review_ui.md`](details/09_stage_7_review_ui.md) |
-| 7 | `review_ui/` | [`09_stage_7_review_ui.md`](details/09_stage_7_review_ui.md) | [`08_stage_6_timeline_planning.md`](details/08_stage_6_timeline_planning.md) | [`10_stage_8_rendering.md`](details/10_stage_8_rendering.md) |
-| 8 | `renderer/` | [`10_stage_8_rendering.md`](details/10_stage_8_rendering.md) | [`09_stage_7_review_ui.md`](details/09_stage_7_review_ui.md) | — |
+Cột **Stage liền kề** = bước 5 (§4/§5/§9). Ký hiệu **∥** = chạy song song, **không chờ** module kia hoàn thành.
 
-**Ghi chú pipeline:**
+| Stage | Module | File spec (bước 4 — đọc full) | Stage liền kề (bước 5 — §4/§5/§9) |
+| ----- | ------ | ------------------------------- | ---------------------------------- |
+| 1 | `input_processor/` | [`03_stage_1_input_processing.md`](details/03_stage_1_input_processing.md) | **Sau:** [`04`](details/04_stage_2_audio_analysis.md) Audio **+** [`05`](details/05_stage_3_video_analysis.md) Video — cả hai ∥, cùng nhận output Stage 1 |
+| 2 | `audio_analyzer/` | [`04_stage_2_audio_analysis.md`](details/04_stage_2_audio_analysis.md) | **Trước:** [`03`](details/03_stage_1_input_processing.md) · **Sau:** [`06`](details/06_stage_4_embedding_indexing.md) Embedding — *không chờ Stage 3* |
+| 3 | `video_analyzer/` | [`05_stage_3_video_analysis.md`](details/05_stage_3_video_analysis.md) | **Trước:** [`03`](details/03_stage_1_input_processing.md) · **Sau:** [`06`](details/06_stage_4_embedding_indexing.md) Embedding — *không chờ Stage 2* |
+| 4 | `embedding_indexer/` | [`06_stage_4_embedding_indexing.md`](details/06_stage_4_embedding_indexing.md) | **Trước:** [`04`](details/04_stage_2_audio_analysis.md) Audio **+** [`05`](details/05_stage_3_video_analysis.md) Video *(bắt buộc cả hai)* · **Sau:** [`07`](details/07_stage_5_matching_engine.md) Matching |
+| 5 | `matching_engine/` | [`07_stage_5_matching_engine.md`](details/07_stage_5_matching_engine.md) | **Trước:** [`06`](details/06_stage_4_embedding_indexing.md) · **Sau:** [`08`](details/08_stage_6_timeline_planning.md) Timeline |
+| 6 | `timeline_planner/` | [`08_stage_6_timeline_planning.md`](details/08_stage_6_timeline_planning.md) | **Trước:** [`07`](details/07_stage_5_matching_engine.md) · **Sau:** [`09`](details/09_stage_7_review_ui.md) Review |
+| 7 | `review_ui/` | [`09_stage_7_review_ui.md`](details/09_stage_7_review_ui.md) | **Trước:** [`08`](details/08_stage_6_timeline_planning.md) · **Sau:** [`10`](details/10_stage_8_rendering.md) Render — ghi đè `timeline.json`; MVP không sửa transcript |
+| 8 | `renderer/` | [`10_stage_8_rendering.md`](details/10_stage_8_rendering.md) | **Trước:** [`09`](details/09_stage_7_review_ui.md) — *không có stage sau* |
 
-* Stage 2 (Audio) và Stage 3 (Video) chạy **song song** sau Stage 1 — không phụ thuộc lẫn nhau; bước 5 chỉ cần stage liền kề theo bảng.
-* Stage 4 đọc output từ **cả** Stage 2 và Stage 3. Ngoài bước 5, nên đọc thêm [`04_stage_2_audio_analysis.md`](details/04_stage_2_audio_analysis.md) §4/§5/§9.
-* Stage 1 không có stage trước; owner Stage 1 nên đọc thêm [`05_stage_3_video_analysis.md`](details/05_stage_3_video_analysis.md) §4/§5/§9 (Video Analyzer cũng nhận output Stage 1, song song với Audio).
-* Stage 8 không có stage sau.
+**Ghi chú bổ sung:**
+
+* Stage 2 và Stage 3 chạy **song song** sau Stage 1. Owner Stage 2 **không** cần chờ `clip_metadata.json` để bắt đầu code; owner Stage 3 **không** cần chờ `audio_segments.json`.
 * Leader / integration: đọc toàn bộ stage spec `03`–`10` (§7.3).
 
 **Ví dụ — owner Stage 5 (Matching Engine):**
@@ -472,6 +476,8 @@ clip_metadata.json
 Nên đọc:
 
 ```text
+problem.md          (khuyến nghị)
+analysis.md         (khuyến nghị)
 details/00_project_scope.md
 details/01_system_architecture.md
 details/02_data_contract.md
@@ -500,6 +506,8 @@ matching_candidates.json
 Nên đọc:
 
 ```text
+problem.md          (khuyến nghị)
+analysis.md         (khuyến nghị)
 details/00_project_scope.md
 details/01_system_architecture.md
 details/02_data_contract.md
@@ -525,6 +533,8 @@ timeline.json
 Nên đọc:
 
 ```text
+problem.md          (khuyến nghị)
+analysis.md         (khuyến nghị)
 details/00_project_scope.md
 details/01_system_architecture.md
 details/02_data_contract.md
@@ -552,6 +562,8 @@ timeline.json (ghi đè data/intermediate/timeline.json, cập nhật updated_at
 Nên đọc:
 
 ```text
+problem.md          (khuyến nghị)
+analysis.md         (khuyến nghị)
 details/00_project_scope.md
 details/01_system_architecture.md
 details/02_data_contract.md
@@ -639,6 +651,7 @@ Trước khi đưa output của module vào pipeline chung, cần kiểm tra:
 7. Score có nằm trong khoảng `0.0` đến `1.0` không?
 8. Path media hoặc keyframe có tồn tại không?
 9. Module sau có thể đọc được output không?
+10. Cross-file validate: `python scripts/validate_json.py --input-dir data/intermediate`
 
 Nếu pipeline lỗi, ưu tiên kiểm tra file JSON trung gian trước khi sửa code.
 

@@ -35,6 +35,12 @@ data/intermediate/render_log.json
 - Schema: `docs/schemas/timeline.schema.md`, `render_config.schema.md`, `render_log.schema.md`
 - Mẫu: `docs/samples/timeline_sample.json`, `media_metadata_sample.json`, `render_config_sample.json`, `render_log_sample.json`
 
+## Cách test (sẽ bổ sung khi có code)
+
+- Input mẫu: `docs/samples/timeline_sample.json`, `media_metadata_sample.json`, `render_config_sample.json`
+- Output mẫu: `docs/samples/render_log_sample.json`
+- Validate: `python scripts/validate_json.py --input-dir data/intermediate`
+
 ## Ranh giới
 
 - Không chọn hoặc xếp hạng clip.

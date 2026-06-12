@@ -14,70 +14,79 @@ Kiến trúc module: [`docs/details/01_system_architecture.md` §2](docs/details
 
 ## 3. Cấu trúc thư mục
 
+Repo chia **bốn cụm** — đọc theo thứ tự `docs` → code pipeline → `data`/`scripts` → gốc repo:
+
+| Cụm | Vai trò |
+| --- | ------- |
+| **Tài liệu** (`docs/`) | Thiết kế, Data Contract, schema, JSON mẫu — nguồn tham chiếu trước khi code |
+| **Pipeline** (8 module + `integration/`, `shared/`) | Code từng stage; ghép luồng; helper dùng chung |
+| **Runtime** (`data/`, `scripts/`) | Media chạy thử, artifact JSON/video, script validate và demo |
+| **Gốc repo** | Onboarding, dependency, gitignore |
+
+### Tài liệu — `docs/`
+
 ```text
-project-root/
+docs/
+├── README.md                 hub — thứ tự đọc, quy tắc làm việc
+├── problem.md                phát biểu bài toán gốc
+├── analysis.md               lý do thiết kế (tham khảo, không phải contract)
 │
-├── docs/
-│   ├── README.md
-│   ├── problem.md
-│   ├── analysis.md
-│   │
-│   ├── details/
-│   │   ├── 00_project_scope.md
-│   │   ├── 01_system_architecture.md
-│   │   ├── 02_data_contract.md
-│   │   ├── 03_stage_1_input_processing.md
-│   │   ├── 04_stage_2_audio_analysis.md
-│   │   ├── 05_stage_3_video_analysis.md
-│   │   ├── 06_stage_4_embedding_indexing.md
-│   │   ├── 07_stage_5_matching_engine.md
-│   │   ├── 08_stage_6_timeline_planning.md
-│   │   ├── 09_stage_7_review_ui.md
-│   │   ├── 10_stage_8_rendering.md
-│   │   ├── 11_team_assignment.md
-│   │   └── 12_integration_plan.md
-│   │
-│   ├── schemas/
-│   │   ├── media_metadata.schema.md
-│   │   ├── audio_segments.schema.md
-│   │   ├── clip_metadata.schema.md
-│   │   ├── embedding_metadata.schema.md
-│   │   ├── matching_candidates.schema.md
-│   │   ├── timeline.schema.md
-│   │   ├── render_config.schema.md
-│   │   ├── render_log.schema.md
-│   │   └── evaluation_report.schema.md
-│   │
-│   └── samples/
-│       ├── media_metadata_sample.json
-│       ├── audio_segments_sample.json
-│       ├── clip_metadata_sample.json
-│       ├── embedding_metadata_sample.json
-│       ├── embedding_index_sample/
-│       ├── matching_candidates_sample.json
-│       ├── timeline_sample.json
-│       ├── render_config_sample.json
-│       └── render_log_sample.json
+├── details/                  spec chi tiết
+│   ├── 00_project_scope.md       phạm vi MVP, demo
+│   ├── 01_system_architecture.md kiến trúc, luồng module
+│   ├── 02_data_contract.md       contract JSON giữa các stage
+│   ├── 03 … 10_stage_*.md        spec triển khai Stage 1–8
+│   ├── 11_team_assignment.md     phân công nhóm
+│   └── 12_integration_plan.md    kế hoạch ghép pipeline
 │
-├── integration/
-├── input_processor/
-├── audio_analyzer/
-├── video_analyzer/
-├── embedding_indexer/
-├── matching_engine/
-├── timeline_planner/
-├── review_ui/
-├── renderer/
-├── shared/
-├── data/
-├── scripts/
-│
-├── README.md
-├── .gitignore
-└── requirements.txt
+├── schemas/                  field bắt buộc tối thiểu từng file JSON
+└── samples/                  JSON mẫu — test độc lập, validate cross-file
+```
+
+### Code pipeline — Stage 1 → 8
+
+```text
+① input_processor/      chuẩn hóa media        → media_metadata.json
+② audio_analyzer/       ASR, audio segment     → audio_segments.json      ┐
+③ video_analyzer/       clip, keyframe         → clip_metadata.json       ├─ ∥ sau ①
+④ embedding_indexer/    embedding + index      → embedding_metadata.json  ┘
+⑤ matching_engine/      top-k clip/segment     → matching_candidates.json
+⑥ timeline_planner/     bản dựng ban đầu      → timeline.json
+⑦ review_ui/            review, đổi clip       → timeline.json (ghi đè)
+⑧ renderer/             xuất video             → final_video.mp4, render_log.json
+
+integration/            điều phối pipeline end-to-end (leader)
+shared/                 helper JSON, path, validate — thống nhất với leader
+```
+
+### Dữ liệu & script
+
+```text
+data/
+├── raw/              video/audio đầu vào (không commit file nặng)
+├── normalized/       media sau Input Processor
+├── keyframes/        ảnh keyframe từ Video Analyzer
+├── intermediate/     JSON trung gian giữa các stage
+└── final/            video render cuối
+
+scripts/
+├── validate_json.py          kiểm tra contract JSON (samples / runtime)
+├── bootstrap_data_dirs.*     tạo skeleton thư mục data/
+├── run_demo.*                validate mẫu (+ pipeline demo sau)
+└── clean_outputs.*           dọn data/intermediate, data/final
+```
+
+### Gốc repo
+
+```text
+README.md           onboarding dự án (file này)
+requirements.txt    gợi ý stack MVP — owner module bổ sung version
+.gitignore          bỏ qua media/output nặng; giữ .gitkeep trong data/
 ```
 
 ## 4. Vai trò của các thư mục chính
+
+Tóm tắt cấu trúc theo cụm: §3. Phần dưới bổ sung chi tiết vận hành.
 
 ### `docs/`
 
@@ -144,12 +153,29 @@ Chứa các script hỗ trợ:
 * Kiểm tra schema JSON.
 * Dọn output tạm.
 * Chạy pipeline mẫu.
+* Tạo cấu trúc thư mục `data/` (`bootstrap_data_dirs`).
+
+**Trên Windows** (Git Bash hoặc WSL):
+
+```bash
+bash scripts/bootstrap_data_dirs.sh
+bash scripts/run_demo.sh
+bash scripts/clean_outputs.sh --yes
+```
+
+**Trên Windows** (PowerShell):
+
+```powershell
+.\scripts\bootstrap_data_dirs.ps1
+.\scripts\run_demo.ps1
+.\scripts\clean_outputs.ps1 -Yes
+```
 
 ## 5. Thứ tự đọc tài liệu
 
-**Thành viên mới phụ trách Stage X:** đọc theo [`docs/README.md` §7.2](docs/README.md) — `00` → `01` → `02` → stage spec của mình (full) → stage liền kề (chỉ §4 Input, §5 Output, §9 Handoff).
+**Thành viên mới:** đọc [`docs/README.md` §7](docs/README.md) — **khuyến nghị** `problem.md` + `analysis.md` (~20 phút), rồi theo §7.2 (`00` → `01` → `02` → stage spec full → stage liền kề §4/§5/§9).
 
-Danh sách đầy đủ theo vai trò (leader, schema, samples): [`docs/README.md` §7](docs/README.md).
+Lộ trình đầy đủ (leader, toàn bộ tài liệu): [`docs/README.md` §7.1](docs/README.md).
 
 ## 6. Quy tắc làm việc chung
 
@@ -173,7 +199,7 @@ Các module có thể dùng thư viện và cách triển khai khác nhau, nhưn
 
 Không tự ý đổi format JSON.
 
-Trước khi tích hợp, chạy `python scripts/validate_json.py` trên `docs/samples/`.
+Trước khi tích hợp, chạy `python scripts/validate_json.py` (mặc định kiểm tra `docs/samples/`). Khi có output runtime: `python scripts/validate_json.py --input-dir data/intermediate`.
 
 Nếu cần đổi schema, phải trao đổi với leader và cập nhật tài liệu trước.
 
@@ -392,7 +418,7 @@ Repo sẵn sàng cho giai đoạn triển khai module:
 * Schema và mẫu JSON trong `docs/samples/` đã validate cross-file.
 * Chưa có implementation code; bắt đầu từ module trong `docs/details/11_team_assignment.md`.
 
-Trước tích hợp: `python scripts/validate_json.py`.
+Trước tích hợp: `python scripts/validate_json.py` (samples) và `python scripts/validate_json.py --input-dir data/intermediate` (output runtime).
 
 ## 13. Mục tiêu làm việc của repo
 

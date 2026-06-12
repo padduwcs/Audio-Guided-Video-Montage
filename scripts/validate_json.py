@@ -126,17 +126,34 @@ def collect_unique(items: list[dict[str, Any]], key: str, label: str) -> dict[st
     return result
 
 
-def validate_samples(samples_dir: Path) -> None:
-    files = {
-        "media": samples_dir / "media_metadata_sample.json",
-        "audio": samples_dir / "audio_segments_sample.json",
-        "clips": samples_dir / "clip_metadata_sample.json",
-        "embeddings": samples_dir / "embedding_metadata_sample.json",
-        "matching": samples_dir / "matching_candidates_sample.json",
-        "timeline": samples_dir / "timeline_sample.json",
-        "render_config": samples_dir / "render_config_sample.json",
-        "render_log": samples_dir / "render_log_sample.json",
-    }
+def contract_files(directory: Path, *, runtime: bool) -> dict[str, Path]:
+    if runtime:
+        names = {
+            "media": "media_metadata.json",
+            "audio": "audio_segments.json",
+            "clips": "clip_metadata.json",
+            "embeddings": "embedding_metadata.json",
+            "matching": "matching_candidates.json",
+            "timeline": "timeline.json",
+            "render_config": "render_config.json",
+            "render_log": "render_log.json",
+        }
+    else:
+        names = {
+            "media": "media_metadata_sample.json",
+            "audio": "audio_segments_sample.json",
+            "clips": "clip_metadata_sample.json",
+            "embeddings": "embedding_metadata_sample.json",
+            "matching": "matching_candidates_sample.json",
+            "timeline": "timeline_sample.json",
+            "render_config": "render_config_sample.json",
+            "render_log": "render_log_sample.json",
+        }
+    return {key: directory / filename for key, filename in names.items()}
+
+
+def validate_samples(samples_dir: Path, *, runtime: bool = False) -> None:
+    files = contract_files(samples_dir, runtime=runtime)
 
     data = {name: load_json(path) for name, path in files.items()}
 
@@ -428,17 +445,41 @@ def validate_samples(samples_dir: Path) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Validate JSON sample contracts.")
-    parser.add_argument("--samples-dir", type=Path, default=SAMPLES)
+    parser = argparse.ArgumentParser(description="Validate JSON contracts against the shared schema rules.")
+    parser.add_argument(
+        "--samples-dir",
+        type=Path,
+        default=None,
+        help="Directory with *_sample.json files (default: docs/samples).",
+    )
+    parser.add_argument(
+        "--input-dir",
+        type=Path,
+        default=None,
+        help="Directory with runtime JSON artifacts (e.g. data/intermediate).",
+    )
     args = parser.parse_args()
 
+    if args.samples_dir is not None and args.input_dir is not None:
+        print("ERROR: use only one of --samples-dir or --input-dir")
+        return 1
+
+    if args.input_dir is not None:
+        target_dir = args.input_dir
+        runtime = True
+        label = "runtime JSON contracts"
+    else:
+        target_dir = args.samples_dir or SAMPLES
+        runtime = False
+        label = "JSON samples"
+
     try:
-        validate_samples(args.samples_dir)
+        validate_samples(target_dir, runtime=runtime)
     except ValidationError as exc:
         print(f"ERROR: {exc}")
         return 1
 
-    print(f"OK: JSON samples validated in {args.samples_dir}")
+    print(f"OK: {label} validated in {target_dir}")
     return 0
 
 

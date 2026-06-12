@@ -32,6 +32,12 @@ data/intermediate/matching_engine_log.json
 - Schema: `docs/schemas/matching_candidates.schema.md`
 - Mẫu: `docs/samples/matching_candidates_sample.json`
 
+## Cách test (sẽ bổ sung khi có code)
+
+- Input mẫu: `docs/samples/audio_segments_sample.json`, `clip_metadata_sample.json`, `embedding_metadata_sample.json`
+- Output mẫu: `docs/samples/matching_candidates_sample.json`
+- Validate: `python scripts/validate_json.py --input-dir data/intermediate`
+
 ## Ranh giới
 
 - Không tạo `timeline.json` hoặc render video.

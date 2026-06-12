@@ -1,8 +1,14 @@
-data/raw/
-data/normalized/
-data/keyframes/
-data/intermediate/
-data/final/
+# Generated media and outputs (keep .gitkeep placeholders)
+data/raw/*
+!data/raw/.gitkeep
+data/normalized/*
+!data/normalized/.gitkeep
+data/keyframes/*
+!data/keyframes/.gitkeep
+data/intermediate/*
+!data/intermediate/.gitkeep
+data/final/*
+!data/final/.gitkeep
 
 *.mp4
 *.mov

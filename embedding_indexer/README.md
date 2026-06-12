@@ -32,6 +32,12 @@ data/intermediate/embedding_indexing_log.json
 - Schema: `docs/schemas/embedding_metadata.schema.md`
 - Mẫu: `docs/samples/embedding_metadata_sample.json`, `docs/samples/embedding_index_sample/`
 
+## Cách test (sẽ bổ sung khi có code)
+
+- Input mẫu: `docs/samples/audio_segments_sample.json`, `clip_metadata_sample.json`
+- Output mẫu: `docs/samples/embedding_metadata_sample.json`
+- Validate: `python scripts/validate_json.py --input-dir data/intermediate`
+
 ## Ranh giới
 
 - Không sửa transcript/query.

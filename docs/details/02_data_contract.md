@@ -17,6 +17,16 @@ Nguyên tắc quan trọng:
 
 > Mỗi thành viên có thể tự chọn cách triển khai bên trong module, nhưng input/output phải tuân thủ Data Contract chung.
 
+### 1.1. Lộ trình đọc (khuyến nghị)
+
+1. §2 — Quy ước chung (thời gian, score, ID, path)
+2. §3 — Bảng tổng quan file
+3. Section file output của module mình (§4–§11)
+4. §13 — Mapping cross-file
+5. §14–§16 — Validate, UI, Renderer
+
+Chi tiết triển khai từng stage: `docs/details/03`–`10` tương ứng.
+
 ## 2. Quy ước chung
 
 ### 2.1. Định dạng file
@@ -148,7 +158,7 @@ Một số field optional (ví dụ `clip_metadata.items[].status`, `source_path
 
 ### 2.8. Mẫu dữ liệu và thứ tự ưu tiên
 
-Mẫu JSON tích hợp: `docs/samples/*_sample.json`. Kiểm tra cross-file: `python scripts/validate_json.py`.
+Mẫu JSON tích hợp: `docs/samples/*_sample.json`. Kiểm tra cross-file: `python scripts/validate_json.py` (samples) hoặc `python scripts/validate_json.py --input-dir data/intermediate` (runtime).
 
 Khi tài liệu mâu thuẫn, ưu tiên: **Data Contract → schemas → samples → stage spec → README module**. `docs/analysis.md` tham khảo ý tưởng, không phải contract triển khai.
 
@@ -728,7 +738,7 @@ Timeline Planner tạo bản đầu tiên. Review UI cập nhật **cùng file**
 Quy ước path:
 
 * MVP mặc định: một file `timeline.json` duy nhất, Timeline Planner tạo lần đầu, Review UI ghi đè sau khi người dùng chỉnh.
-* MVP ghi đè `data/intermediate/timeline.json`. Có thể xuất `timeline_updated.json` làm backup; integration phải truyền đúng path cho Renderer.
+* MVP ghi đè `data/intermediate/timeline.json`. Có thể xuất `timeline.before_review.json` làm backup; integration phải truyền đúng path cho Renderer.
 * Thuật ngữ "updated timeline" trong sơ đồ chỉ mô tả nội dung sau review, không phải tên file bắt buộc.
 
 ### 9.2. Cấu trúc
@@ -1148,7 +1158,7 @@ UI được phép chỉnh:
 * `locked`.
 * `updated_at`.
 
-Review UI ghi đè `data/intermediate/timeline.json`. Backup optional: `timeline_updated.json`.
+Review UI ghi đè `data/intermediate/timeline.json`. Backup optional: `timeline.before_review.json`.
 
 UI không nên chỉnh:
 

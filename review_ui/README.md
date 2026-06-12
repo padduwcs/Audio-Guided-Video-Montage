@@ -25,7 +25,7 @@ Media preview: voice-over từ `media_metadata.audio.normalized_path`; video t�
 ```text
 data/intermediate/timeline.json
 data/intermediate/review_ui_log.json          (optional)
-data/intermediate/timeline_updated.json       (backup, optional)
+data/intermediate/timeline.before_review.json (backup, optional)
 ```
 
 MVP ghi đè `timeline.json` tại cùng path.
@@ -36,6 +36,11 @@ MVP ghi đè `timeline.json` tại cùng path.
 - Stage spec: `docs/details/09_stage_7_review_ui.md`
 - Schema: `docs/schemas/timeline.schema.md`
 - Mẫu: `docs/samples/timeline_sample.json` và các sample liên quan trong `docs/samples/`
+
+## Cách test (sẽ bổ sung khi có code)
+
+- Input mẫu: `docs/samples/timeline_sample.json`, `matching_candidates_sample.json`, `clip_metadata_sample.json`, `audio_segments_sample.json`, `media_metadata_sample.json`
+- Validate timeline sau chỉnh: `python scripts/validate_json.py --input-dir data/intermediate`
 
 ## Ranh giới
 

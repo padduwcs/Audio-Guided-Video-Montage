@@ -13,6 +13,11 @@ Tiện ích và hằng số dùng chung giữa các module.
 - `docs/details/02_data_contract.md`
 - `docs/details/01_system_architecture.md`
 
+## Cách test (sẽ bổ sung khi có code)
+
+- Contract reference: `python scripts/validate_json.py`
+- Runtime artifacts: `python scripts/validate_json.py --input-dir data/intermediate`
+
 ## Ranh giới
 
 - Không đặt business logic riêng của từng module.

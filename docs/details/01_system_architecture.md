@@ -225,7 +225,7 @@ media_metadata.json
 * Lấy timestamp theo câu, cụm từ hoặc đoạn nói.
 * Chia audio thành các segment có ý nghĩa.
 * Tạo query tìm kiếm clip cho từng segment.
-* Cho phép sửa transcript nếu cần.
+* Hỗ trợ transcript correction qua chạy lại module (file correction nội bộ — không qua Review UI trong MVP).
 
 ### Output
 
@@ -863,7 +863,7 @@ Nếu các ID không khớp, pipeline sẽ lỗi khi tích hợp.
 Cách xử lý:
 
 * Đánh dấu segment lỗi hoặc confidence thấp.
-* Cho phép người dùng sửa transcript.
+* MVP: sửa transcript qua file correction + chạy lại Audio Analyzer (xem Stage 2 §7.13), không qua Review UI.
 * Không dừng toàn bộ pipeline nếu chỉ một đoạn lỗi nhẹ.
 
 ## 12.2. Video không tách được scene tốt

@@ -42,6 +42,19 @@ Log debug (optional): `*_log.json` từng stage, gồm `timeline_planning_log.js
 - `docs/details/02_data_contract.md`
 - `docs/details/12_integration_plan.md`
 
+## Cách test (sẽ bổ sung khi có code)
+
+- Validate samples: `python scripts/validate_json.py`
+- Validate runtime: `python scripts/validate_json.py --input-dir data/intermediate`
+
+## Kiểm tra trước khi chạy
+
+```bash
+python scripts/validate_json.py
+# Sau khi có output runtime trong data/intermediate/:
+python scripts/validate_json.py --input-dir data/intermediate
+```
+
 ## Ranh giới
 
 - Không đổi schema trong code tích hợp.

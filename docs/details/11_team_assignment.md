@@ -46,6 +46,8 @@ shared
 
 Trong nhóm 5 người, một người có thể phụ trách nhiều module nếu các module có liên quan gần nhau.
 
+Module **Evaluation** (`evaluation_report.json`) nằm ngoài phân công triển khai giai đoạn 1. Làm sau khi có demo end-to-end; schema tại `docs/schemas/evaluation_report.schema.md`.
+
 ## 3. Phân công tổng quan
 
 | Thành viên | Vai trò chính                        | Module phụ trách chính                                         | Output chính                                          |
@@ -538,7 +540,7 @@ Output Review UI:
 data/intermediate/timeline.json
 ```
 
-Nếu cần backup so sánh, có thể xuất `data/intermediate/timeline_updated.json`; integration truyền path timeline cho Renderer.
+Nếu cần backup so sánh, có thể xuất `data/intermediate/timeline.before_review.json`; integration truyền path timeline cho Renderer.
 
 Output Renderer:
 

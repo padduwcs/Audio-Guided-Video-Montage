@@ -65,3 +65,31 @@ Allowed `confidence`: `high`, `medium`, `low`.
 Allowed `speed` in MVP: `0.75` to `1.25`.
 Allowed `transition`: `cut`, `fade`, `crossfade`.
 Allowed `effect` in MVP: `null`, `none`.
+
+## `render_settings` optional fields (MVP)
+
+| Field | Type |
+| --- | --- |
+| `default_transition` | string |
+| `crop_mode` | string |
+| `keep_original_audio` | boolean |
+| `original_audio_volume` | number |
+
+## `items[]` optional fields (MVP)
+
+| Field | Type |
+| --- | --- |
+| `needs_review` | boolean |
+| `fallback_used` | boolean |
+| `user_edited` | boolean |
+| `locked` | boolean |
+
+## `items[].visual_items[]` optional fields (MVP)
+
+| Field | Type |
+| --- | --- |
+| `crop_mode` | string/null |
+| `effect` | string/null |
+| `volume` | number |
+| `source_candidate_rank` | integer/null |
+| `locked` | boolean |

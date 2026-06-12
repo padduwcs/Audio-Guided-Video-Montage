@@ -40,7 +40,7 @@ Vì vậy, hướng thiết kế phù hợp nhất không phải là tự độn
 * Audio thuyết minh là kênh âm thanh chính của video thành phẩm.
 * Audio có thể là tiếng Việt ở giai đoạn hiện tại.
 * Hệ thống cần chuyển audio thành transcript có timestamp.
-* Người dùng nên được phép sửa transcript nếu ASR nhận sai tên riêng, địa danh hoặc thuật ngữ.
+* Khi ASR nhận sai, MVP xử lý bằng **file correction + chạy lại Audio Analyzer** (không qua Review UI). Sửa transcript trên UI thuộc phạm vi sau MVP.
 
 ### 2.3. Giới hạn của hệ thống
 
@@ -202,7 +202,7 @@ Phụ thuộc module, sample data, tích hợp theo lớp: [`01` §7, §10](deta
 
 | Rủi ro                                   | Ảnh hưởng             | Cách giảm                            |
 | ---------------------------------------- | --------------------- | ------------------------------------ |
-| ASR nhận sai transcript                  | Matching sai          | Cho người dùng sửa transcript        |
+| ASR nhận sai transcript                  | Matching sai          | File correction + chạy lại Stage 2; UI sửa transcript sau MVP |
 | Video nguồn thiếu cảnh phù hợp           | Video sai nghĩa       | Dùng fallback + confidence thấp      |
 | Clip top 1 không hợp cảm nhận người dùng | Video chưa tốt        | Cho chọn clip trong top-k            |
 | Scene detection cắt sai                  | Clip candidate xấu    | Lọc clip quá ngắn, chia clip quá dài |

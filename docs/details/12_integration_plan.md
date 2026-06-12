@@ -135,7 +135,7 @@ Schema, field, mapping: [`02_data_contract.md`](./02_data_contract.md) · module
 | `render_config.json` | user/integration | Optional; `output.path`, fps, `voiceover_path`, allowed crop/transition |
 | `render_log.json` | `renderer/` | `status`, `output_path`; file tồn tại nếu success |
 
-Validate: `python scripts/validate_json.py` trước khi ghép stage tiếp.
+Validate: `python scripts/validate_json.py` (samples) hoặc `python scripts/validate_json.py --input-dir data/intermediate` (runtime) trước khi ghép stage tiếp.
 
 ## 5. Chiến lược tích hợp theo lớp
 
@@ -171,6 +171,8 @@ Leader chuẩn bị sample data:
 * Có ít nhất 4-6 clip candidates.
 * Có ít nhất một segment confidence thấp.
 * Có ít nhất một segment dùng nhiều visual items nếu muốn test timeline linh hoạt.
+
+Vector/index nhị phân không commit vào repo; xem [`docs/samples/embedding_index_sample/README.md`](../samples/embedding_index_sample/README.md).
 
 ### Module có thể test bằng sample data
 
@@ -381,7 +383,7 @@ UI cần làm được:
 data/intermediate/timeline.json
 ```
 
-Nếu cần backup, có thể xuất `data/intermediate/timeline_updated.json`; integration truyền path timeline cho Renderer.
+Nếu cần backup, có thể xuất `data/intermediate/timeline.before_review.json`; integration truyền path timeline cho Renderer.
 
 ### Tiêu chí hoàn thành lớp 4
 

@@ -31,6 +31,12 @@ data/intermediate/audio_analysis_log.json
 - Schema: `docs/schemas/audio_segments.schema.md`
 - Mẫu: `docs/samples/audio_segments_sample.json`
 
+## Cách test (sẽ bổ sung khi có code)
+
+- Input mẫu: `docs/samples/media_metadata_sample.json`
+- Output mẫu: `docs/samples/audio_segments_sample.json`
+- Validate: `python scripts/validate_json.py --input-dir data/intermediate`
+
 ## Ranh giới
 
 - Không phân tích video nguồn.

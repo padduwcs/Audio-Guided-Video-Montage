@@ -87,7 +87,7 @@ Không đọc video nguồn — chỉ phụ thuộc output Stage ①. Chi tiết
 * Không matching audio segment với clip, không chọn clip cho timeline.
 * Không tạo `timeline.json`, không render video cuối.
 
-Nếu người dùng sửa transcript trên UI ở stage sau, UI có thể cập nhật dữ liệu phục vụ review; Audio Analyzer không quản lý timeline chỉnh sửa của người dùng.
+Sửa transcript không thuộc Review UI trong MVP. Nếu có transcript correction, chạy lại Audio Analyzer theo §7.13; các module downstream đọc `audio_segments.json` mới.
 
 ## 4. Input cần đọc
 
@@ -374,7 +374,17 @@ Thiết kế module không khóa cứng một lần ASR. Nếu có transcript co
 * Sửa timestamp → validate lại toàn bộ `start`, `end`, `duration`.
 * Ghi rõ trong log rằng output dùng transcript correction.
 
-File correction nội bộ (không phải contract MVP) — xem sample trong implementation nếu nhóm làm UI sửa transcript.
+File correction nội bộ (không phải contract MVP). Ví dụ:
+
+```json
+{
+  "segment_id": "a003",
+  "corrected_text": "Khach tham quan di chuyen sang khu trai nghiem tiep theo.",
+  "corrected_query": "khach tham quan di chuyen khu trai nghiem"
+}
+```
+
+Sau khi áp dụng correction, chạy lại Stage 2 rồi pipeline từ Embedding Indexer trở đi (xem [`12_integration_plan.md`](12_integration_plan.md) §12.2).
 
 ## 8. Error / fallback / re-run behavior
 

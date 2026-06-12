@@ -31,6 +31,12 @@ data/keyframes/*.jpg
 - Schema: `docs/schemas/clip_metadata.schema.md`
 - Mẫu: `docs/samples/clip_metadata_sample.json`
 
+## Cách test (sẽ bổ sung khi có code)
+
+- Input mẫu: `docs/samples/media_metadata_sample.json`
+- Output mẫu: `docs/samples/clip_metadata_sample.json`
+- Validate: `python scripts/validate_json.py --input-dir data/intermediate`
+
 ## Ranh giới
 
 - Không matching ngữ nghĩa với audio.
