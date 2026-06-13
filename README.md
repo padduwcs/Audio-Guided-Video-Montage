@@ -249,7 +249,57 @@ Chỉ nên commit:
 * Tài liệu.
 * Script hỗ trợ.
 
-## 7. Quy trình phát triển đề xuất
+## 7. Workflow Git/GitHub cho nhóm
+
+### 7.1. Nhánh chính
+
+* **`main`** — bản ổn định để demo và nộp sản phẩm.
+* **`develop`** — nhánh tích hợp chung; mọi thay đổi hợp lệ được gom tại đây trước khi release lên `main`.
+* Thành viên **luôn tạo branch làm việc từ `develop`**, không tạo từ `main`.
+
+### 7.2. Quy ước đặt tên branch
+
+| Tiền tố | Dùng khi |
+| ------- | -------- |
+| `feature/...` | Thêm hoặc hoàn thiện chức năng module |
+| `fix/...` | Sửa lỗi |
+| `docs/...` | Cập nhật tài liệu |
+| `integration/...` | Ghép pipeline, wiring giữa các module |
+
+Ví dụ: `feature/audio-analyzer-asr`, `docs/team-git-workflow`.
+
+### 7.3. Quy trình làm việc
+
+1. `git checkout develop` → `git pull origin develop`
+2. Tạo branch mới theo quy ước trên.
+3. Làm việc, commit thường xuyên với message rõ ràng.
+4. Push branch lên GitHub và **tạo Pull Request về `develop`**.
+5. **Không push trực tiếp lên `main`.**
+
+### 7.4. Quy tắc bắt buộc khi làm việc trên Git
+
+* **Không tự ý đổi** Data Contract, schema (`docs/schemas/`), JSON mẫu (`docs/samples/`), quy ước ID hoặc timeline format — cần thống nhất với leader trước.
+* **Không commit** file media (`.mp4`, `.wav`, …), model lớn, output render nặng (xem thêm §6.5).
+
+### 7.5. Nội dung Pull Request
+
+Mỗi PR cần mô tả đủ các mục:
+
+* **Phần làm** — module/file nào, thay đổi gì.
+* **Cách chạy** — lệnh hoặc bước thực thi.
+* **Cách test** — dữ liệu đầu vào, lệnh kiểm tra.
+* **Output tạo ra** — file JSON/video và đường dẫn.
+* **Giới hạn hiện tại** — phần chưa làm, edge case chưa xử lý.
+
+### 7.6. Trước khi merge vào `develop`
+
+Người review (hoặc tác giả PR) cần xác nhận:
+
+1. Module chạy được độc lập.
+2. Output đúng schema (`python scripts/validate_json.py` hoặc `--input-dir data/intermediate`).
+3. Không ảnh hưởng module khác (không đổi contract, không sửa code module người khác nếu chưa trao đổi).
+
+## 8. Quy trình phát triển đề xuất
 
 ### Bước 1: Đọc tài liệu
 
@@ -305,7 +355,7 @@ Input video/audio
 → final_video.mp4
 ```
 
-## 8. Output trung gian chuẩn
+## 9. Output trung gian chuẩn
 
 Các file output trung gian quan trọng gồm:
 
@@ -328,7 +378,7 @@ final_video.mp4
 
 Ý nghĩa từng file sẽ được mô tả chi tiết trong `docs/details/02_data_contract.md` và `docs/schemas/`.
 
-## 9. Nguyên tắc tích hợp
+## 10. Nguyên tắc tích hợp
 
 Khi tích hợp module, cần kiểm tra theo thứ tự:
 
@@ -342,9 +392,9 @@ Khi tích hợp module, cần kiểm tra theo thứ tự:
 
 Nếu có lỗi, ưu tiên kiểm tra file JSON trung gian trước khi sửa code.
 
-## 10. Quy ước chung
+## 11. Quy ước chung
 
-### 10.1. Đơn vị thời gian
+### 11.1. Đơn vị thời gian
 
 Tất cả thời gian trong JSON sử dụng đơn vị giây.
 
@@ -357,7 +407,7 @@ Ví dụ:
 }
 ```
 
-### 10.2. Score
+### 11.2. Score
 
 Các điểm số nên nằm trong khoảng từ `0.0` đến `1.0`.
 
@@ -371,7 +421,7 @@ Ví dụ:
 }
 ```
 
-### 10.3. Confidence
+### 11.3. Confidence
 
 Confidence dùng ba mức chính:
 
@@ -381,7 +431,7 @@ medium
 low
 ```
 
-### 10.4. ID
+### 11.4. ID
 
 ID nên đặt ngắn gọn, dễ đọc và thống nhất.
 
@@ -394,7 +444,7 @@ v01_c003
 candidates_a001
 ```
 
-## 11. Phân công module tổng quát
+## 12. Phân công module tổng quát
 
 | Vai trò              | Thư mục chính                      | Output chính                  |
 | -------------------- | ---------------------------------- | ----------------------------- |
@@ -410,7 +460,7 @@ candidates_a001
 
 Một thành viên có thể phụ trách nhiều module tùy theo phân công thực tế.
 
-## 12. Trạng thái hiện tại
+## 13. Trạng thái hiện tại
 
 Repo sẵn sàng cho giai đoạn triển khai module:
 
@@ -420,7 +470,7 @@ Repo sẵn sàng cho giai đoạn triển khai module:
 
 Trước tích hợp: `python scripts/validate_json.py` (samples) và `python scripts/validate_json.py --input-dir data/intermediate` (output runtime).
 
-## 13. Mục tiêu làm việc của repo
+## 14. Mục tiêu làm việc của repo
 
 Repo này không chỉ chứa code, mà còn là nơi thống nhất cách cả nhóm hiểu và phát triển dự án.
 
