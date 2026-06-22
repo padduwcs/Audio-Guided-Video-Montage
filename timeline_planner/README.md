@@ -33,11 +33,21 @@ data/intermediate/timeline_planning_log.json   (optional)
 - Schema: `docs/schemas/timeline.schema.md`
 - Mẫu: `docs/samples/timeline_sample.json`
 
-## Cách test (sẽ bổ sung khi có code)
+## Cách chạy
 
-- Input mẫu: `docs/samples/matching_candidates_sample.json`, `audio_segments_sample.json`, `clip_metadata_sample.json`, `media_metadata_sample.json`
-- Output mẫu: `docs/samples/timeline_sample.json`
-- Validate: `python scripts/validate_json.py --input-dir data/intermediate`
+```powershell
+python -m timeline_planner --input-dir data/intermediate
+python -m timeline_planner --input-dir data/intermediate --output data/intermediate/timeline.json
+```
+
+Input mẫu: copy từ `docs/samples/` vào `data/intermediate/` (hoặc dùng `integration.run_pipeline --use-sample-data`).
+
+## Cách test
+
+```powershell
+python -m timeline_planner --input-dir data/intermediate
+python scripts/validate_json.py --input-dir data/intermediate
+```
 
 ## Ranh giới
 
