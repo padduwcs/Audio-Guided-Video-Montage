@@ -36,22 +36,32 @@ Log debug (optional): `*_log.json` từng stage, gồm `timeline_planning_log.js
 
 `render_config.json` optional nếu tách cấu hình render khỏi `timeline.render_settings`.
 
+## Cách chạy
+
+```powershell
+python -m integration.run_pipeline --use-sample-data --to-stage 6 --overwrite
+python -m integration.run_pipeline --from-stage 6 --validate-only
+python -m integration.run_pipeline --validate-only --input-dir data/intermediate
+```
+
+## Cách test
+
+```powershell
+python scripts/validate_json.py
+python scripts/validate_json.py --input-dir data/intermediate
+.\scripts\run_demo.ps1
+```
+
 ## Tài liệu
 
 - `docs/details/01_system_architecture.md`
 - `docs/details/02_data_contract.md`
 - `docs/details/12_integration_plan.md`
 
-## Cách test (sẽ bổ sung khi có code)
-
-- Validate samples: `python scripts/validate_json.py`
-- Validate runtime: `python scripts/validate_json.py --input-dir data/intermediate`
-
 ## Kiểm tra trước khi chạy
 
-```bash
+```powershell
 python scripts/validate_json.py
-# Sau khi có output runtime trong data/intermediate/:
 python scripts/validate_json.py --input-dir data/intermediate
 ```
 
@@ -59,3 +69,8 @@ python scripts/validate_json.py --input-dir data/intermediate
 
 - Không đổi schema trong code tích hợp.
 - Không bỏ qua lỗi validation.
+
+## Giới hạn hiện tại (tuần 1)
+
+- Stage 1–5 dùng copy từ `docs/samples/` khi bật `--use-sample-data`.
+- Stage 7–8 chưa implement.
