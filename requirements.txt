@@ -8,8 +8,9 @@
 #   opencv-python
 #
 # audio_analyzer:
-#   faster-whisper   # or openai-whisper
-#
+faster-whisper==1.2.1
+# 
+#   
 # embedding_indexer / matching_engine:
 #   numpy
 #   faiss-cpu        # or alternative index
@@ -20,3 +21,4 @@
 #
 # renderer:
 #   ffmpeg-python    # optional wrapper; ffmpeg CLI is sufficient for MVP
+
