@@ -213,6 +213,202 @@ def launch_review_ui(
             Dự án: **{project_data.timeline.get('project_id')}** | Tập tin: `{os.path.basename(timeline_path)}`
             """
         )
+        gr.Markdown(
+            """
+            <style>
+            .gradio-container {
+                background: #FFFFFF !important;
+                color: #1D1D1F !important;
+                font-family: SF Pro Text, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+                letter-spacing: 0px !important;
+            }
+            .gr-box, .gr-group {
+                background: #FFFFFF !important;
+                border: 1px solid #EDEDF2 !important;
+                border-radius: 0px !important;
+                box-shadow: none !important;
+                padding: 24px !important;
+            }
+            .gr-card, .gr-panel {
+                background: #FFFFFF !important;
+                border-radius: 0px !important;
+                box-shadow: none !important;
+                border: none !important;
+            }
+            input, select, textarea, .gr-input {
+                background: #FFFFFF !important;
+                color: #1D1D1F !important;
+                border: 1px solid #D5D5D7 !important;
+                border-radius: 8px !important;
+                padding: 12px 16px !important;
+                font-family: SF Pro Text, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+                font-size: 17px !important;
+                line-height: 25px !important;
+            }
+            input:focus, select:focus, textarea:focus, .gr-input:focus {
+                border-color: #0071E3 !important;
+                box-shadow: 0 0 0 3px rgba(0,113,227,0.1) !important;
+            }
+            label, .gr-label {
+                font-family: SF Pro Text, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+                font-size: 12px !important;
+                font-weight: 600 !important;
+                color: #1D1D1F !important;
+                margin-bottom: 8px !important;
+                display: block !important;
+            }
+            button.primary, .gr-button-primary {
+                background: #0071E3 !important;
+                color: #FFFFFF !important;
+                font-family: SF Pro Text, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+                font-size: 17px !important;
+                font-weight: 400 !important;
+                line-height: 25px !important;
+                padding: 12px 24px !important;
+                border-radius: 50% !important;
+                border: none !important;
+                box-shadow: none !important;
+                min-height: 44px !important;
+                min-width: 44px !important;
+                transition: background 0.2s;
+            }
+            button.primary:hover, .gr-button-primary:hover {
+                background: #006EDB !important;
+            }
+            button.primary:active, .gr-button-primary:active {
+                background: #0076DF !important;
+            }
+            button.secondary, .gr-button-secondary {
+                background: transparent !important;
+                color: #0071E3 !important;
+                font-family: SF Pro Text, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+                font-size: 17px !important;
+                font-weight: 400 !important;
+                line-height: 25px !important;
+                padding: 12px 24px !important;
+                border-radius: 50% !important;
+                border: 2px solid #0071E3 !important;
+                box-shadow: none !important;
+                min-height: 44px !important;
+                min-width: 44px !important;
+                transition: background 0.2s, border-color 0.2s;
+            }
+            button.secondary:hover, .gr-button-secondary:hover {
+                background: rgba(0,113,227,0.05) !important;
+                border-color: #006EDB !important;
+            }
+            button.secondary:active, .gr-button-secondary:active {
+                border: 2px solid #0076DF !important;
+            }
+            button.ghost, .gr-button-ghost {
+                background: transparent !important;
+                color: #1D1D1F !important;
+                font-family: SF Pro Text, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+                font-size: 17px !important;
+                font-weight: 400 !important;
+                line-height: 25px !important;
+                padding: 12px 8px !important;
+                border-radius: 0px !important;
+                border: none !important;
+                box-shadow: none !important;
+                min-height: 44px !important;
+                min-width: 44px !important;
+            }
+            button.ghost:hover, .gr-button-ghost:hover {
+                background: rgba(0,0,0,0.05) !important;
+            }
+            button.ghost:active, .gr-button-ghost:active {
+                background: rgba(0,0,0,0.08) !important;
+            }
+            .gradio-navbar, .gr-top-bar {
+                background: rgba(255,255,255,0.8) !important;
+                color: #1D1D1F !important;
+                font-family: SF Pro Text, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+                font-size: 17px !important;
+                font-weight: 400 !important;
+                line-height: 25px !important;
+                border-bottom: 1px solid rgba(0,0,0,0.1) !important;
+                height: 44px !important;
+                box-shadow: none !important;
+                backdrop-filter: blur(12px) !important;
+            }
+            .gr-card, .gr-panel, .gr-box, .gr-group {
+                border-radius: 0px !important;
+                box-shadow: none !important;
+                border: 1px solid #EDEDF2 !important;
+                background: #FFFFFF !important;
+                padding: 24px !important;
+            }
+            h1, .gr-h1 {
+                font-family: SF Pro Display, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+                font-size: 40px !important;
+                font-weight: 600 !important;
+                line-height: 44px !important;
+                color: #1D1D1F !important;
+                margin-bottom: 24px !important;
+            }
+            h2, .gr-h2 {
+                font-family: SF Pro Display, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+                font-size: 28px !important;
+                font-weight: 400 !important;
+                line-height: 32px !important;
+                color: #1D1D1F !important;
+                margin-bottom: 20px !important;
+            }
+            h3, .gr-h3 {
+                font-family: SF Pro Display, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+                font-size: 24px !important;
+                font-weight: 600 !important;
+                line-height: 28px !important;
+                color: #1D1D1F !important;
+                margin-bottom: 16px !important;
+            }
+            .gr-body, p, .gr-markdown {
+                font-family: SF Pro Text, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+                font-size: 17px !important;
+                font-weight: 400 !important;
+                line-height: 25px !important;
+                color: #1D1D1F !important;
+            }
+            .gr-caption, .gr-label-caption {
+                font-size: 12px !important;
+                color: #6E6E73 !important;
+                font-weight: 400 !important;
+                line-height: 16px !important;
+            }
+            .gradio-container, .gr-box, .gr-group, .gr-card, .gr-panel {
+                padding: 24px !important;
+                margin-bottom: 24px !important;
+            }
+            .gr-row, .gr-col {
+                gap: 24px !important;
+            }
+            button, .gr-button, input, select, textarea {
+                min-height: 44px !important;
+                min-width: 44px !important;
+            }
+            .gradio-container, .gr-box, .gr-group, .gr-card, .gr-panel {
+                box-shadow: none !important;
+            }
+            @media (max-width: 1023px) {
+                .gradio-container, .gr-box, .gr-group, .gr-card, .gr-panel {
+                    padding: 16px !important;
+                }
+                h1, .gr-h1 { font-size: 28px !important; }
+                h2, .gr-h2 { font-size: 20px !important; }
+                h3, .gr-h3 { font-size: 17px !important; }
+            }
+            @media (max-width: 767px) {
+                .gradio-container, .gr-box, .gr-group, .gr-card, .gr-panel {
+                    padding: 12px !important;
+                }
+                h1, .gr-h1 { font-size: 20px !important; }
+                h2, .gr-h2 { font-size: 17px !important; }
+                h3, .gr-h3 { font-size: 15px !important; }
+            }
+            </style>
+            """
+        )
         
         # App state variables
         project_state = gr.State(project_data)
@@ -355,48 +551,85 @@ def launch_review_ui(
             """
             <style>
             .gradio-container {
-                background-color: #f8fafc !important;
-                color: #334155 !important;
-                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                background: #FFFFFF !important;
+                color: #1D1D1F !important;
+                font-family: SF Pro Text, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+                letter-spacing: 0px !important;
             }
             .gr-box, .gr-group {
-                background: #ffffff !important;
-                border: 1px solid #e2e8f0 !important;
-                border-radius: 6px !important;
+                background: #FFFFFF !important;
+                border: 1px solid #EDEDF2 !important;
+                border-radius: 0px !important;
                 box-shadow: none !important;
-                padding: 12px !important;
+                padding: 24px !important;
+            }
+            .gr-card, .gr-panel {
+                background: #FFFFFF !important;
+                border-radius: 0px !important;
+                box-shadow: none !important;
+                border: none !important;
             }
             input, select, textarea, .gr-input {
-                background: #ffffff !important;
-                color: #0f172a !important;
-                border: 1px solid #cbd5e1 !important;
-                border-radius: 4px !important;
-                padding: 6px !important;
+                background: #FFFFFF !important;
+                color: #1D1D1F !important;
+                border: 1px solid #D5D5D7 !important;
+                border-radius: 8px !important;
+                padding: 12px 16px !important;
+                font-family: SF Pro Text, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+                font-size: 17px !important;
+                line-height: 25px !important;
             }
-            button.primary {
-                background: #2563eb !important;
-                color: #ffffff !important;
+            input:focus, select:focus, textarea:focus, .gr-input:focus {
+                border-color: #0071E3 !important;
+                box-shadow: 0 0 0 3px rgba(0,113,227,0.1) !important;
+            }
+            label, .gr-label {
+                font-family: SF Pro Text, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+                font-size: 12px !important;
+                font-weight: 600 !important;
+                color: #1D1D1F !important;
+                margin-bottom: 8px !important;
+                display: block !important;
+            }
+            /* Force override Gradio orange button */
+            button, .gr-button, button.primary, .gr-button-primary, button.secondary, .gr-button-secondary, [class*="primary"], [class*="secondary"] {
+                background: #0071E3 !important;
+                color: #FFFFFF !important;
+                border-radius: 50% !important;
                 border: none !important;
-                border-radius: 4px !important;
-                font-weight: 500 !important;
-                cursor: pointer;
+                font-family: SF Pro Text, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+                font-size: 17px !important;
+                font-weight: 400 !important;
+                min-height: 44px !important;
+                min-width: 44px !important;
                 box-shadow: none !important;
             }
-            button.primary:hover {
-                background: #1d4ed8 !important;
+            button:hover, .gr-button:hover, button.primary:hover, .gr-button-primary:hover, [class*="primary"]:hover, [class*="secondary"]:hover {
+                background: #006EDB !important;
             }
-            button.secondary, .gr-button-secondary {
-                background: #f1f5f9 !important;
-                border: 1px solid #cbd5e1 !important;
-                color: #475569 !important;
-                border-radius: 4px !important;
-                font-weight: 500 !important;
-                cursor: pointer;
-            }
-            button.secondary:hover, .gr-button-secondary:hover {
-                background: #e2e8f0 !important;
+            button:active, .gr-button:active, button.primary:active, .gr-button-primary:active, [class*="primary"]:active, [class*="secondary"]:active {
+                background: #0076DF !important;
             }
             </style>
+            <script>
+            // Force override Gradio inline style for all buttons
+            window.addEventListener('DOMContentLoaded', function() {
+                setTimeout(function() {
+                    document.querySelectorAll('button, .gr-button').forEach(function(btn) {
+                        btn.style.background = '#0071E3';
+                        btn.style.color = '#FFFFFF';
+                        btn.style.borderRadius = '50%';
+                        btn.style.border = 'none';
+                        btn.style.fontFamily = 'SF Pro Text, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                        btn.style.fontSize = '17px';
+                        btn.style.fontWeight = '400';
+                        btn.style.minHeight = '44px';
+                        btn.style.minWidth = '44px';
+                        btn.style.boxShadow = 'none';
+                    });
+                }, 500);
+            });
+            </script>
             """
         )
 
