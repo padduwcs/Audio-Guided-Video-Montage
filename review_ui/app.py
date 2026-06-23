@@ -506,7 +506,7 @@ def launch_review_ui(
         )
 
         # Render final video callback
-        def on_render(data, is_dirty):
+        def on_render(data, is_dirty, progress=gr.Progress()):
             # Check and auto-save if dirty
             if is_dirty:
                 try:
@@ -532,11 +532,13 @@ def launch_review_ui(
             log_path_render = os.path.join(REPO_ROOT, "data", "intermediate", "render_log.json")
             
             try:
+                progress(0.0, desc="Bắt đầu chuẩn bị render...")
                 render_timeline(
                     timeline_path=timeline_path,
                     output_path=output_video_path,
                     log_path=log_path_render,
-                    voice_over_path=voice_over_path
+                    voice_over_path=voice_over_path,
+                    progress_callback=lambda ratio, desc: progress(ratio, desc=desc)
                 )
                 return output_video_path, "Render video thành công tại data/final/final_video.mp4!", False, gr.update(selected="render_tab")
             except Exception as e:

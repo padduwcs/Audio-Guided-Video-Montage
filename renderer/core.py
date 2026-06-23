@@ -55,7 +55,8 @@ def render_timeline(
     overlay_image=None,
     overlay_pos="top-right",
     preview=False,
-    voice_over_path=None
+    voice_over_path=None,
+    progress_callback=None
 ):
     # Load timeline
     with open(timeline_path, "r", encoding="utf-8") as f:
@@ -78,7 +79,10 @@ def render_timeline(
     transitions = []
 
     try:
+        total_segs = len(segments)
         for idx, item in enumerate(tqdm(segments, desc="Extracting segments", unit="seg")):
+            if progress_callback:
+                progress_callback(idx / (total_segs + 1), f"Đang trích xuất segment {idx+1}/{total_segs}...")
             # For MVP: use the first visual_item of each segment
             visual_items = item.get("visual_items", [])
             if not visual_items:
@@ -111,6 +115,9 @@ def render_timeline(
         if not segment_files:
             print("No segments extracted. Nothing to render.")
             return
+
+        if progress_callback:
+            progress_callback(total_segs / (total_segs + 1), "Đang ghép nối các phân đoạn và lồng âm thanh thuyết minh...")
 
         # If all transitions are "cut", use concat. Otherwise, use filter_complex for transitions.
         if all(t == "cut" for t in transitions):
@@ -243,6 +250,9 @@ def render_timeline(
             with open(log_path, "w", encoding="utf-8") as lf:
                 json.dump(log_data, lf, indent=2)
             print(f"Render log written to: {log_path}")
+
+        if progress_callback:
+            progress_callback(1.0, "Hoàn tất render video!")
 
     finally:
         shutil.rmtree(temp_dir)
