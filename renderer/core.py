@@ -54,7 +54,8 @@ def render_timeline(
     hwaccel=None,
     overlay_image=None,
     overlay_pos="top-right",
-    preview=False
+    preview=False,
+    voice_over_path=None
 ):
     # Load timeline
     with open(timeline_path, "r", encoding="utf-8") as f:
@@ -139,10 +140,33 @@ def render_timeline(
                     "bottom-right": "main_w-overlay_w-10:main_h-overlay_h-10"
                 }
                 overlay_expr = pos_map.get(overlay_pos, "main_w-overlay_w-10:10")
-                concat_cmd += [
-                    "-filter_complex", f"[0:v][1:v]overlay={overlay_expr}[v]",
-                    "-map", "[v]", "-map", "0:a?"
-                ]
+
+            # Add voiceover if provided
+            if voice_over_path and os.path.exists(voice_over_path):
+                concat_cmd += ["-i", voice_over_path]
+
+            # Build mapping options
+            if overlay_image:
+                if voice_over_path and os.path.exists(voice_over_path):
+                    concat_cmd += [
+                        "-filter_complex", f"[0:v][1:v]overlay={overlay_expr}[v]",
+                        "-map", "[v]", "-map", "2:a"
+                    ]
+                else:
+                    concat_cmd += [
+                        "-filter_complex", f"[0:v][1:v]overlay={overlay_expr}[v]",
+                        "-map", "[v]", "-map", "0:a?"
+                    ]
+            else:
+                if voice_over_path and os.path.exists(voice_over_path):
+                    concat_cmd += [
+                        "-map", "0:v", "-map", "1:a"
+                    ]
+                else:
+                    concat_cmd += [
+                        "-map", "0:v?", "-map", "0:a?"
+                    ]
+
             if out_format:
                 concat_cmd += ["-f", out_format]
             if overlay_image:
@@ -154,12 +178,16 @@ def render_timeline(
                 concat_cmd += ["-c:v", "copy"]
             if video_bitrate:
                 concat_cmd += ["-b:v", video_bitrate]
-            if audio_codec:
+
+            if voice_over_path and os.path.exists(voice_over_path):
+                concat_cmd += ["-c:a", audio_codec or "aac", "-shortest"]
+            elif audio_codec:
                 concat_cmd += ["-c:a", audio_codec]
             else:
                 concat_cmd += ["-c:a", "copy"]
             if audio_bitrate:
                 concat_cmd += ["-b:a", audio_bitrate]
+
             concat_cmd.append(output_path)
             result = subprocess.run(concat_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             if result.returncode != 0:
@@ -171,26 +199,35 @@ def render_timeline(
             input_args = []
             for i, seg in enumerate(segment_files):
                 input_args += ["-i", seg]
-            filter_parts = []
-            out_stream = ""
-            for i in range(len(segment_files)):
-                filter_parts.append(f"[{i}:v][{i}:a]")
-            # MVP: only support crossfade between first two segments
-            # TODO: Generalize for N segments and all transition types
-            if len(segment_files) == 2 and transitions[0] in ("fade", "crossfade"):
-                # Example: crossfade 1s at end of first segment
-                filter_complex = (
-                    "[0:v][1:v]xfade=transition=fade:duration=1:offset=4[v];"
-                    "[0:a][1:a]acrossfade=d=1[a]"
-                )
-                out_stream = "-map [v] -map [a]"
+            
+            if voice_over_path and os.path.exists(voice_over_path):
+                voice_idx = len(segment_files)
+                input_args += ["-i", voice_over_path]
+                # MVP: only support crossfade between first two segments
+                if len(segment_files) == 2 and transitions[0] in ("fade", "crossfade"):
+                    filter_complex = "[0:v][1:v]xfade=transition=fade:duration=1:offset=4[v]"
+                    cmd = ["ffmpeg", "-y"] + input_args + [
+                        "-filter_complex", filter_complex,
+                        "-map", "[v]", "-map", f"{voice_idx}:a", "-c:a", audio_codec or "aac", "-shortest", output_path
+                    ]
+                else:
+                    print("Complex transitions for more than 2 segments not yet implemented.")
+                    return
             else:
-                print("Complex transitions for more than 2 segments not yet implemented.")
-                return
-            cmd = ["ffmpeg", "-y"] + input_args + [
-                "-filter_complex", filter_complex,
-                "-map", "[v]", "-map", "[a]", output_path
-            ]
+                # No voiceover path
+                if len(segment_files) == 2 and transitions[0] in ("fade", "crossfade"):
+                    filter_complex = (
+                        "[0:v][1:v]xfade=transition=fade:duration=1:offset=4[v];"
+                        "[0:a][1:a]acrossfade=d=1[a]"
+                    )
+                    cmd = ["ffmpeg", "-y"] + input_args + [
+                        "-filter_complex", filter_complex,
+                        "-map", "[v]", "-map", "[a]", output_path
+                    ]
+                else:
+                    print("Complex transitions for more than 2 segments not yet implemented.")
+                    return
+
             result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             if result.returncode != 0:
                 raise RuntimeError(f"ffmpeg filter_complex failed: {result.stderr.decode()}")

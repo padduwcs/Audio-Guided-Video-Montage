@@ -423,10 +423,10 @@ def launch_review_ui(
                     # Center Column: Preview & Suggestions
                     with gr.Column(scale=1, elem_classes="capcut-panel"):
                         gr.Markdown("### Trình Xem Thử Video")
-                        with gr.Tabs():
-                            with gr.Tab("Preview Phân Đoạn"):
+                        with gr.Tabs(selected="preview_tab") as video_tabs:
+                            with gr.Tab("Preview Phân Đoạn", id="preview_tab"):
                                 video_player = gr.Video(label="Video preview", interactive=False)
-                            with gr.Tab("Video Kết Quả (Final Render)"):
+                            with gr.Tab("Video Kết Quả (Final Render)", id="render_tab"):
                                 final_video_player = gr.Video(label="Video kết quả", interactive=False)
                         
                         gr.Markdown("### Gợi ý Thay Thế (Candidates)")
@@ -515,7 +515,16 @@ def launch_review_ui(
                         validate_fn=lambda t: validate_project_data(data, mode="edit_save")
                     )
                 except Exception as e:
-                    return None, f"Tự động lưu thất bại: {e}. Vui lòng kiểm tra lại!", is_dirty
+                    return None, f"Tự động lưu thất bại: {e}. Vui lòng kiểm tra lại!", is_dirty, gr.update()
+
+            # Resolve voice-over path from media_metadata
+            voice_over_path = None
+            try:
+                voice_over_rel = data.media_metadata.get("audio", {}).get("normalized_path")
+                if voice_over_rel:
+                    voice_over_path = make_abs(voice_over_rel)
+            except Exception as e:
+                print(f"[Warning] Failed to resolve voice-over audio: {e}")
 
             output_dir = os.path.join(REPO_ROOT, "data", "final")
             os.makedirs(output_dir, exist_ok=True)
@@ -526,16 +535,17 @@ def launch_review_ui(
                 render_timeline(
                     timeline_path=timeline_path,
                     output_path=output_video_path,
-                    log_path=log_path_render
+                    log_path=log_path_render,
+                    voice_over_path=voice_over_path
                 )
-                return output_video_path, "Render video thành công tại data/final/final_video.mp4!", False
+                return output_video_path, "Render video thành công tại data/final/final_video.mp4!", False, gr.update(selected="render_tab")
             except Exception as e:
-                return None, f"Render video thất bại: {e}", is_dirty
+                return None, f"Render video thất bại: {e}", is_dirty, gr.update()
 
         render_btn.click(
             fn=on_render,
             inputs=[project_state, dirty_state],
-            outputs=[final_video_player, status_box, dirty_state]
+            outputs=[final_video_player, status_box, dirty_state, video_tabs]
         )
 
         pass
