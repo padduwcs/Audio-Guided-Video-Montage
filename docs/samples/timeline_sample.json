@@ -38,7 +38,7 @@
           "timeline_start": 0.0,
           "timeline_end": 5.2,
           "speed": 1.0,
-          "transition": "cut",
+          "transition": "fade",
           "effect": null,
           "crop_mode": "center_crop",
           "volume": 0.0,

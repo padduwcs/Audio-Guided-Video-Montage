@@ -1,0 +1,1 @@
+"""Renderer package for Stage 8 - Audio-Guided Video Montage."""
