@@ -9,6 +9,16 @@ import time
 from datetime import datetime, timezone
 from tqdm import tqdm
 
+def has_audio_stream(source_path):
+    try:
+        probe = subprocess.run(
+            ["ffprobe", "-v", "error", "-select_streams", "a", "-show_entries", "stream=codec_type", "-of", "csv=p=0", source_path],
+            capture_output=True, text=True
+        )
+        return "audio" in probe.stdout
+    except:
+        return False
+
 def extract_segment_ffmpeg(
     source_path, start, end, output_path,
     speed=1.0, width=None, height=None, fps=None, crop_mode="center_crop",
@@ -23,15 +33,27 @@ def extract_segment_ffmpeg(
     if hwaccel:
         cmd += ["-hwaccel", hwaccel]
         
-    cmd += ["-ss", str(start), "-i", source_path, "-t", str(duration)]
+    cmd += ["-ss", str(start), "-i", source_path]
+    cmd += ["-f", "lavfi", "-t", str(duration), "-i", "anullsrc=channel_layout=stereo:sample_rate=44100"]
     
+    has_audio = has_audio_stream(source_path)
+    effective_vol = volume if volume is not None else original_audio_volume
+    use_original_audio = has_audio and keep_original_audio and effective_vol > 0.0
+
+    cmd += ["-map", "0:v:0"]
+    if use_original_audio:
+        cmd += ["-map", "0:a:0"]
+    else:
+        cmd += ["-map", "1:a:0"]
+        
     vf = []
     af = []
     
     if speed != 1.0:
         vf.append(f"setpts={1.0/speed}*PTS")
-        af.append(f"atempo={speed}")
-        
+        if use_original_audio:
+            af.append(f"atempo={speed}")
+            
     if width and height:
         if crop_mode == "fit":
             vf.append(f"scale={width}:{height}:force_original_aspect_ratio=decrease,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2")
@@ -45,10 +67,7 @@ def extract_segment_ffmpeg(
     if fps:
         vf.append(f"fps={fps}")
         
-    effective_vol = volume if volume is not None else original_audio_volume
-    if not keep_original_audio or effective_vol == 0.0:
-        af.append("volume=0.0")
-    elif effective_vol != 1.0:
+    if use_original_audio and effective_vol != 1.0:
         af.append(f"volume={effective_vol}")
         
     if vf:
@@ -60,10 +79,12 @@ def extract_segment_ffmpeg(
     if video_bitrate:
         cmd += ["-b:v", video_bitrate]
         
-    cmd += ["-c:a", audio_codec]
+    # Enforce standard audio format so concat demuxer doesn't fail
+    cmd += ["-c:a", audio_codec, "-ar", "44100", "-ac", "2"]
     if audio_bitrate:
         cmd += ["-b:a", audio_bitrate]
         
+    cmd += ["-t", str(duration)]
     cmd.append(output_path)
     
     result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -191,7 +212,7 @@ def render_timeline(
             concat_file = os.path.join(temp_dir, "concat_list.txt")
             with open(concat_file, "w") as cf:
                 for seg in segment_files:
-                    cf.write(f"file '{seg}'\\n")
+                    cf.write(f"file '{seg}'\n")
                     
             concat_cmd = ["ffmpeg", "-y"]
             if hwaccel:
