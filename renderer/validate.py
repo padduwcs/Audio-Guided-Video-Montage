@@ -25,6 +25,8 @@ def validate_timeline(timeline_path):
                 raise ValueError(f"Missing field '{f}' in timeline.items[{idx}]")
         if not isinstance(item["visual_items"], list):
             raise ValueError(f"visual_items must be a list in timeline.items[{idx}]")
+        if len(item["visual_items"]) == 0:
+            raise ValueError(f"visual_items is empty in timeline.items[{idx}] (segment_id: {item.get('segment_id')}) - Cannot render MVP timeline with missing visual items")
 
     # TODO: Add more contract checks as per schema
 

@@ -389,7 +389,7 @@ def launch_review_ui(
 
         # Render final video callback
         def on_render(data, is_dirty, progress=gr.Progress()):
-            # Check and auto-save if dirty
+            # 1. Check and auto-save if dirty
             if is_dirty:
                 try:
                     save_timeline(
@@ -398,6 +398,15 @@ def launch_review_ui(
                     )
                 except Exception as e:
                     return None, f"Tự động lưu thất bại: {e}. Vui lòng kiểm tra lại!", is_dirty, gr.update()
+
+            # 2. Validate for renderer handoff
+            msgs = validate_project_data(data, mode="renderer_handoff")
+            errors = [m for m in msgs if m.level == "error"]
+            if errors:
+                err_msg = "\\n".join([f"- Segment {err.segment_id}: {err.message}" for err in errors[:5]])
+                if len(errors) > 5:
+                    err_msg += f"\\n... và {len(errors) - 5} lỗi khác."
+                return None, f"Lỗi không thể render (Thiếu hình ảnh hoặc lỗi nghiêm trọng):\\n{err_msg}", is_dirty, gr.update()
 
             # Resolve voice-over path from media_metadata
             voice_over_path = None
