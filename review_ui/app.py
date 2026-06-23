@@ -205,210 +205,159 @@ def launch_review_ui(
             print(f"[Error] Failed to slice audio: {e}")
             return None
 
+    custom_css = """
+    /* 1. CapCut-Inspired Theme & Atmosphere */
+    .gradio-container {
+        background: #f8f9fa !important;
+        color: #1f2937 !important;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+    }
+
+    /* Left Sidebar container */
+    .capcut-sidebar {
+        background: #ffffff !important;
+        border-right: 1px solid #e5e7eb !important;
+        padding: 20px !important;
+        box-shadow: 2px 0 8px rgba(0,0,0,0.02) !important;
+    }
+
+    /* Main Workspace panels */
+    .capcut-panel {
+        background: #ffffff !important;
+        border: 1px solid #e5e7eb !important;
+        border-radius: 12px !important;
+        padding: 20px !important;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03), 0 2px 4px -1px rgba(0,0,0,0.02) !important;
+        margin-bottom: 20px !important;
+    }
+
+    /* Timeline Map container */
+    .capcut-timeline-panel {
+        background: #ffffff !important;
+        border: 1px solid #e5e7eb !important;
+        border-radius: 12px !important;
+        padding: 20px !important;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03), 0 2px 4px -1px rgba(0,0,0,0.02) !important;
+    }
+
+    /* Header Navbar styling */
+    .capcut-nav-bar {
+        background: #ffffff !important;
+        border-bottom: 1px solid #e5e7eb !important;
+        padding: 12px 24px !important;
+        margin-bottom: 20px !important;
+        display: flex !important;
+        align-items: center !important;
+        border-radius: 8px !important;
+    }
+    .capcut-nav-bar .nav-title {
+        font-weight: 600 !important;
+        color: #111827 !important;
+        font-size: 16px !important;
+    }
+
+    /* Inputs & Form Elements */
+    input, select, textarea, .gr-input, .gr-textbox input, .gr-dropdown select, .gr-number input {
+        background: #f9fafb !important;
+        color: #1f2937 !important;
+        border: 1px solid #e5e7eb !important;
+        border-radius: 8px !important;
+        padding: 10px 14px !important;
+        font-family: 'Inter', sans-serif !important;
+        font-size: 14px !important;
+        transition: all 0.2s ease !important;
+    }
+    input:focus, select:focus, textarea:focus, .gr-input:focus {
+        border-color: #00b2e2 !important;
+        background: #ffffff !important;
+        box-shadow: 0 0 0 3px rgba(0, 178, 226, 0.15) !important;
+    }
+
+    /* Labels */
+    label, .gr-label {
+        font-size: 12px !important;
+        font-weight: 600 !important;
+        color: #4b5563 !important;
+        margin-bottom: 6px !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.5px !important;
+    }
+
+    /* Slider styling overrides for Gradio */
+    .gr-slider input[type=range] {
+        accent-color: #00b2e2 !important;
+    }
+
+    /* Buttons (Primary, Secondary, Ghost) */
+    button, .gr-button {
+        font-family: 'Inter', sans-serif !important;
+        font-size: 14px !important;
+        font-weight: 500 !important;
+        border-radius: 9999px !important; /* CapCut Pill Shape buttons */
+        padding: 10px 20px !important;
+        transition: all 0.2s ease !important;
+        cursor: pointer !important;
+        box-shadow: none !important;
+        border: none !important;
+    }
+
+    /* Primary Button: Gradient cyan-blue like CapCut */
+    button.primary, .gr-button-primary, button[class*="primary"] {
+        background: linear-gradient(135deg, #25cbf5 0%, #00b2e2 100%) !important;
+        color: #ffffff !important;
+        font-weight: 600 !important;
+    }
+    button.primary:hover, .gr-button-primary:hover, button[class*="primary"]:hover {
+        opacity: 0.95 !important;
+        box-shadow: 0 4px 12px rgba(0, 178, 226, 0.2) !important;
+        transform: translateY(-1px) !important;
+    }
+    button.primary:active, .gr-button-primary:active, button[class*="primary"]:active {
+        transform: translateY(0px) !important;
+    }
+
+    /* Secondary Button: Transparent with border */
+    button.secondary, .gr-button-secondary, button[class*="secondary"] {
+        background: #ffffff !important;
+        color: #00b2e2 !important;
+        border: 1.5px solid #00b2e2 !important;
+    }
+    button.secondary:hover, .gr-button-secondary:hover, button[class*="secondary"]:hover {
+        background: rgba(0, 178, 226, 0.06) !important;
+        border-color: #0099c2 !important;
+        color: #0099c2 !important;
+    }
+    button.secondary:active, .gr-button-secondary:active, button[class*="secondary"]:active {
+        background: rgba(0, 178, 226, 0.12) !important;
+    }
+
+    /* Layout Spacing */
+    .gr-row, .gr-col {
+        gap: 16px !important;
+    }
+
+    /* Typography */
+    h1, h2, h3, .gr-h1, .gr-h2, .gr-h3 {
+        font-family: 'Inter', sans-serif !important;
+        color: #111827 !important;
+        font-weight: 700 !important;
+    }
+    h3, .gr-h3 {
+        font-size: 16px !important;
+        border-bottom: 2px solid #f3f4f6 !important;
+        padding-bottom: 8px !important;
+        margin-bottom: 16px !important;
+    }
+    """
+
     # Load layout
-    with gr.Blocks(title="Review UI - Audio-Guided Video Montage") as demo:
-        gr.Markdown(
-            f"""
-            # Review UI - Biên tập & Chỉnh sửa phân đoạn timeline
-            Dự án: **{project_data.timeline.get('project_id')}** | Tập tin: `{os.path.basename(timeline_path)}`
-            """
-        )
-        gr.Markdown(
-            """
-            <style>
-            .gradio-container {
-                background: #FFFFFF !important;
-                color: #1D1D1F !important;
-                font-family: SF Pro Text, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-                letter-spacing: 0px !important;
-            }
-            .gr-box, .gr-group {
-                background: #FFFFFF !important;
-                border: 1px solid #EDEDF2 !important;
-                border-radius: 0px !important;
-                box-shadow: none !important;
-                padding: 24px !important;
-            }
-            .gr-card, .gr-panel {
-                background: #FFFFFF !important;
-                border-radius: 0px !important;
-                box-shadow: none !important;
-                border: none !important;
-            }
-            input, select, textarea, .gr-input {
-                background: #FFFFFF !important;
-                color: #1D1D1F !important;
-                border: 1px solid #D5D5D7 !important;
-                border-radius: 8px !important;
-                padding: 12px 16px !important;
-                font-family: SF Pro Text, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-                font-size: 17px !important;
-                line-height: 25px !important;
-            }
-            input:focus, select:focus, textarea:focus, .gr-input:focus {
-                border-color: #0071E3 !important;
-                box-shadow: 0 0 0 3px rgba(0,113,227,0.1) !important;
-            }
-            label, .gr-label {
-                font-family: SF Pro Text, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-                font-size: 12px !important;
-                font-weight: 600 !important;
-                color: #1D1D1F !important;
-                margin-bottom: 8px !important;
-                display: block !important;
-            }
-            button.primary, .gr-button-primary {
-                background: #0071E3 !important;
-                color: #FFFFFF !important;
-                font-family: SF Pro Text, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-                font-size: 17px !important;
-                font-weight: 400 !important;
-                line-height: 25px !important;
-                padding: 12px 24px !important;
-                border-radius: 50% !important;
-                border: none !important;
-                box-shadow: none !important;
-                min-height: 44px !important;
-                min-width: 44px !important;
-                transition: background 0.2s;
-            }
-            button.primary:hover, .gr-button-primary:hover {
-                background: #006EDB !important;
-            }
-            button.primary:active, .gr-button-primary:active {
-                background: #0076DF !important;
-            }
-            button.secondary, .gr-button-secondary {
-                background: transparent !important;
-                color: #0071E3 !important;
-                font-family: SF Pro Text, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-                font-size: 17px !important;
-                font-weight: 400 !important;
-                line-height: 25px !important;
-                padding: 12px 24px !important;
-                border-radius: 50% !important;
-                border: 2px solid #0071E3 !important;
-                box-shadow: none !important;
-                min-height: 44px !important;
-                min-width: 44px !important;
-                transition: background 0.2s, border-color 0.2s;
-            }
-            button.secondary:hover, .gr-button-secondary:hover {
-                background: rgba(0,113,227,0.05) !important;
-                border-color: #006EDB !important;
-            }
-            button.secondary:active, .gr-button-secondary:active {
-                border: 2px solid #0076DF !important;
-            }
-            button.ghost, .gr-button-ghost {
-                background: transparent !important;
-                color: #1D1D1F !important;
-                font-family: SF Pro Text, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-                font-size: 17px !important;
-                font-weight: 400 !important;
-                line-height: 25px !important;
-                padding: 12px 8px !important;
-                border-radius: 0px !important;
-                border: none !important;
-                box-shadow: none !important;
-                min-height: 44px !important;
-                min-width: 44px !important;
-            }
-            button.ghost:hover, .gr-button-ghost:hover {
-                background: rgba(0,0,0,0.05) !important;
-            }
-            button.ghost:active, .gr-button-ghost:active {
-                background: rgba(0,0,0,0.08) !important;
-            }
-            .gradio-navbar, .gr-top-bar {
-                background: rgba(255,255,255,0.8) !important;
-                color: #1D1D1F !important;
-                font-family: SF Pro Text, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-                font-size: 17px !important;
-                font-weight: 400 !important;
-                line-height: 25px !important;
-                border-bottom: 1px solid rgba(0,0,0,0.1) !important;
-                height: 44px !important;
-                box-shadow: none !important;
-                backdrop-filter: blur(12px) !important;
-            }
-            .gr-card, .gr-panel, .gr-box, .gr-group {
-                border-radius: 0px !important;
-                box-shadow: none !important;
-                border: 1px solid #EDEDF2 !important;
-                background: #FFFFFF !important;
-                padding: 24px !important;
-            }
-            h1, .gr-h1 {
-                font-family: SF Pro Display, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-                font-size: 40px !important;
-                font-weight: 600 !important;
-                line-height: 44px !important;
-                color: #1D1D1F !important;
-                margin-bottom: 24px !important;
-            }
-            h2, .gr-h2 {
-                font-family: SF Pro Display, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-                font-size: 28px !important;
-                font-weight: 400 !important;
-                line-height: 32px !important;
-                color: #1D1D1F !important;
-                margin-bottom: 20px !important;
-            }
-            h3, .gr-h3 {
-                font-family: SF Pro Display, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-                font-size: 24px !important;
-                font-weight: 600 !important;
-                line-height: 28px !important;
-                color: #1D1D1F !important;
-                margin-bottom: 16px !important;
-            }
-            .gr-body, p, .gr-markdown {
-                font-family: SF Pro Text, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-                font-size: 17px !important;
-                font-weight: 400 !important;
-                line-height: 25px !important;
-                color: #1D1D1F !important;
-            }
-            .gr-caption, .gr-label-caption {
-                font-size: 12px !important;
-                color: #6E6E73 !important;
-                font-weight: 400 !important;
-                line-height: 16px !important;
-            }
-            .gradio-container, .gr-box, .gr-group, .gr-card, .gr-panel {
-                padding: 24px !important;
-                margin-bottom: 24px !important;
-            }
-            .gr-row, .gr-col {
-                gap: 24px !important;
-            }
-            button, .gr-button, input, select, textarea {
-                min-height: 44px !important;
-                min-width: 44px !important;
-            }
-            .gradio-container, .gr-box, .gr-group, .gr-card, .gr-panel {
-                box-shadow: none !important;
-            }
-            @media (max-width: 1023px) {
-                .gradio-container, .gr-box, .gr-group, .gr-card, .gr-panel {
-                    padding: 16px !important;
-                }
-                h1, .gr-h1 { font-size: 28px !important; }
-                h2, .gr-h2 { font-size: 20px !important; }
-                h3, .gr-h3 { font-size: 17px !important; }
-            }
-            @media (max-width: 767px) {
-                .gradio-container, .gr-box, .gr-group, .gr-card, .gr-panel {
-                    padding: 12px !important;
-                }
-                h1, .gr-h1 { font-size: 20px !important; }
-                h2, .gr-h2 { font-size: 17px !important; }
-                h3, .gr-h3 { font-size: 15px !important; }
-            }
-            </style>
-            """
-        )
+    with gr.Blocks(title="Review UI - Audio-Guided Video Montage", css=custom_css) as demo:
+        with gr.Row(elem_classes="capcut-nav-bar"):
+            gr.HTML(
+                f"""
+                <div class="nav-title">Review UI — Dự án: <strong>{project_data.timeline.get('project_id')}</strong> &nbsp;|&nbsp; Tập tin: <code>{os.path.basename(timeline_path)}</code></div>
+                """
+            )
         
         # App state variables
         project_state = gr.State(project_data)
@@ -416,16 +365,104 @@ def launch_review_ui(
         selected_vi_state = gr.State("") # Current visual item id
         transaction_log_state = gr.State(transaction_log)
 
-        # Header status section
+        # MAIN WORKSPACE ROW
         with gr.Row():
-            with gr.Column(scale=2):
+            # LEFT SIDEBAR: Configuration & Navigation
+            with gr.Column(scale=1, elem_classes="capcut-sidebar", min_width=320):
+                gr.Markdown("### Điều hướng Phân đoạn")
+                filter_dropdown = gr.Dropdown(
+                    choices=[
+                        ("Tất cả", "all"),
+                        ("Cần review", "needs_review"),
+                        ("Độ tin cậy thấp", "low_confidence"),
+                        ("Sử dụng fallback", "fallback"),
+                        ("Đã chỉnh sửa", "edited"),
+                        ("Thiếu hình ảnh", "missing_visual"),
+                        ("Có lỗi", "error"),
+                    ],
+                    value="all",
+                    label="Lọc theo điều kiện"
+                )
+                
+                segment_dropdown = gr.Dropdown(
+                    choices=get_segment_options(project_data, "all"),
+                    value=project_data.timeline["items"][0]["segment_id"] if project_data.timeline["items"] else None,
+                    label="Chọn phân đoạn"
+                )
+
+                gr.Markdown("### Thuyết Minh Phân Đoạn")
+                audio_player = gr.Audio(label="File audio segment", interactive=False)
+                transcript_box = gr.Textbox(label="Nội dung lời thoại", interactive=False)
+                
+                with gr.Row():
+                    conf_box = gr.Textbox(label="Độ tin cậy", interactive=False)
+                    score_box = gr.Textbox(label="Điểm số", interactive=False)
+                
+                needs_review_cb = gr.Checkbox(label="Đánh dấu cần Review", interactive=not readonly)
+                notes_box = gr.Textbox(label="Ghi chú người dùng", placeholder="Ghi chú...", interactive=not readonly)
+                apply_properties_btn = gr.Button("Cập nhật ghi chú", variant="secondary", interactive=not readonly)
+
+                gr.Markdown("### Thao tác dự án")
                 status_box = gr.Markdown("Giao diện đã sẵn sàng.")
-            with gr.Column(scale=1):
                 with gr.Row():
                     undo_btn = gr.Button("↶ Undo", variant="secondary", interactive=True)
                     redo_btn = gr.Button("↷ Redo", variant="secondary", interactive=True)
+                
+                validate_btn = gr.Button("Kiểm lỗi dự án", variant="secondary")
                 save_btn = gr.Button("Lưu Thay Đổi", variant="primary", interactive=not readonly)
-                validate_btn = gr.Button("Kiểm lỗi", variant="secondary")
+                
+                export_audit_btn = gr.Button("Xuất Audit Log", variant="secondary")
+                audit_log_box = gr.Textbox(label="Audit Log (JSON)", lines=5, interactive=False)
+
+            # RIGHT SIDE: Editing Workspace
+            with gr.Column(scale=3):
+                # TOP SPLIT: Video & Candidates (Center) + Inspector (Right)
+                with gr.Row():
+                    # Center Column: Preview & Suggestions
+                    with gr.Column(scale=1, elem_classes="capcut-panel"):
+                        gr.Markdown("### Trình Xem Thử Video")
+                        video_player = gr.Video(label="Video preview", interactive=False)
+                        
+                        gr.Markdown("### Gợi ý Thay Thế (Candidates)")
+                        candidates_markdown = gr.Markdown("Không có đề xuất.")
+                        candidate_dropdown = gr.Dropdown(choices=[], label="Chọn Clip Candidate", interactive=not readonly)
+                        choose_cand_btn = gr.Button("Đổi sang Candidate đã chọn", variant="primary", interactive=not readonly)
+
+                    # Right Column: Inspector
+                    with gr.Column(scale=1, elem_classes="capcut-panel"):
+                        gr.Markdown("### Thuộc Tính Clip (Inspector)")
+                        
+                        # Visual item selector
+                        vi_dropdown = gr.Dropdown(choices=[], label="Chọn Visual Item", interactive=True)
+                        create_vi_btn = gr.Button("Tạo Visual Item từ Candidate", variant="secondary", visible=False, interactive=not readonly)
+                        
+                        # Active editing fields
+                        inspector_group = gr.Group(visible=True)
+                        with inspector_group:
+                            clip_id_input = gr.Textbox(label="Mã Clip ID", interactive=False)
+                            video_id_input = gr.Textbox(label="Mã Video ID", interactive=False)
+                            source_path_input = gr.Textbox(label="Đường dẫn file nguồn", interactive=False)
+                            
+                            with gr.Row():
+                                clip_start_input = gr.Number(label="Thời điểm bắt đầu (giây)", interactive=not readonly)
+                                clip_end_input = gr.Number(label="Thời điểm kết thúc (giây)", interactive=not readonly)
+                            
+                            speed_input = gr.Slider(minimum=0.75, maximum=1.25, step=0.01, label="Tốc độ clip (Speed)", interactive=not readonly)
+                            
+                            with gr.Row():
+                                transition_input = gr.Dropdown(choices=["cut", "fade", "crossfade"], label="Kiểu chuyển cảnh", interactive=not readonly)
+                                crop_mode_input = gr.Dropdown(choices=["fit", "fill", "center_crop", "blur_background"], label="Chế độ crop hình", interactive=not readonly)
+                            
+                            volume_input = gr.Slider(minimum=0.0, maximum=1.0, step=0.1, label="Âm lượng clip gốc", interactive=not readonly)
+                            locked_input = gr.Checkbox(label="Khóa Clip này", interactive=not readonly)
+                            
+                            update_inspector_btn = gr.Button("Áp dụng điều chỉnh", variant="primary", interactive=not readonly)
+
+                # BOTTOM SPLIT: Full-width Timeline Map
+                with gr.Row(elem_classes="capcut-timeline-panel"):
+                    with gr.Column(scale=1):
+                        gr.Markdown("### Bản đồ phân đoạn Timeline")
+                        timeline_html_map = gr.HTML(generate_timeline_html(project_data, None))
 
         # Undo/Redo callbacks
         def on_undo(data, tlog):
@@ -456,182 +493,14 @@ def launch_review_ui(
             import json
             return json.dumps(tlog.get_audit_log(), indent=2, ensure_ascii=False)
 
-        export_audit_btn = gr.Button("Export Audit Log", variant="secondary")
-        audit_log_box = gr.Textbox(label="Audit Log (JSON)", lines=8, interactive=False)
-
         export_audit_btn.click(
             fn=on_export_audit_log,
             inputs=[transaction_log_state],
             outputs=[audit_log_box]
         )
 
-        # Premium Timeline Map at the top
-        gr.Markdown("### Bản đồ phân đoạn Timeline")
-        timeline_html_map = gr.HTML(generate_timeline_html(project_data, None))
+        pass
 
-        # 3 Column layout
-        with gr.Row():
-            # Column 1: Segments List & Details
-            with gr.Column(scale=1):
-                gr.Markdown("### Danh sách phân đoạn")
-                filter_dropdown = gr.Dropdown(
-                    choices=[
-                        ("Tất cả", "all"),
-                        ("Cần review", "needs_review"),
-                        ("Độ tin cậy thấp", "low_confidence"),
-                        ("Sử dụng fallback", "fallback"),
-                        ("Đã chỉnh sửa", "edited"),
-                        ("Thiếu hình ảnh", "missing_visual"),
-                        ("Có lỗi", "error"),
-                    ],
-                    value="all",
-                    label="Lọc theo điều kiện"
-                )
-                
-                segment_dropdown = gr.Dropdown(
-                    choices=get_segment_options(project_data, "all"),
-                    value=project_data.timeline["items"][0]["segment_id"] if project_data.timeline["items"] else None,
-                    label="Chọn phân đoạn"
-                )
-
-                gr.Markdown("### Preview Thuyết Minh")
-                audio_player = gr.Audio(label="File audio segment", interactive=False)
-                transcript_box = gr.Textbox(label="Nội dung lời thoại", interactive=False)
-                
-                with gr.Row():
-                    conf_box = gr.Textbox(label="Độ tin cậy", interactive=False)
-                    score_box = gr.Textbox(label="Điểm số", interactive=False)
-                
-                needs_review_cb = gr.Checkbox(label="Đánh dấu cần Review", interactive=not readonly)
-                notes_box = gr.Textbox(label="Ghi chú người dùng", placeholder="Ghi chú...", interactive=not readonly)
-                apply_properties_btn = gr.Button("Cập nhật ghi chú", variant="secondary", interactive=not readonly)
-
-            # Column 2: Visual Item Inspector & Preview
-            with gr.Column(scale=1):
-                gr.Markdown("### Xem trước Video")
-                video_player = gr.Video(label="Video preview", interactive=False)
-                
-                gr.Markdown("### Inspector - Điều chỉnh chi tiết")
-                
-                # Visual item selector
-                vi_dropdown = gr.Dropdown(choices=[], label="Chọn Visual Item", interactive=True)
-                create_vi_btn = gr.Button("Tạo Visual Item từ Candidate", variant="secondary", visible=False, interactive=not readonly)
-                
-                # Active editing fields
-                inspector_group = gr.Group(visible=True)
-                with inspector_group:
-                    clip_id_input = gr.Textbox(label="Mã Clip ID", interactive=False)
-                    video_id_input = gr.Textbox(label="Mã Video ID", interactive=False)
-                    source_path_input = gr.Textbox(label="Đường dẫn file nguồn", interactive=False)
-                    
-                    with gr.Row():
-                        clip_start_input = gr.Number(label="Thời điểm bắt đầu (giây)", interactive=not readonly)
-                        clip_end_input = gr.Number(label="Thời điểm kết thúc (giây)", interactive=not readonly)
-                    
-                    speed_input = gr.Slider(minimum=0.75, maximum=1.25, step=0.01, label="Tốc độ clip (Speed)", interactive=not readonly)
-                    
-                    with gr.Row():
-                        transition_input = gr.Dropdown(choices=["cut", "fade", "crossfade"], label="Kiểu chuyển cảnh", interactive=not readonly)
-                        crop_mode_input = gr.Dropdown(choices=["fit", "fill", "center_crop", "blur_background"], label="Chế độ crop hình", interactive=not readonly)
-                    
-                    volume_input = gr.Slider(minimum=0.0, maximum=1.0, step=0.1, label="Âm lượng clip gốc", interactive=not readonly)
-                    locked_input = gr.Checkbox(label="Khóa Clip này", interactive=not readonly)
-                    
-                    update_inspector_btn = gr.Button("Áp dụng điều chỉnh", variant="primary", interactive=not readonly)
-
-            # Column 3: Candidate Clips
-            with gr.Column(scale=1):
-                gr.Markdown("### Đề xuất gợi ý (Candidates)")
-                candidates_markdown = gr.Markdown("Không có đề xuất.")
-                candidate_dropdown = gr.Dropdown(choices=[], label="Chọn Clip Candidate", interactive=not readonly)
-                choose_cand_btn = gr.Button("Đổi sang Candidate đã chọn", variant="primary", interactive=not readonly)
-
-        # Flat, clean, user-friendly CSS styles
-        gr.Markdown(
-            """
-            <style>
-            .gradio-container {
-                background: #FFFFFF !important;
-                color: #1D1D1F !important;
-                font-family: SF Pro Text, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-                letter-spacing: 0px !important;
-            }
-            .gr-box, .gr-group {
-                background: #FFFFFF !important;
-                border: 1px solid #EDEDF2 !important;
-                border-radius: 0px !important;
-                box-shadow: none !important;
-                padding: 24px !important;
-            }
-            .gr-card, .gr-panel {
-                background: #FFFFFF !important;
-                border-radius: 0px !important;
-                box-shadow: none !important;
-                border: none !important;
-            }
-            input, select, textarea, .gr-input {
-                background: #FFFFFF !important;
-                color: #1D1D1F !important;
-                border: 1px solid #D5D5D7 !important;
-                border-radius: 8px !important;
-                padding: 12px 16px !important;
-                font-family: SF Pro Text, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-                font-size: 17px !important;
-                line-height: 25px !important;
-            }
-            input:focus, select:focus, textarea:focus, .gr-input:focus {
-                border-color: #0071E3 !important;
-                box-shadow: 0 0 0 3px rgba(0,113,227,0.1) !important;
-            }
-            label, .gr-label {
-                font-family: SF Pro Text, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-                font-size: 12px !important;
-                font-weight: 600 !important;
-                color: #1D1D1F !important;
-                margin-bottom: 8px !important;
-                display: block !important;
-            }
-            /* Force override Gradio orange button */
-            button, .gr-button, button.primary, .gr-button-primary, button.secondary, .gr-button-secondary, [class*="primary"], [class*="secondary"] {
-                background: #0071E3 !important;
-                color: #FFFFFF !important;
-                border-radius: 50% !important;
-                border: none !important;
-                font-family: SF Pro Text, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-                font-size: 17px !important;
-                font-weight: 400 !important;
-                min-height: 44px !important;
-                min-width: 44px !important;
-                box-shadow: none !important;
-            }
-            button:hover, .gr-button:hover, button.primary:hover, .gr-button-primary:hover, [class*="primary"]:hover, [class*="secondary"]:hover {
-                background: #006EDB !important;
-            }
-            button:active, .gr-button:active, button.primary:active, .gr-button-primary:active, [class*="primary"]:active, [class*="secondary"]:active {
-                background: #0076DF !important;
-            }
-            </style>
-            <script>
-            // Force override Gradio inline style for all buttons
-            window.addEventListener('DOMContentLoaded', function() {
-                setTimeout(function() {
-                    document.querySelectorAll('button, .gr-button').forEach(function(btn) {
-                        btn.style.background = '#0071E3';
-                        btn.style.color = '#FFFFFF';
-                        btn.style.borderRadius = '50%';
-                        btn.style.border = 'none';
-                        btn.style.fontFamily = 'SF Pro Text, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-                        btn.style.fontSize = '17px';
-                        btn.style.fontWeight = '400';
-                        btn.style.minHeight = '44px';
-                        btn.style.minWidth = '44px';
-                        btn.style.boxShadow = 'none';
-                    });
-                }, 500);
-            });
-            </script>
-            """
-        )
 
         # Helper function to refresh choices on segment load
         def load_segment_data(segment_id, data):
@@ -972,7 +841,47 @@ def launch_review_ui(
             outputs=[dirty_state, status_box, timeline_html_map]
         )
 
-        # Force browser to Light Mode & load initial preview
+        js_code = """
+        () => {
+            document.body.classList.remove('dark');
+            
+            function styleButtons() {
+                document.querySelectorAll('button, .gr-button').forEach(function(btn) {
+                    btn.style.fontFamily = "'Inter', -apple-system, BlinkMacSystemFont, sans-serif";
+                    btn.style.fontSize = '14px';
+                    btn.style.fontWeight = '500';
+                    btn.style.minHeight = '38px';
+                    btn.style.boxShadow = 'none';
+                    btn.style.borderRadius = '9999px';
+                    
+                    var text = btn.innerText || '';
+                    var isSecondary = btn.classList.contains('secondary') || 
+                                      btn.className.includes('secondary') || 
+                                      btn.getAttribute('variant') === 'secondary' ||
+                                      text.includes('Undo') || 
+                                      text.includes('Redo') || 
+                                      text.includes('Kiểm lỗi') || 
+                                      text.includes('ghi chú') || 
+                                      text.includes('Audit') ||
+                                      text.includes('Xuất') ||
+                                      text.includes('Tạo Visual');
+                                      
+                    if (isSecondary) {
+                        btn.style.setProperty('background', '#ffffff', 'important');
+                        btn.style.setProperty('color', '#00b2e2', 'important');
+                        btn.style.setProperty('border', '1.5px solid #00b2e2', 'important');
+                    } else {
+                        btn.style.setProperty('background', 'linear-gradient(135deg, #25cbf5 0%, #00b2e2 100%)', 'important');
+                        btn.style.setProperty('color', '#ffffff', 'important');
+                        btn.style.setProperty('border', 'none', 'important');
+                    }
+                });
+            }
+            
+            setInterval(styleButtons, 500);
+            document.body.addEventListener('click', () => setTimeout(styleButtons, 100));
+        }
+        """
         demo.load(
             fn=load_segment_data,
             inputs=[segment_dropdown, project_state],
@@ -984,7 +893,7 @@ def launch_review_ui(
                 candidates_markdown, candidate_dropdown,
                 timeline_html_map
             ],
-            js="() => { document.body.classList.remove('dark'); }"
+            js=js_code
         )
 
     # Launch Gradio app with explicit allowed_paths whitelisting for local media serving
