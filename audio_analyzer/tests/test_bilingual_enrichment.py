@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import unittest
 
 from audio_analyzer.bilingual_keywords import BilingualKeywordExtractor
@@ -10,6 +11,12 @@ class BilingualKeywordTests(unittest.TestCase):
     def setUp(self) -> None:
         self.extractor = BilingualKeywordExtractor()
         self.query_builder = BilingualQueryBuilder()
+
+    def assert_query_uses_only_transcript_words(self, query: str, text: str) -> None:
+        words = lambda value: {
+            word.casefold() for word in re.findall(r"[^\W\d_]+", value)
+        }
+        self.assertLessEqual(words(query), words(text))
 
     def test_preserves_english_multiword_terms_in_vietnamese_text(self) -> None:
         text = (
@@ -68,16 +75,19 @@ class BilingualKeywordTests(unittest.TestCase):
 
         self.assertIn("Wrong Answer", query)
         self.assertIn("Time Limit Exceeded", query)
-        self.assertEqual(query, text)
+        self.assert_query_uses_only_transcript_words(query, text)
         self.assertFalse(is_generic)
 
-    def test_query_keeps_negation_and_original_word_order(self) -> None:
+    def test_query_uses_positive_side_of_explicit_contrast(self) -> None:
         text = "Trong CP, vũ khí không phải bóng hay vợt mà là trí tuệ và thuật toán."
 
         query, _ = self.query_builder.build(text, self.extractor.extract(text))
 
-        self.assertIn("không phải", query)
-        self.assertIn(query, text)
+        self.assertIn("trí tuệ", query)
+        self.assertIn("thuật toán", query)
+        self.assertNotIn("bóng", query)
+        self.assertNotIn("vợt", query)
+        self.assert_query_uses_only_transcript_words(query, text)
 
     def test_query_shortens_one_sentence_using_a_contiguous_span(self) -> None:
         text = (
@@ -88,10 +98,10 @@ class BilingualKeywordTests(unittest.TestCase):
         query, _ = self.query_builder.build(text, self.extractor.extract(text))
 
         self.assertNotEqual(query, text)
-        self.assertIn(query, text)
         self.assertIn("thiết kế thuật toán", query)
+        self.assert_query_uses_only_transcript_words(query, text)
 
-    def test_query_never_joins_disconnected_keyword_spans(self) -> None:
+    def test_semantic_query_excludes_negated_and_metaphorical_terms(self) -> None:
         text = (
             "CP là một môn thể thao trí tuệ, nhưng vũ khí không phải bóng, "
             "mà là thuật toán."
@@ -99,15 +109,43 @@ class BilingualKeywordTests(unittest.TestCase):
 
         query, _ = self.query_builder.build(text, self.extractor.extract(text))
 
-        self.assertIn(query, text)
-        self.assertNotEqual(query, "CP vũ khí thuật toán")
+        self.assertIn("CP", query)
+        self.assertIn("thuật toán", query)
+        self.assertNotIn("vũ khí", query)
+        self.assertNotIn("bóng", query)
+        self.assert_query_uses_only_transcript_words(query, text)
 
-    def test_query_falls_back_when_reduction_is_not_material(self) -> None:
+    def test_semantic_query_excludes_negated_action(self) -> None:
+        text = (
+            "CP không xây dựng sản phẩm, bạn giải toán dưới áp lực đồng hồ."
+        )
+
+        query, _ = self.query_builder.build(text, self.extractor.extract(text))
+
+        self.assertIn("CP", query)
+        self.assertIn("giải toán", query)
+        self.assertNotIn("xây dựng", query)
+
+    def test_abstract_query_prioritizes_retrievable_concepts(self) -> None:
+        text = (
+            "Mỗi bài toán là một lần não bộ được rèn giũa, "
+            "phản xạ logic nhanh hơn, tư duy hệ thống sâu hơn."
+        )
+
+        query, _ = self.query_builder.build(text, self.extractor.extract(text))
+
+        self.assertIn("phản xạ logic nhanh hơn", query)
+        self.assertIn("tư duy hệ thống sâu hơn", query)
+        self.assertNotIn("rèn giũa", query)
+
+    def test_short_query_keeps_topic_and_description(self) -> None:
         text = "CP là một bộ môn thi đấu."
 
         query, _ = self.query_builder.build(text, self.extractor.extract(text))
 
-        self.assertEqual(query, text)
+        self.assertIn("CP", query)
+        self.assertIn("bộ môn thi đấu", query)
+        self.assert_query_uses_only_transcript_words(query, text)
 
     def test_query_rejects_alias_only_span(self) -> None:
         text = (
@@ -169,6 +207,53 @@ class BilingualKeywordTests(unittest.TestCase):
             query,
             "Lập trình thông thường tạo ra sản phẩm, app, web, phần mềm.",
         )
+
+    def test_vague_transition_uses_source_fallback_and_is_generic(self) -> None:
+        text = "Một trận đấu CP diễn ra như thế này."
+        extraction = self.extractor.extract(text)
+
+        decision = self.query_builder.build_many_detailed([text], [extraction])[0]
+
+        self.assertEqual(decision.query, text)
+        self.assertTrue(decision.is_generic)
+        self.assertEqual(decision.fallback_reason, "no_visual_query")
+        self.assertEqual(decision.visual_suitability, 0.0)
+
+    def test_outro_is_not_treated_as_a_visual_query(self) -> None:
+        text = "Hẹn gặp lại ở phần sau."
+        extraction = self.extractor.extract(text)
+
+        decision = self.query_builder.build_many_detailed([text], [extraction])[0]
+
+        self.assertTrue(decision.is_generic)
+        self.assertEqual(decision.fallback_reason, "no_visual_query")
+
+    def test_long_technical_query_keeps_multiple_retrieval_intents(self) -> None:
+        text = (
+            "CP dẫn đến kỳ thi học sinh giỏi quốc gia, Olympic Tin Học Quốc tế "
+            "IOI, và vòng phỏng vấn kỹ thuật tại công ty công nghệ."
+        )
+
+        query, _ = self.query_builder.build(text, self.extractor.extract(text))
+
+        self.assertIn("IOI", query)
+        self.assertIn("vòng phỏng vấn kỹ thuật", query)
+        self.assert_query_uses_only_transcript_words(query, text)
+
+    def test_short_factual_sentence_is_not_over_compressed(self) -> None:
+        text = "Lập trình thông thường tạo ra sản phẩm, app, web, phần mềm."
+
+        decision = self.query_builder.build_many_detailed(
+            [text],
+            [self.extractor.extract(text)],
+        )[0]
+
+        self.assertEqual(decision.query, text)
+        self.assertEqual(decision.fallback_reason, "source_already_concise")
+
+    def test_invalid_minimum_source_words_is_rejected(self) -> None:
+        with self.assertRaisesRegex(ValueError, "must be positive"):
+            BilingualQueryBuilder(min_source_words_for_reduction=0)
 
     def test_keywords_keep_complete_vietnamese_phrase(self) -> None:
         result = self.extractor.extract(

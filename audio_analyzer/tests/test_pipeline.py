@@ -8,6 +8,7 @@ from pathlib import Path
 
 from audio_analyzer.models import ASRChunk
 from audio_analyzer.pipeline import PipelineError, run_pipeline
+from audio_analyzer.query_reranker import QueryReranker, QueryRerankerError
 from audio_analyzer.tests.fakes import FakeASRBackend
 
 
@@ -32,6 +33,19 @@ EXPECTED_ITEM_FIELDS = {
     "asr_confidence",
     "needs_review",
 }
+
+
+class FailingQueryReranker(QueryReranker):
+    @property
+    def backend_name(self) -> str:
+        return "failing-reranker"
+
+    @property
+    def model_name(self) -> str:
+        return "unavailable-model"
+
+    def select_many(self, source_texts, candidate_groups):
+        raise QueryRerankerError("simulated query model failure")
 
 
 class PipelineIntegrationTests(unittest.TestCase):
@@ -79,13 +93,18 @@ class PipelineIntegrationTests(unittest.TestCase):
         )
 
     def run_pipeline_case(
-        self, backend: FakeASRBackend, *, overwrite: bool = False
+        self,
+        backend: FakeASRBackend,
+        *,
+        overwrite: bool = False,
+        query_reranker: QueryReranker | None = None,
     ):
         return run_pipeline(
             media_metadata_path=self.metadata_path,
             output_dir=self.output_dir,
             asr_backend=backend,
             overwrite=overwrite,
+            query_reranker=query_reranker,
             project_root=self.root,
             clock=lambda: self.fixed_time,
         )
@@ -137,6 +156,26 @@ class PipelineIntegrationTests(unittest.TestCase):
 
         self.assertEqual(log["status"], "success")
         self.assertEqual(log["asr"], {"backend": "fake-asr", "model": "fixed-fixture"})
+        self.assertEqual(log["query_generation"]["backend"], "rules")
+        self.assertEqual(
+            len(log["query_generation"]["segments"]),
+            len(self.read_json("audio_segments.json")["items"]),
+        )
+        decision = log["query_generation"]["segments"][0]
+        self.assertEqual(
+            set(decision),
+            {
+                "segment_id",
+                "selected",
+                "candidates",
+                "strategy",
+                "fallback_reason",
+                "visual_suitability",
+                "candidate_evaluations",
+            },
+        )
+        self.assertTrue(decision["selected"])
+        self.assertIn(decision["selected"], decision["candidates"])
         self.assertEqual(len(log["raw_asr_chunks"]), 3)
         event_types = {event["type"] for event in log["segmentation_events"]}
         self.assertIn("merge", event_types)
@@ -151,6 +190,22 @@ class PipelineIntegrationTests(unittest.TestCase):
         }
         self.assertIn("low_asr_confidence", reasons)
         self.assertIn("estimated_timestamp", reasons)
+
+    def test_query_reranker_failure_falls_back_to_rules_and_is_logged(self) -> None:
+        self.write_metadata()
+
+        self.run_pipeline_case(
+            self.backend_with_merge_split_and_review(),
+            query_reranker=FailingQueryReranker(),
+        )
+        output = self.read_json("audio_segments.json")
+        log = self.read_json("audio_analysis_log.json")
+
+        self.assertTrue(all(item["query"] for item in output["items"]))
+        self.assertTrue(log["query_generation"]["fallback_used"])
+        self.assertTrue(
+            any("query reranker failed" in warning for warning in log["warnings"])
+        )
 
     def test_warning_metadata_continues_and_is_logged(self) -> None:
         self.write_metadata(status="warning")

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import re
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -115,3 +116,8 @@ class EnrichedAudioSegment:
     needs_review: bool
     review_reasons: tuple[str, ...]
     translated_query: None = None
+    query_candidates: tuple[str, ...] = ()
+    query_strategy: str = "rules"
+    query_fallback_reason: str | None = None
+    query_visual_suitability: float = 0.0
+    query_candidate_evaluations: tuple[dict[str, Any], ...] = ()

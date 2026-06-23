@@ -9,6 +9,11 @@ from typing import Sequence
 
 from audio_analyzer.asr import ASRBackend, FasterWhisperBackend
 from audio_analyzer.pipeline import PipelineError, run_pipeline
+from audio_analyzer.query_reranker import (
+    DEFAULT_QUERY_MODEL,
+    QueryReranker,
+    SentenceTransformerQueryReranker,
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -58,6 +63,26 @@ def build_parser() -> argparse.ArgumentParser:
         default="int8",
         help="CTranslate2 compute type (default: int8).",
     )
+    parser.add_argument(
+        "--query-backend",
+        choices=("rules", "local-embedding"),
+        default="rules",
+        help=(
+            "Query selection backend: deterministic rules or local multilingual "
+            "embedding reranking (default: rules)."
+        ),
+    )
+    parser.add_argument(
+        "--query-model",
+        default=DEFAULT_QUERY_MODEL,
+        help="Sentence Transformers model used by local-embedding query reranking.",
+    )
+    parser.add_argument(
+        "--query-min-similarity",
+        type=float,
+        default=0.72,
+        help="Minimum source/candidate cosine similarity in [0,1] (default: 0.72).",
+    )
     return parser
 
 
@@ -66,6 +91,7 @@ def main(
     *,
     project_root: Path | None = None,
     asr_backend: ASRBackend | None = None,
+    query_reranker: QueryReranker | None = None,
 ) -> int:
     args = build_parser().parse_args(argv)
     root = (project_root or Path.cwd()).resolve()
@@ -75,6 +101,12 @@ def main(
         device=args.device,
         compute_type=args.compute_type,
     )
+    reranker = query_reranker
+    if reranker is None and args.query_backend == "local-embedding":
+        reranker = SentenceTransformerQueryReranker(
+            model=args.query_model,
+            min_similarity=args.query_min_similarity,
+        )
 
     try:
         result = run_pipeline(
@@ -83,6 +115,7 @@ def main(
             asr_backend=backend,
             overwrite=args.overwrite,
             language=args.language,
+            query_reranker=reranker,
             project_root=root,
         )
     except PipelineError as exc:

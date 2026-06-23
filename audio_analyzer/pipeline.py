@@ -18,6 +18,7 @@ from audio_analyzer.output import (
     write_json_atomic,
 )
 from audio_analyzer.segmentation import create_segments_with_report
+from audio_analyzer.query_reranker import QueryReranker, QueryRerankerError
 from audio_analyzer.transcript import clean_transcript_chunks
 from audio_analyzer.timestamps import align_chunks_to_audio_duration
 
@@ -68,7 +69,28 @@ def _review_document(segments: list[EnrichedAudioSegment]) -> list[dict[str, Any
     ]
 
 
-def _base_log(backend: ASRBackend, started_at: str) -> dict[str, Any]:
+def _query_decision_document(
+    segments: list[EnrichedAudioSegment],
+) -> list[dict[str, Any]]:
+    return [
+        {
+            "segment_id": enriched.segment.segment_id,
+            "selected": enriched.query,
+            "candidates": list(enriched.query_candidates),
+            "strategy": enriched.query_strategy,
+            "fallback_reason": enriched.query_fallback_reason,
+            "visual_suitability": enriched.query_visual_suitability,
+            "candidate_evaluations": list(enriched.query_candidate_evaluations),
+        }
+        for enriched in segments
+    ]
+
+
+def _base_log(
+    backend: ASRBackend,
+    query_reranker: QueryReranker | None,
+    started_at: str,
+) -> dict[str, Any]:
     return {
         "started_at": started_at,
         "finished_at": None,
@@ -76,6 +98,12 @@ def _base_log(backend: ASRBackend, started_at: str) -> dict[str, Any]:
         "asr": {
             "backend": backend.backend_name,
             "model": backend.model_name,
+        },
+        "query_generation": {
+            "backend": query_reranker.backend_name if query_reranker else "rules",
+            "model": query_reranker.model_name if query_reranker else None,
+            "fallback_used": False,
+            "segments": [],
         },
         "project_id": None,
         "audio_id": None,
@@ -96,6 +124,7 @@ def run_pipeline(
     asr_backend: ASRBackend,
     overwrite: bool = False,
     language: str = "vi",
+    query_reranker: QueryReranker | None = None,
     project_root: Path | None = None,
     clock: Clock = _utc_now,
 ) -> PipelineResult:
@@ -103,6 +132,8 @@ def run_pipeline(
 
     if not isinstance(asr_backend, ASRBackend):
         raise TypeError("asr_backend must implement ASRBackend")
+    if query_reranker is not None and not isinstance(query_reranker, QueryReranker):
+        raise TypeError("query_reranker must implement QueryReranker")
 
     output_dir = output_dir.resolve()
     audio_segments_path = output_dir / "audio_segments.json"
@@ -113,7 +144,7 @@ def run_pipeline(
         )
 
     started_at = _iso_timestamp(clock)
-    analysis_log = _base_log(asr_backend, started_at)
+    analysis_log = _base_log(asr_backend, query_reranker, started_at)
     audio_input: AudioInput | None = None
 
     try:
@@ -154,9 +185,22 @@ def run_pipeline(
             )
 
         segmentation = create_segments_with_report(cleaned_chunks)
-        enriched_segments = enrich_segments(segmentation.segments)
+        try:
+            enriched_segments = enrich_segments(
+                segmentation.segments,
+                query_reranker=query_reranker,
+            )
+        except QueryRerankerError as exc:
+            analysis_log["query_generation"]["fallback_used"] = True
+            analysis_log["warnings"].append(
+                f"local query reranker failed; used deterministic rules: {exc}"
+            )
+            enriched_segments = enrich_segments(segmentation.segments)
         analysis_log["segmentation_events"] = list(segmentation.events)
         analysis_log["review_segments"] = _review_document(enriched_segments)
+        analysis_log["query_generation"]["segments"] = _query_decision_document(
+            enriched_segments
+        )
 
         created_at = _iso_timestamp(clock)
         document = build_audio_segments_document(

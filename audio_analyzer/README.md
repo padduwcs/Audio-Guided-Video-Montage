@@ -61,6 +61,16 @@ trong cache cục bộ.
 python -m audio_analyzer.main --media-metadata data/intermediate/media_metadata.json --output-dir data/intermediate --model base --language auto --overwrite
 ```
 
+Để rerank các query candidate bằng multilingual embedding local:
+
+```bash
+python -m audio_analyzer.main --media-metadata data/intermediate/media_metadata.json --output-dir data/intermediate --model base --language auto --query-backend local-embedding --overwrite
+```
+
+Lần chạy đầu của `local-embedding` sẽ tải model query nếu chưa có trong cache.
+Nếu model không load/inference được, pipeline ghi warning vào
+`audio_analysis_log.json` và fallback về query rule-based.
+
 Các tham số:
 
 - `--media-metadata`: đường dẫn tới `media_metadata.json`.
@@ -73,6 +83,12 @@ Các tham số:
     Chế độ này bật nhận diện đa ngôn ngữ và không dịch transcript.
 - `--device`: thiết bị inference, ví dụ `cpu` hoặc `cuda`; mặc định là `cpu`.
 - `--compute-type`: kiểu tính toán của CTranslate2, mặc định là `int8`.
+- `--query-backend`: `rules` (nhanh, không tải model) hoặc `local-embedding`
+  (batch multilingual semantic reranking); mặc định là `rules`.
+- `--query-model`: tên hoặc đường dẫn Sentence Transformers model dùng cho
+  query reranking.
+- `--query-min-similarity`: ngưỡng cosine tối thiểu để chấp nhận candidate;
+  mặc định `0.72`.
 - `--overwrite`: cho phép ghi đè `audio_segments.json` đã tồn tại.
 
 Xem toàn bộ tham số:

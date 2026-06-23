@@ -121,6 +121,29 @@ class EnrichmentTests(unittest.TestCase):
                 self.assertEqual(enriched.segment_type, expected_type)
                 self.assertTrue(enriched.needs_review)
 
+    def test_non_visual_discourse_is_classified_for_downstream_fallback(self) -> None:
+        cases = [
+            ("Một trận đấu CP diễn ra như thế này.", "transition"),
+            ("Đây là phần cân não nhất.", "abstract"),
+            ("Vậy tại sao CP lại quan trọng với bạn?", "abstract"),
+            ("Hẹn gặp lại ở phần sau.", "transition"),
+        ]
+
+        for text, expected_type in cases:
+            with self.subTest(text=text):
+                enriched = enrich_segment(make_segment(text))
+                self.assertEqual(enriched.segment_type, expected_type)
+                self.assertIn("generic_query", enriched.review_reasons)
+
+    def test_leading_transition_does_not_hide_visual_action(self) -> None:
+        enriched = enrich_segment(
+            make_segment(
+                "Tiếp theo, bạn thiết kế thuật toán mà máy tính sẽ thực thi."
+            )
+        )
+
+        self.assertEqual(enriched.segment_type, "action")
+
     def test_uncertain_proper_name_or_place_needs_review(self) -> None:
         enriched = enrich_segment(
             make_segment("Đoàn tham quan di chuyển đến thành phố Huế.")

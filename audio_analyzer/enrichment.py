@@ -6,8 +6,9 @@ import re
 from collections.abc import Iterable
 
 from audio_analyzer.bilingual_keywords import BilingualKeywordExtractor, KeywordExtraction
-from audio_analyzer.bilingual_query import BilingualQueryBuilder
+from audio_analyzer.bilingual_query import BilingualQueryBuilder, QueryBuildDecision
 from audio_analyzer.models import AudioSegment, EnrichedAudioSegment
+from audio_analyzer.query_reranker import QueryReranker
 
 
 ALLOWED_SEGMENT_TYPES = frozenset(
@@ -48,6 +49,7 @@ _GENERIC_WORDS = frozenset(
     {"điều", "nơi", "mọi", "người", "tiếp", "tục", "thứ", "việc"}
 )
 _ABSTRACT_MARKERS = (
+    "cân não",
     "cảm thấy",
     "cảm xúc",
     "đáng nhớ",
@@ -58,6 +60,7 @@ _ABSTRACT_MARKERS = (
     "tuyệt vời",
     "bệ phóng",
     "tư duy",
+    "tại sao",
 )
 _TRANSITION_MARKERS = (
     "sau đó",
@@ -66,6 +69,14 @@ _TRANSITION_MARKERS = (
     "di chuyển sang",
     "rời khỏi",
     "cuối cùng",
+)
+_NON_VISUAL_TRANSITION_MARKERS = (
+    "bật thông báo",
+    "diễn ra như thế này",
+    "follow kênh",
+    "hẹn gặp lại",
+    "phần sau",
+    "video tiếp theo",
 )
 _ACTION_MARKERS = (
     "di chuyển",
@@ -132,12 +143,14 @@ def _classify(text: str) -> str:
     lowered = text.casefold()
     if any(marker in lowered for marker in _ABSTRACT_MARKERS):
         return "abstract"
-    if any(marker in lowered for marker in _TRANSITION_MARKERS):
+    if any(marker in lowered for marker in _NON_VISUAL_TRANSITION_MARKERS):
         return "transition"
     if any(marker in lowered for marker in _ACTION_MARKERS):
         return "action"
     if any(marker in lowered for marker in _DESCRIPTION_MARKERS):
         return "description"
+    if any(marker in lowered for marker in _TRANSITION_MARKERS):
+        return "transition"
     return "unknown"
 
 
@@ -183,9 +196,10 @@ def _is_hard_to_understand(text: str) -> bool:
 def _enrich_with_extraction(
     segment: AudioSegment,
     extraction: KeywordExtraction,
-    query_builder: BilingualQueryBuilder,
+    query_result: QueryBuildDecision,
 ) -> EnrichedAudioSegment:
-    query, query_too_generic = query_builder.build(segment.text, extraction)
+    query = query_result.query
+    query_too_generic = query_result.is_generic
     segment_type = _classify(segment.text)
     review_reasons: list[str] = []
     if segment.confidence is not None and segment.confidence < 0.65:
@@ -211,30 +225,49 @@ def _enrich_with_extraction(
         needs_review=bool(review_reasons),
         review_reasons=tuple(review_reasons),
         translated_query=None,
+        query_candidates=query_result.candidates,
+        query_strategy=query_result.strategy,
+        query_fallback_reason=query_result.fallback_reason,
+        query_visual_suitability=query_result.visual_suitability,
+        query_candidate_evaluations=query_result.candidate_evaluations,
     )
 
 
-def enrich_segment(segment: AudioSegment) -> EnrichedAudioSegment:
+def enrich_segment(
+    segment: AudioSegment,
+    query_reranker: QueryReranker | None = None,
+) -> EnrichedAudioSegment:
     """Add safe, deterministic metadata without changing transcript text."""
 
     if not isinstance(segment, AudioSegment):
         raise TypeError("segment must be an AudioSegment")
     extractor = BilingualKeywordExtractor()
-    return _enrich_with_extraction(
-        segment,
-        extractor.extract(segment.text),
-        BilingualQueryBuilder(),
-    )
+    extraction = extractor.extract(segment.text)
+    query_result = BilingualQueryBuilder(
+        reranker=query_reranker
+    ).build_many_detailed([segment.text], [extraction])[0]
+    return _enrich_with_extraction(segment, extraction, query_result)
 
 
-def enrich_segments(segments: Iterable[AudioSegment]) -> list[EnrichedAudioSegment]:
+def enrich_segments(
+    segments: Iterable[AudioSegment],
+    query_reranker: QueryReranker | None = None,
+) -> list[EnrichedAudioSegment]:
     segment_list = list(segments)
     if not all(isinstance(segment, AudioSegment) for segment in segment_list):
         raise TypeError("all segments must be AudioSegment instances")
     extractor = BilingualKeywordExtractor()
-    query_builder = BilingualQueryBuilder()
+    query_builder = BilingualQueryBuilder(reranker=query_reranker)
     extractions = extractor.extract_many([segment.text for segment in segment_list])
+    query_results = query_builder.build_many_detailed(
+        [segment.text for segment in segment_list],
+        extractions,
+    )
     return [
-        _enrich_with_extraction(segment, extraction, query_builder)
-        for segment, extraction in zip(segment_list, extractions)
+        _enrich_with_extraction(segment, extraction, query_result)
+        for segment, extraction, query_result in zip(
+            segment_list,
+            extractions,
+            query_results,
+        )
     ]

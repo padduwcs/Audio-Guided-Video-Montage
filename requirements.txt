@@ -9,6 +9,7 @@
 #
 # audio_analyzer:
 faster-whisper==1.2.1
+sentence-transformers==3.4.1
 # 
 #   
 # embedding_indexer / matching_engine:
