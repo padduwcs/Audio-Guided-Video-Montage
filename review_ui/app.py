@@ -20,6 +20,7 @@ from review_ui.editor import replace_clip, create_visual_from_candidate, update_
 from review_ui.storage import save_timeline, backup_timeline
 from review_ui.media import resolve_video_path, resolve_audio_path
 from review_ui.transaction_log import TransactionLog
+from renderer.core import render_timeline
 
 # Resolve Repo Root Path
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -410,6 +411,7 @@ def launch_review_ui(
                 
                 validate_btn = gr.Button("Kiểm lỗi dự án", variant="secondary")
                 save_btn = gr.Button("Lưu Thay Đổi", variant="primary", interactive=not readonly)
+                render_btn = gr.Button("Bắt đầu Render Video", variant="secondary", interactive=not readonly)
                 
                 export_audit_btn = gr.Button("Xuất Audit Log", variant="secondary")
                 audit_log_box = gr.Textbox(label="Audit Log (JSON)", lines=5, interactive=False)
@@ -421,7 +423,11 @@ def launch_review_ui(
                     # Center Column: Preview & Suggestions
                     with gr.Column(scale=1, elem_classes="capcut-panel"):
                         gr.Markdown("### Trình Xem Thử Video")
-                        video_player = gr.Video(label="Video preview", interactive=False)
+                        with gr.Tabs():
+                            with gr.Tab("Preview Phân Đoạn"):
+                                video_player = gr.Video(label="Video preview", interactive=False)
+                            with gr.Tab("Video Kết Quả (Final Render)"):
+                                final_video_player = gr.Video(label="Video kết quả", interactive=False)
                         
                         gr.Markdown("### Gợi ý Thay Thế (Candidates)")
                         candidates_markdown = gr.Markdown("Không có đề xuất.")
@@ -497,6 +503,39 @@ def launch_review_ui(
             fn=on_export_audit_log,
             inputs=[transaction_log_state],
             outputs=[audit_log_box]
+        )
+
+        # Render final video callback
+        def on_render(data, is_dirty):
+            # Check and auto-save if dirty
+            if is_dirty:
+                try:
+                    save_timeline(
+                        data.timeline, timeline_path,
+                        validate_fn=lambda t: validate_project_data(data, mode="edit_save")
+                    )
+                except Exception as e:
+                    return None, f"Tự động lưu thất bại: {e}. Vui lòng kiểm tra lại!", is_dirty
+
+            output_dir = os.path.join(REPO_ROOT, "data", "final")
+            os.makedirs(output_dir, exist_ok=True)
+            output_video_path = os.path.join(output_dir, "final_video.mp4")
+            log_path_render = os.path.join(REPO_ROOT, "data", "intermediate", "render_log.json")
+            
+            try:
+                render_timeline(
+                    timeline_path=timeline_path,
+                    output_path=output_video_path,
+                    log_path=log_path_render
+                )
+                return output_video_path, "Render video thành công tại data/final/final_video.mp4!", False
+            except Exception as e:
+                return None, f"Render video thất bại: {e}", is_dirty
+
+        render_btn.click(
+            fn=on_render,
+            inputs=[project_state, dirty_state],
+            outputs=[final_video_player, status_box, dirty_state]
         )
 
         pass
@@ -864,6 +903,7 @@ def launch_review_ui(
                                       text.includes('ghi chú') || 
                                       text.includes('Audit') ||
                                       text.includes('Xuất') ||
+                                      text.includes('Render') ||
                                       text.includes('Tạo Visual');
                                       
                     if (isSecondary) {
