@@ -65,15 +65,29 @@ SKIP_STATUSES = {"too_short", "error"}
 
 
 def select_source_text(segment: dict, prefer_translated: bool, fallback_to_query: bool) -> str:
-    """Chon text that su dua vao model. KHONG bia text."""
+    """Chon text that su dua vao model. KHONG bia text.
+
+    Thu tu uu tien:
+      1. translated_query (neu prefer_translated va co gia tri)
+      2. text (cau thoai day du — CLIP hieu ngu canh tot hon keywords)
+      3. query (fallback — chi la keywords roi rac)
+    """
     tq = segment.get("translated_query")
+    full_text = segment.get("text")
     q = segment.get("query")
+
+    # Translated query available and preferred
     if prefer_translated and tq:
         return tq
+
+    # Full sentence text — CLIP understands context much better than keywords
+    if full_text:
+        return full_text
+
+    # Fallback to query (keywords)
     if q:
         return q
-    if fallback_to_query and q:
-        return q
+
     raise InputError(f"Segment {segment.get('segment_id')} khong co text hop le")
 
 

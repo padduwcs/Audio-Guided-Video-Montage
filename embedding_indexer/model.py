@@ -5,6 +5,8 @@ neu khong vector khong so sanh duoc o Stage 5.
 
 Cung cap 2 backend:
   - CLIPModelBackend: that, dung transformers + torch (production).
+    Tu dong dich text tieng Viet sang tieng Anh truoc khi encode vi
+    CLIP goc chi hieu tieng Anh.
   - FakeModelBackend: deterministic hash -> vector, KHONG can torch,
     de chay thu pipeline / unit test nhanh. Vector van L2-normalized,
     van dung dimension, nhung KHONG co y nghia ngu nghia.
@@ -12,8 +14,63 @@ Cung cap 2 backend:
 
 from __future__ import annotations
 import hashlib
+import re
 import numpy as np
 
+
+# --------------- Translation helper ---------------
+
+_translator_instance = None
+
+
+def _get_translator():
+    """Lazy-load Google Translator (free, no API key)."""
+    global _translator_instance
+    if _translator_instance is None:
+        try:
+            from deep_translator import GoogleTranslator
+            _translator_instance = GoogleTranslator(source="vi", target="en")
+            print("[info] Loaded GoogleTranslator (vi → en) for CLIP text encoding")
+        except ImportError:
+            print("[warn] deep-translator not installed, skipping translation")
+            _translator_instance = False  # sentinel: don't retry
+    return _translator_instance if _translator_instance else None
+
+
+def _is_mostly_ascii(text: str) -> bool:
+    """Return True if text is already mostly English/ASCII."""
+    ascii_chars = sum(1 for c in text if ord(c) < 128)
+    return len(text) > 0 and (ascii_chars / len(text)) > 0.85
+
+
+def translate_to_english(text: str) -> str:
+    """Translate Vietnamese text to English for CLIP.
+
+    Returns original text if already English or translation fails.
+    """
+    if not text or _is_mostly_ascii(text):
+        return text
+    translator = _get_translator()
+    if translator is None:
+        return text
+    try:
+        translated = translator.translate(text)
+        if translated and isinstance(translated, str) and len(translated) > 2:
+            return translated
+    except Exception as e:
+        print(f"[warn] Translation failed for '{text[:50]}...': {e}")
+    return text
+
+
+def translate_batch(texts: list[str]) -> list[str]:
+    """Translate a batch of texts, preserving order."""
+    results = []
+    for t in texts:
+        results.append(translate_to_english(t))
+    return results
+
+
+# --------------- Core model backends ---------------
 
 class BaseBackend:
     dimension: int
@@ -64,7 +121,11 @@ class FakeModelBackend(BaseBackend):
 
 
 class CLIPModelBackend(BaseBackend):
-    """Backend that su dung openai/clip-vit-base-patch32."""
+    """Backend that su dung openai/clip-vit-base-patch32.
+
+    Tu dong dich text tieng Viet sang tieng Anh truoc khi encode,
+    vi CLIP goc chi hieu tieng Anh.
+    """
 
     def __init__(self, name: str = "clip-vit-base-patch32", dimension: int = 512):
         import torch
@@ -79,11 +140,13 @@ class CLIPModelBackend(BaseBackend):
         # Dimension that cua model (projection dim)
         self.dimension = self.model.config.projection_dim
         if self.dimension != dimension:
-            # Ghi dimension THAT, khong ep theo config (BAY: model.dimension phai khop vector that)
+            # Ghi dimension THAT, khong ep theo config
             print(f"[warn] config dimension={dimension} != model dim={self.dimension}, dung {self.dimension}")
 
     def encode_text(self, text: str) -> np.ndarray:
-        inputs = self.processor(text=[text], return_tensors="pt", padding=True, truncation=True)
+        # Translate Vietnamese → English before CLIP encoding
+        en_text = translate_to_english(text)
+        inputs = self.processor(text=[en_text], return_tensors="pt", padding=True, truncation=True)
         with self._torch.no_grad():
             feats = self.model.get_text_features(**inputs)
         return l2_normalize(feats[0].cpu().numpy().astype("float32"))
@@ -91,7 +154,9 @@ class CLIPModelBackend(BaseBackend):
     def encode_texts(self, texts: list[str]) -> list[np.ndarray]:
         if not texts:
             return []
-        inputs = self.processor(text=texts, return_tensors="pt", padding=True, truncation=True)
+        # Batch translate
+        en_texts = translate_batch(texts)
+        inputs = self.processor(text=en_texts, return_tensors="pt", padding=True, truncation=True)
         with self._torch.no_grad():
             feats = self.model.get_text_features(**inputs)
         mat = l2_normalize(feats.cpu().numpy().astype("float32"))
