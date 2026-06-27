@@ -1,7 +1,0 @@
-- [ ] Analyze CLI validation warnings and requirements
-- [ ] Inspect timeline.json for segments a006, a007, a008
-- [ ] Check matching_candidates.json for candidates for these segments
-- [x] Determine why visual_items are missing
-- [ ] Propose or implement a fix for missing visual_items
-- [ ] (Optional) Investigate low confidence/fallback for a008
-- [ ] Test and verify warnings are resolved
