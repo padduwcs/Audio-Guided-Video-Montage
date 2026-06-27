@@ -8,7 +8,16 @@ echo "Validating sample JSON contracts..."
 python scripts/validate_json.py
 
 echo
-echo "Pipeline execution is not implemented yet."
-echo "Expected future flow:"
-echo "  Input Processor -> Audio Analyzer + Video Analyzer -> Embedding Indexer"
-echo "  -> Matching Engine -> Timeline Planner -> Review UI -> Renderer"
+echo "Ensuring data directories exist..."
+bash scripts/bootstrap_data_dirs.sh
+
+echo
+echo "Running sample pipeline through Timeline Planner (stage 6)..."
+python -m integration.run_pipeline --use-sample-data --to-stage 6 --overwrite
+
+echo
+echo "Validating runtime JSON contracts..."
+python scripts/validate_json.py --input-dir data/intermediate
+
+echo
+echo "Demo complete: data/intermediate/timeline.json"

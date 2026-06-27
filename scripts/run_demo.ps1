@@ -8,7 +8,18 @@ python scripts/validate_json.py
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host ""
-Write-Host "Pipeline execution is not implemented yet."
-Write-Host "Expected future flow:"
-Write-Host "  Input Processor -> Audio Analyzer + Video Analyzer -> Embedding Indexer"
-Write-Host "  -> Matching Engine -> Timeline Planner -> Review UI -> Renderer"
+Write-Host "Ensuring data directories exist..."
+& "$PSScriptRoot\bootstrap_data_dirs.ps1"
+
+Write-Host ""
+Write-Host "Running sample pipeline through Timeline Planner (stage 6)..."
+python -m integration.run_pipeline --use-sample-data --to-stage 6 --overwrite
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host ""
+Write-Host "Validating runtime JSON contracts..."
+python scripts/validate_json.py --input-dir data/intermediate
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host ""
+Write-Host "Demo complete: data/intermediate/timeline.json"
