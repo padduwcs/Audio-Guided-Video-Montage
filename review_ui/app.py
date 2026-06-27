@@ -70,33 +70,10 @@ def generate_timeline_html(data, selected_id):
             
         border_style = "border: 3px solid #0ea5e9; box-shadow: 0 0 0 3px rgba(14,165,233,0.3);" if is_selected else "border: 3px solid transparent;"
         
-        bg_html = ""
-        text_color = "#52525b"
-        bg_color = "#a1a1aa"
-        text_shadow = "none"
-        
-        visual_items = item.get("visual_items", [])
-        if visual_items and "source_path" in visual_items[0] and visual_items[0]["source_path"]:
-            source_path = visual_items[0]["source_path"]
-            abs_source = make_abs(source_path)
-            if abs_source:
-                ext = abs_source.lower()
-                if ext.endswith(('.mp4', '.webm', '.mov')):
-                    bg_html = f'<video src="/file={abs_source}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; opacity: 0.7; pointer-events: none;" autoplay muted loop playsinline></video>'
-                    text_color = "#ffffff"
-                    bg_color = "#18181b"
-                    text_shadow = "0 1px 4px rgba(0,0,0,0.9)"
-                elif ext.endswith(('.jpg', '.png', '.jpeg')):
-                    bg_html = f'<img src="/file={abs_source}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; opacity: 0.7;" />'
-                    text_color = "#ffffff"
-                    bg_color = "#18181b"
-                    text_shadow = "0 1px 4px rgba(0,0,0,0.9)"
-        
         html += f'''
         <div style="flex: 0 0 auto; width: 140px; display: flex; flex-direction: column; gap: 8px; cursor: pointer; font-family: -apple-system, sans-serif; {border_style} border-radius: 8px; padding: 4px; transition: all 0.2s;" title="Segment: {sid}">
-            <div style="height: 80px; background-color: {bg_color}; border-radius: 4px; position: relative; overflow: hidden; display: flex; justify-content: center; align-items: center; box-shadow: inset 0 0 10px rgba(0,0,0,0.1);">
-                {bg_html}
-                <span style="color: {text_color}; font-size: 14px; font-weight: 600; z-index: 10; text-shadow: {text_shadow};">{sid}</span>
+            <div style="height: 80px; background-color: #a1a1aa; border-radius: 4px; position: relative; overflow: hidden; display: flex; justify-content: center; align-items: center; box-shadow: inset 0 0 10px rgba(0,0,0,0.1);">
+                <span style="color: #52525b; font-size: 14px; font-weight: 600;">{sid}</span>
                 <span style="position: absolute; bottom: 4px; left: 4px; background: rgba(0,0,0,0.7); color: white; padding: 2px 5px; border-radius: 4px; font-size: 11px; z-index: 10;">{item["duration"]:.1f}s</span>
                 {badge_html}
             </div>
@@ -320,7 +297,7 @@ def launch_review_ui(
                             redo_btn = gr.Button("↷ Redo", variant="secondary", interactive=True)
                         with gr.Row():
                             save_btn = gr.Button("Lưu Thay Đổi", variant="primary", interactive=not readonly)
-                            render_btn = gr.Button("Render Video", variant="primary", interactive=not readonly)
+                            render_btn = gr.Button("Kết xuất Video", variant="primary", interactive=not readonly)
 
                     with gr.Tab("Audio & Văn bản"):
                         audio_player = gr.Audio(label="Audio gốc", interactive=False)
@@ -412,7 +389,7 @@ def launch_review_ui(
 
         # Render final video callback
         def on_render(data, is_dirty, progress=gr.Progress()):
-            # 1. Check and auto-save if dirty
+            # Check and auto-save if dirty
             if is_dirty:
                 try:
                     save_timeline(
@@ -421,15 +398,6 @@ def launch_review_ui(
                     )
                 except Exception as e:
                     return None, f"Tự động lưu thất bại: {e}. Vui lòng kiểm tra lại!", is_dirty, gr.update()
-
-            # 2. Validate for renderer handoff
-            msgs = validate_project_data(data, mode="renderer_handoff")
-            errors = [m for m in msgs if m.level == "error"]
-            if errors:
-                err_msg = "\\n".join([f"- Segment {err.segment_id}: {err.message}" for err in errors[:5]])
-                if len(errors) > 5:
-                    err_msg += f"\\n... và {len(errors) - 5} lỗi khác."
-                return None, f"Lỗi không thể render (Thiếu hình ảnh hoặc lỗi nghiêm trọng):\\n{err_msg}", is_dirty, gr.update()
 
             # Resolve voice-over path from media_metadata
             voice_over_path = None

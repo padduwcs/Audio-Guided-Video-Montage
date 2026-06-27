@@ -22,7 +22,3 @@ data/final/*
 __pycache__/
 *.pyc
 .DS_Store
-
-# Python virtual environments
-env*/
-venv*/
