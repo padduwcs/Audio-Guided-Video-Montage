@@ -1,0 +1,1 @@
+import{w as s,I as n}from"./index-CU1DelDP.js";function w(o,i,r,f,a){var d=()=>{f(r[o])};r.addEventListener(i,d),a?s(()=>{r[o]=a()}):d(),(r===document.body||r===window||r===document)&&n(()=>{r.removeEventListener(i,d)})}export{w as b};
