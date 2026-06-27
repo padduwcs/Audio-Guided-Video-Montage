@@ -20,6 +20,8 @@ def main():
     parser.add_argument("--config", type=str, required=False, default=None, help="YAML/JSON config file for batch rendering")
     parser.add_argument("--dry-run", action="store_true", help="Validate only, do not render")
     parser.add_argument("--log-path", type=str, required=False, default=None, help="Path to render_log.json")
+    parser.add_argument("--voiceover", type=str, required=False, default=None, help="Explicit path to voice-over audio")
+    parser.add_argument("--media-metadata", type=str, required=False, default=None, help="Path to media_metadata.json to resolve voice-over")
     args = parser.parse_args()
 
     # Validate timeline
@@ -33,6 +35,20 @@ def main():
     if args.dry_run:
         print("Dry-run mode: validation only. Exiting.")
         sys.exit(0)
+
+    # Resolve voice-over path
+    voiceover_path = args.voiceover
+    if not voiceover_path and args.media_metadata:
+        try:
+            import json, os
+            with open(args.media_metadata, "r", encoding="utf-8") as f:
+                media_meta = json.load(f)
+            vo_rel = media_meta.get("audio", {}).get("normalized_path")
+            if vo_rel:
+                # Resolve relative to project root or current dir
+                voiceover_path = os.path.abspath(vo_rel)
+        except Exception as e:
+            print(f"Warning: Failed to resolve voice-over from media_metadata: {e}")
 
     # Batch mode: load config file if specified
     if args.config:
@@ -57,7 +73,8 @@ def main():
                 hwaccel=job.get("hwaccel"),
                 overlay_image=job.get("overlay_image"),
                 overlay_pos=job.get("overlay_pos", "top-right"),
-                preview=job.get("preview", False)
+                preview=job.get("preview", False),
+                voice_over_path=job.get("voiceover", voiceover_path)
             )
     else:
         from renderer.core import render_timeline
@@ -73,7 +90,9 @@ def main():
             hwaccel=args.hwaccel,
             overlay_image=args.overlay_image,
             overlay_pos=args.overlay_pos,
-            preview=args.preview
+            preview=args.preview,
+            voice_over_path=voiceover_path
         )
+
 if __name__ == "__main__":
     main()
