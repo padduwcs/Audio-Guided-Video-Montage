@@ -13,7 +13,7 @@ bash scripts/bootstrap_data_dirs.sh
 
 echo
 echo "Running sample pipeline through Timeline Planner (stage 6)..."
-python -m integration.run_pipeline --use-sample-data --to-stage 6 --overwrite
+python -m integration.run_pipeline --use-sample-data --from-stage 1 --to-stage 6 --skip-ui --overwrite
 
 echo
 echo "Validating runtime JSON contracts..."

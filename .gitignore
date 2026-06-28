@@ -22,7 +22,9 @@ data/final/*
 __pycache__/
 *.pyc
 .DS_Store
+tmp/
 
 # Python virtual environments
 env*/
 venv*/
+.venv/

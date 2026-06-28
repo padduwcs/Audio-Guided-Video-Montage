@@ -13,7 +13,7 @@ Write-Host "Ensuring data directories exist..."
 
 Write-Host ""
 Write-Host "Running sample pipeline through Timeline Planner (stage 6)..."
-python -m integration.run_pipeline --use-sample-data --to-stage 6 --overwrite
+python -m integration.run_pipeline --use-sample-data --from-stage 1 --to-stage 6 --skip-ui --overwrite
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host ""

@@ -1,25 +1,30 @@
-# Runtime dependencies will be added by each module owner as implementation starts.
-# Suggested MVP stack (pin versions when modules are implemented):
+# Runtime dependencies for the MVP pipeline.
 #
-# System:
-#   ffmpeg
-#
-# input_processor / video_analyzer:
-#   opencv-python
-#
-# audio_analyzer:
+# System dependency, not installed by pip:
+#   ffmpeg and ffprobe must be available on PATH, or passed to the CLIs.
+
+# Stage 2: Audio Analyzer
 faster-whisper==1.2.1
 sentence-transformers==3.4.1
-# 
-#   
-# embedding_indexer / matching_engine:
-#   numpy
-#   faiss-cpu        # or alternative index
-#   open-clip-torch  # or sentence-transformers — per team choice
-#
-# review_ui:
-#   flask or fastapi + frontend stack of choice
-#
-# renderer:
-#   ffmpeg-python    # optional wrapper; ffmpeg CLI is sufficient for MVP
+
+# Stage 3: Video Analyzer
+scenedetect[opencv]==0.6.6
+
+# Stage 4-5: Embedding + Matching
+numpy==2.1.3
+pillow==11.0.0
+transformers==4.47.1
+faiss-cpu==1.9.0.post1
+deep-translator==1.11.4
+
+# Stage 7: Review UI
+gradio==5.9.1
+soundfile==0.12.1
+
+# Stage 8: Renderer
+tqdm==4.67.1
+
+# Optional but commonly required by transformers/CLIP. Install the build that
+# matches your machine/GPU if this default CPU wheel is not appropriate.
+torch==2.5.1
 

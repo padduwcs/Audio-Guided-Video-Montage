@@ -44,6 +44,22 @@ python -m integration.run_pipeline --from-stage 6 --validate-only
 python -m integration.run_pipeline --validate-only --input-dir data/intermediate
 ```
 
+Chạy pipeline thật từ raw media:
+
+```powershell
+python -m integration.run_pipeline `
+  --project-id demo_01 `
+  --videos data/raw/video_01.mp4 `
+  --audio data/raw/voiceover.wav `
+  --overwrite `
+  --fake-embeddings `
+  --video-method fixed_window `
+  --skip-ui `
+  --to-stage 8
+```
+
+Chi tiết môi trường, tham số và quy trình debug: `docs/current_pipeline_runbook.md`.
+
 ## Cách test
 
 ```powershell
@@ -70,7 +86,11 @@ python scripts/validate_json.py --input-dir data/intermediate
 - Không đổi schema trong code tích hợp.
 - Không bỏ qua lỗi validation.
 
-## Giới hạn hiện tại (tuần 1)
+## Giới hạn hiện tại
 
-- Stage 1–5 dùng copy từ `docs/samples/` khi bật `--use-sample-data`.
-- Stage 7–8 chưa implement.
+- `--use-sample-data` chỉ là chế độ contract/demo: Stage 1-5 dùng JSON mẫu,
+  Stage 6 chạy planner thật. Render sample chỉ chạy khi path media mẫu tồn tại.
+- Stage 7 mặc định chạy validate non-interactive; dùng `--launch-ui` để mở
+  Gradio UI.
+- Stage 8 đã được gọi từ integration, nhưng MVP ổn định nhất với transition
+  `cut`.

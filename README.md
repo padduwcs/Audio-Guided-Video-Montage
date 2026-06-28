@@ -1,5 +1,11 @@
 # Audio-Guided Video Montage
 
+> **Cập nhật vận hành hiện tại:** Repo đã có implementation cho các module
+> Stage 1-8 và integration runner đã gọi được module thật theo từng stage.
+> Một số đoạn README/docs cũ còn mô tả trạng thái skeleton; khi cần chạy hoặc
+> kiểm tra pipeline hiện tại, ưu tiên đọc
+> [`docs/current_pipeline_runbook.md`](docs/current_pipeline_runbook.md).
+
 ## 1. Giới thiệu dự án
 
 **Audio-Guided Video Montage** — hệ thống dựng video bán tự động theo audio thuyết minh, tận dụng cảnh có sẵn trong video nguồn (không sinh video mới bằng AI).
