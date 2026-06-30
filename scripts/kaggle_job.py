@@ -185,6 +185,17 @@ def run(command: list[str], *, check: bool = True) -> subprocess.CompletedProces
 
 
 def kaggle_command(*args: str) -> list[str]:
+    script_dir = Path(sys.executable).resolve().parent
+    names = ("kaggle.exe", "kaggle.cmd", "kaggle") if os.name == "nt" else ("kaggle",)
+    for name in names:
+        executable = script_dir / name
+        if executable.is_file():
+            return [str(executable), *args]
+
+    executable = shutil.which("kaggle")
+    if executable:
+        return [executable, *args]
+
     return [sys.executable, "-m", "kaggle", *args]
 
 
@@ -443,26 +454,15 @@ def wait_for_dataset(args: argparse.Namespace) -> None:
 
     dataset_ref = kaggle_ref(args.username, args.dataset)
     deadline = time.time() + (args.dataset_max_wait_minutes * 60)
-    config_path = DATASET_DIR / "kaggle_job_config.json"
-    config = json.loads(config_path.read_text(encoding="utf-8")) if config_path.is_file() else {}
-    expected_files = [
-        "kaggle_job_config.json",
-        *config.get("videos", []),
-        config.get("audio", ""),
-        f"{config.get('source_dir', '')}/requirements-kaggle.txt" if config.get("source_dir") else "",
-        f"{config.get('source_dir', '')}/integration/run_pipeline.py" if config.get("source_dir") else "",
-    ]
-    expected_files = [item.lower() for item in expected_files if item]
     while True:
         status = run(kaggle_command("datasets", "status", dataset_ref), check=False)
         files = run(
             kaggle_command("datasets", "files", dataset_ref, "--page-size", "200"),
             check=False,
         )
+        status_text = status.stdout.strip().lower()
         files_output = files.stdout.lower()
-        if status.stdout.strip().lower() == "ready" and files.returncode == 0 and all(
-            expected in files_output for expected in expected_files
-        ):
+        if status_text == "ready" and files.returncode == 0 and "kaggle_job_config.json" in files_output:
             print("[dataset] ready for kernel attachment")
             return
         if status.returncode == 0 and any(

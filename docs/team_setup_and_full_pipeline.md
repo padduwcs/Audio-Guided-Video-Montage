@@ -445,6 +445,19 @@ cd "<PROJECT_DIR>"
 .venv\Scripts\python.exe -B scripts\kaggle_job.py submit --videos data\raw\my_video.mp4 --audio data\raw\my_voice.mp3 --device cpu --compute-type int8 --wait --pull
 ```
 
+Lenh tren dung fake embeddings de test pipeline nhanh. Neu muon matching that
+bang CLIP va chay ASR/CLIP tren GPU Kaggle, dung:
+
+```bat
+.venv\Scripts\python.exe -B scripts\kaggle_job.py submit --videos data\raw\my_video.mp4 --audio data\raw\my_voice.mp3 --real-embeddings --device cuda --compute-type float16 --wait --pull
+```
+
+Neu Kaggle bao loi CUDA hoac float16, quay lai lenh CPU on dinh:
+
+```bat
+.venv\Scripts\python.exe -B scripts\kaggle_job.py submit --videos data\raw\my_video.mp4 --audio data\raw\my_voice.mp3 --device cpu --compute-type int8 --wait --pull
+```
+
 ### Nhieu video + mot voice
 
 ```bat

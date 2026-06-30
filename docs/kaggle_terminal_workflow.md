@@ -21,8 +21,17 @@ Kiem tra:
 
 ## Lenh Chay Khuyen Nghi
 
+Mac dinh, lenh duoi day dung fake embeddings de kiem tra pipeline nhanh va on
+dinh:
+
 ```bat
 .venv\Scripts\python.exe -B scripts\kaggle_job.py submit --videos data\raw\my_video.mp4 --audio data\raw\my_voice.mp3 --device cpu --compute-type int8 --wait --pull
+```
+
+Neu muon matching that bang CLIP va chay ASR/CLIP tren GPU Kaggle:
+
+```bat
+.venv\Scripts\python.exe -B scripts\kaggle_job.py submit --videos data\raw\my_video.mp4 --audio data\raw\my_voice.mp3 --real-embeddings --device cuda --compute-type float16 --wait --pull
 ```
 
 Nhieu video:
@@ -99,7 +108,9 @@ Render local:
 ## Ghi Chu
 
 - Mac dinh script dung fake embeddings de Stage 1-6 chay nhanh va on dinh.
-- Dung `--real-embeddings` khi muon thu CLIP that.
+- Dung `--real-embeddings --device cuda --compute-type float16` khi muon thu
+  CLIP that va GPU. Neu Kaggle bao loi CUDA/float16, quay lai
+  `--device cpu --compute-type int8`.
 - Mac dinh transfer mode la `dataset`; mode nay phu hop media lon hon kernel
   embed mode.
 - `.kaggle_work/` chi la thu muc tam va da duoc ignore.

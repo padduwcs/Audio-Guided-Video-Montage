@@ -127,13 +127,23 @@ class CLIPModelBackend(BaseBackend):
     vi CLIP goc chi hieu tieng Anh.
     """
 
-    def __init__(self, name: str = "clip-vit-base-patch32", dimension: int = 512):
+    def __init__(
+        self,
+        name: str = "clip-vit-base-patch32",
+        dimension: int = 512,
+        device: str = "cpu",
+    ):
         import torch
         from transformers import CLIPModel, CLIPProcessor
 
         self._torch = torch
+        if device == "auto":
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+        if device == "cuda" and not torch.cuda.is_available():
+            raise RuntimeError("CUDA was requested for CLIP embeddings, but torch.cuda is not available")
+        self.device = device
         hf_id = name if "/" in name else f"openai/{name}"
-        self.model = CLIPModel.from_pretrained(hf_id)
+        self.model = CLIPModel.from_pretrained(hf_id).to(self.device)
         self.processor = CLIPProcessor.from_pretrained(hf_id)
         self.model.eval()
         self.name = name
@@ -142,11 +152,16 @@ class CLIPModelBackend(BaseBackend):
         if self.dimension != dimension:
             # Ghi dimension THAT, khong ep theo config
             print(f"[warn] config dimension={dimension} != model dim={self.dimension}, dung {self.dimension}")
+        print(f"[info] Dung CLIPModelBackend tren device={self.device}")
+
+    def _to_device(self, inputs):
+        return {key: value.to(self.device) for key, value in inputs.items()}
 
     def encode_text(self, text: str) -> np.ndarray:
         # Translate Vietnamese → English before CLIP encoding
         en_text = translate_to_english(text)
         inputs = self.processor(text=[en_text], return_tensors="pt", padding=True, truncation=True)
+        inputs = self._to_device(inputs)
         with self._torch.no_grad():
             feats = self.model.get_text_features(**inputs)
         return l2_normalize(feats[0].cpu().numpy().astype("float32"))
@@ -157,6 +172,7 @@ class CLIPModelBackend(BaseBackend):
         # Batch translate
         en_texts = translate_batch(texts)
         inputs = self.processor(text=en_texts, return_tensors="pt", padding=True, truncation=True)
+        inputs = self._to_device(inputs)
         with self._torch.no_grad():
             feats = self.model.get_text_features(**inputs)
         mat = l2_normalize(feats.cpu().numpy().astype("float32"))
@@ -166,6 +182,7 @@ class CLIPModelBackend(BaseBackend):
         from PIL import Image
         image = Image.open(image_path).convert("RGB")
         inputs = self.processor(images=image, return_tensors="pt")
+        inputs = self._to_device(inputs)
         with self._torch.no_grad():
             feats = self.model.get_image_features(**inputs)
         return l2_normalize(feats[0].cpu().numpy().astype("float32"))
@@ -176,19 +193,25 @@ class CLIPModelBackend(BaseBackend):
         from PIL import Image
         images = [Image.open(p).convert("RGB") for p in image_paths]
         inputs = self.processor(images=images, return_tensors="pt")
+        inputs = self._to_device(inputs)
         with self._torch.no_grad():
             feats = self.model.get_image_features(**inputs)
         mat = l2_normalize(feats.cpu().numpy().astype("float32"))
         return [mat[i] for i in range(mat.shape[0])]
 
 
-def load_backend(name: str, dimension: int, use_fake: bool = False) -> BaseBackend:
+def load_backend(
+    name: str,
+    dimension: int,
+    use_fake: bool = False,
+    device: str = "cpu",
+) -> BaseBackend:
     """Load model that; neu khong duoc (chua cai torch) va use_fake=True -> FakeBackend."""
     if use_fake:
         print("[info] Dung FakeModelBackend (test mode, vector khong co y nghia ngu nghia)")
         return FakeModelBackend(name, dimension)
     try:
-        return CLIPModelBackend(name, dimension)
+        return CLIPModelBackend(name, dimension, device=device)
     except Exception as e:
         raise RuntimeError(
             f"Khong load duoc CLIP model '{name}': {e}\n"

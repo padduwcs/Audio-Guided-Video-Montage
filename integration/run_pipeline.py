@@ -269,6 +269,7 @@ def _run_embedding_indexer(args: argparse.Namespace, input_dir: Path) -> None:
             config_path=args.embedding_config,
             overwrite=args.overwrite,
             use_fake=args.fake_embeddings,
+            device=args.device,
         )
     except InputError as exc:
         raise RuntimeError(f"Embedding Indexer failed: {exc}") from exc
