@@ -21,23 +21,16 @@ Kiem tra:
 
 ## Lenh Chay Khuyen Nghi
 
-Mac dinh, lenh duoi day dung fake embeddings de kiem tra pipeline nhanh va on
-dinh:
+Mac dinh, repo chay Stage 1-6 tren Kaggle bang GPU va real CLIP embeddings.
 
 ```bat
-.venv\Scripts\python.exe -B scripts\kaggle_job.py submit --videos data\raw\my_video.mp4 --audio data\raw\my_voice.mp3 --device cpu --compute-type int8 --wait --pull
-```
-
-Neu muon matching that bang CLIP va chay ASR/CLIP tren GPU Kaggle:
-
-```bat
-.venv\Scripts\python.exe -B scripts\kaggle_job.py submit --videos data\raw\my_video.mp4 --audio data\raw\my_voice.mp3 --real-embeddings --device cuda --compute-type float16 --wait --pull
+.venv\Scripts\python.exe -B scripts\kaggle_job.py submit --videos data\raw\my_video.mp4 --audio data\raw\my_voice.mp3 --wait --pull
 ```
 
 Nhieu video:
 
 ```bat
-.venv\Scripts\python.exe -B scripts\kaggle_job.py submit --videos data\raw\video1.mp4 data\raw\video2.mp4 --audio data\raw\voice.mp3 --device cpu --compute-type int8 --wait --pull
+.venv\Scripts\python.exe -B scripts\kaggle_job.py submit --videos data\raw\video1.mp4 data\raw\video2.mp4 --audio data\raw\voice.mp3 --wait --pull
 ```
 
 Neu muon chi ro username:
@@ -58,7 +51,7 @@ Script se fail ro rang neu thieu username, `--videos`, hoac `--audio`.
 5. Tao/cap nhat private Kaggle Dataset cua username hien tai
 6. Doi dataset attachable
 7. Push Kaggle Kernel runner va attach dataset
-8. Chay integration.run_pipeline Stage 1-6 tren Kaggle
+8. Chay integration.run_pipeline Stage 1-6 tren Kaggle bang GPU + real embeddings
 9. Neu co --wait, doi kernel xong
 10. Neu co --pull, tai output ve data/
 ```
@@ -78,7 +71,6 @@ data/keyframes/
 .venv\Scripts\python.exe -B scripts\kaggle_job.py push-dataset
 .venv\Scripts\python.exe -B scripts\kaggle_job.py run
 .venv\Scripts\python.exe -B scripts\kaggle_job.py status
-.venv\Scripts\python.exe -B scripts\kaggle_job.py logs
 .venv\Scripts\python.exe -B scripts\kaggle_job.py pull
 ```
 
@@ -107,10 +99,9 @@ Render local:
 
 ## Ghi Chu
 
-- Mac dinh script dung fake embeddings de Stage 1-6 chay nhanh va on dinh.
-- Dung `--real-embeddings --device cuda --compute-type float16` khi muon thu
-  CLIP that va GPU. Neu Kaggle bao loi CUDA/float16, quay lai
-  `--device cpu --compute-type int8`.
+- Mac dinh script dung real embeddings, `--device cuda`, `--compute-type float16`.
+- Chi dung `--fake-embeddings` khi can debug pipeline that nhanh va khong can
+  matching theo ngu nghia.
 - Mac dinh transfer mode la `dataset`; mode nay phu hop media lon hon kernel
   embed mode.
 - `.kaggle_work/` chi la thu muc tam va da duoc ignore.

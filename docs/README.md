@@ -93,7 +93,7 @@ media path that.
 
 Gioi han van hanh dang can nho:
 
-- Stage 4 co `--fake-embeddings` de smoke test nhanh.
+- Stage 4 mac dinh dung real CLIP embeddings; `--fake-embeddings` chi de debug nhanh.
 - Stage 7 mac dinh validate non-interactive; them `--launch-ui` de mo Gradio.
 - Stage 8 on dinh nhat voi transition `cut`.
 - Output trong `data/` co the bi ghi de giua cac lan chay; backup vao `runs/`

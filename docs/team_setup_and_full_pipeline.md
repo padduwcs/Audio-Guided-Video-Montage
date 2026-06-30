@@ -94,8 +94,7 @@ Khuyen nghi cho nguoi moi:
 
 ```text
 Python 3.11 hoac 3.12: on dinh nhat.
-Python 3.13: co the thu voi workflow nhe, nhung neu gap loi dependency thi
-fallback ve 3.12 se it rac roi hon.
+Python 3.13: chi nen dung neu cac dependency cai dat thanh cong.
 ```
 
 Ly do: workflow mac dinh cua repo chi can package nhe de submit Kaggle, mo
@@ -442,26 +441,13 @@ cd "<PROJECT_DIR>"
 ### Mot video + mot voice
 
 ```bat
-.venv\Scripts\python.exe -B scripts\kaggle_job.py submit --videos data\raw\my_video.mp4 --audio data\raw\my_voice.mp3 --device cpu --compute-type int8 --wait --pull
-```
-
-Lenh tren dung fake embeddings de test pipeline nhanh. Neu muon matching that
-bang CLIP va chay ASR/CLIP tren GPU Kaggle, dung:
-
-```bat
-.venv\Scripts\python.exe -B scripts\kaggle_job.py submit --videos data\raw\my_video.mp4 --audio data\raw\my_voice.mp3 --real-embeddings --device cuda --compute-type float16 --wait --pull
-```
-
-Neu Kaggle bao loi CUDA hoac float16, quay lai lenh CPU on dinh:
-
-```bat
-.venv\Scripts\python.exe -B scripts\kaggle_job.py submit --videos data\raw\my_video.mp4 --audio data\raw\my_voice.mp3 --device cpu --compute-type int8 --wait --pull
+.venv\Scripts\python.exe -B scripts\kaggle_job.py submit --videos data\raw\my_video.mp4 --audio data\raw\my_voice.mp3 --wait --pull
 ```
 
 ### Nhieu video + mot voice
 
 ```bat
-.venv\Scripts\python.exe -B scripts\kaggle_job.py submit --videos data\raw\video1.mp4 data\raw\video2.mp4 data\raw\video3.mp4 --audio data\raw\voice.mp3 --device cpu --compute-type int8 --wait --pull
+.venv\Scripts\python.exe -B scripts\kaggle_job.py submit --videos data\raw\video1.mp4 data\raw\video2.mp4 data\raw\video3.mp4 --audio data\raw\voice.mp3 --wait --pull
 ```
 
 Lenh submit se tu dong:
@@ -470,7 +456,7 @@ Lenh submit se tu dong:
 1. Dong goi source code hien tai.
 2. Upload code + raw media len Kaggle Dataset cua account dang dung.
 3. Push Kaggle Kernel runner.
-4. Chay Stage 1-6 tren Kaggle.
+4. Chay Stage 1-6 tren Kaggle bang GPU va real CLIP embeddings.
 5. Cho kernel xong.
 6. Tai output ve may.
 7. Copy output vao data/intermediate, data/normalized, data/keyframes.
@@ -558,7 +544,7 @@ Trong UI:
 ```
 
 Warning nhu `LOW_CONFIDENCE`, `NEEDS_REVIEW`, `FALLBACK_USED` la binh thuong
-khi dang dung fake embeddings. Chung nhac nguoi dung can review thu cong.
+voi timeline tao tu pipeline tu dong. Chung nhac nguoi dung can review thu cong.
 
 Sau khi review xong, quay lai terminal UI va bam:
 
@@ -762,22 +748,17 @@ python -m venv .venv
 Backup `data/intermediate`, `data/normalized`, `data/keyframes`, `data/final`
 truoc khi chay case moi.
 
-## 14. Fake Embeddings Va Real Embeddings
+## 14. Embeddings Va GPU
 
-Mac dinh script Kaggle dang dung fake embeddings de chay end-to-end nhanh va on
-dinh hon:
+Mac dinh script Kaggle dung real CLIP embeddings, `--device cuda` va
+`--compute-type float16`. Nghia la Stage 4 matching theo ngu nghia that, khong
+phai fake vectors.
 
-```text
-fake embeddings: on
-```
-
-Khi muon thu matching bang model that:
+Chi dung fake embeddings khi can debug luong pipeline that nhanh:
 
 ```bat
-.venv\Scripts\python.exe -B scripts\kaggle_job.py submit --videos data\raw\my_video.mp4 --audio data\raw\my_voice.mp3 --real-embeddings --device cpu --compute-type int8 --wait --pull
+.venv\Scripts\python.exe -B scripts\kaggle_job.py submit --videos data\raw\my_video.mp4 --audio data\raw\my_voice.mp3 --fake-embeddings --wait --pull
 ```
-
-Real embeddings co the cham hon va phu thuoc model/torch nhieu hon.
 
 ## 15. Mot Vi Du Day Du Tu Dau Den Cuoi
 
@@ -793,7 +774,7 @@ Chay Stage 1-6 tren Kaggle:
 ```bat
 cd "<PROJECT_DIR>"
 .venv\Scripts\activate
-.venv\Scripts\python.exe -B scripts\kaggle_job.py submit --videos data\raw\my_video.mp4 --audio data\raw\my_voice.mp3 --device cpu --compute-type int8 --wait --pull
+.venv\Scripts\python.exe -B scripts\kaggle_job.py submit --videos data\raw\my_video.mp4 --audio data\raw\my_voice.mp3 --wait --pull
 ```
 
 Mo Review UI:

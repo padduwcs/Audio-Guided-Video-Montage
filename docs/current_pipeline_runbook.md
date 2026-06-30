@@ -67,8 +67,8 @@ Ghi chu:
 - `torch` trong `requirements.txt` dung version range de pip tu chon wheel phu
   hop. Neu may dung CUDA, co the cai ban `torch` phu hop theo huong dan cua
   PyTorch roi moi chay CLIP that.
-- Smoke test nen dung `--fake-embeddings` truoc de tranh phu thuoc model CLIP,
-  GPU, hoac tai model lon.
+- Pipeline chinh dung real CLIP embeddings. `--fake-embeddings` chi danh cho
+  debug nhanh khi khong can matching theo ngu nghia.
 
 ## 3. Lenh kiem tra nhanh
 
@@ -110,7 +110,7 @@ data/raw/video_01.mp4
 data/raw/voiceover.wav
 ```
 
-Smoke test end-to-end, dung embedding gia lap de tranh model CLIP:
+Chay end-to-end voi real CLIP embeddings:
 
 ```powershell
 python -m integration.run_pipeline `
@@ -118,7 +118,6 @@ python -m integration.run_pipeline `
   --videos data/raw/video_01.mp4 `
   --audio data/raw/voiceover.wav `
   --overwrite `
-  --fake-embeddings `
   --video-method fixed_window `
   --skip-ui `
   --to-stage 8
@@ -144,9 +143,6 @@ data/intermediate/render_log.json
 data/final/final_video.mp4
 ```
 
-Neu muon dung CLIP that, bo `--fake-embeddings`. Khi do can cai dung `torch`,
-`transformers`, `pillow`, va model co the duoc tai lan dau.
-
 Neu muon mo UI review truoc render:
 
 ```powershell
@@ -155,7 +151,6 @@ python -m integration.run_pipeline `
   --videos data/raw/video_01.mp4 `
   --audio data/raw/voiceover.wav `
   --overwrite `
-  --fake-embeddings `
   --video-method fixed_window `
   --from-stage 1 `
   --to-stage 7 `
@@ -187,7 +182,7 @@ python -m integration.run_pipeline --from-stage 3 --to-stage 3 --video-method fi
 Stage 4-6:
 
 ```powershell
-python -m integration.run_pipeline --from-stage 4 --to-stage 6 --fake-embeddings --overwrite
+python -m integration.run_pipeline --from-stage 4 --to-stage 6 --overwrite
 ```
 
 Stage 8 render lai tu timeline da co:

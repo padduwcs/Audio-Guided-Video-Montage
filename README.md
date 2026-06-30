@@ -51,8 +51,8 @@ data/                 input/output local; chi commit .gitkeep
 
 Can Python 3.11+ va `ffmpeg`/`ffprobe` tren PATH.
 
-Workflow mac dinh cho thanh vien moi la offload Stage 1-6 len Kaggle, nen local
-chi can dependency nhe:
+Workflow mac dinh cho thanh vien moi la offload Stage 1-6 len Kaggle bang GPU
+va real CLIP embeddings, nen local chi can dependency nhe:
 
 ```powershell
 python -m venv .venv
@@ -87,7 +87,7 @@ Hoac dung script:
 2. Chay Stage 1-6 tren Kaggle:
 
 ```powershell
-.\.venv\Scripts\python.exe -B scripts\kaggle_job.py submit --videos data\raw\my_video.mp4 --audio data\raw\my_voice.mp3 --device cpu --compute-type int8 --wait --pull
+.\.venv\Scripts\python.exe -B scripts\kaggle_job.py submit --videos data\raw\my_video.mp4 --audio data\raw\my_voice.mp3 --wait --pull
 ```
 
 3. Mo Review UI local:

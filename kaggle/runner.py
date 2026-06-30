@@ -117,11 +117,8 @@ def run_pipeline(config: dict) -> None:
     config = prepare_project_inputs(config)
     audio = str(PROJECT_ROOT / config["audio"])
     videos = [str(PROJECT_ROOT / path) for path in config["videos"]]
-    # Keep Kaggle's default path aligned with integration.run_pipeline. Some
-    # Kaggle GPU sessions expose CUDA but reject faster-whisper float16 kernels,
-    # so opt into GPU only when the submit command explicitly asks for it.
-    device = config.get("device") or "cpu"
-    compute_type = config.get("compute_type") or "int8"
+    device = config.get("device") or "cuda"
+    compute_type = config.get("compute_type") or "float16"
     print(
         f"ASR runtime options: device={device}, compute_type={compute_type}",
         flush=True,
@@ -156,7 +153,7 @@ def run_pipeline(config: dict) -> None:
         "--compute-type",
         compute_type,
     ]
-    if config.get("fake_embeddings", True):
+    if config.get("fake_embeddings", False):
         command.append("--fake-embeddings")
     run(command, cwd=PROJECT_ROOT)
 

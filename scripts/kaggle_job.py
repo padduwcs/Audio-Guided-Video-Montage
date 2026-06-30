@@ -94,13 +94,23 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--audio", type=Path, default=None)
     parser.add_argument("--from-stage", type=int, default=1)
     parser.add_argument("--to-stage", type=int, default=6)
-    parser.add_argument("--fake-embeddings", action="store_true", default=True)
-    parser.add_argument("--real-embeddings", action="store_false", dest="fake_embeddings")
+    parser.add_argument(
+        "--fake-embeddings",
+        action="store_true",
+        default=False,
+        help="Use deterministic fake vectors for quick debugging instead of real CLIP embeddings.",
+    )
+    parser.add_argument(
+        "--real-embeddings",
+        action="store_false",
+        dest="fake_embeddings",
+        help=argparse.SUPPRESS,
+    )
     parser.add_argument("--video-method", choices=("content", "fixed_window"), default="fixed_window")
     parser.add_argument("--asr-model", default="base")
     parser.add_argument("--language", choices=("auto", "vi", "en"), default="auto")
-    parser.add_argument("--device", choices=("auto", "cpu", "cuda"), default="auto")
-    parser.add_argument("--compute-type", default="auto")
+    parser.add_argument("--device", choices=("auto", "cpu", "cuda"), default="cuda")
+    parser.add_argument("--compute-type", default="float16")
     parser.add_argument(
         "--transfer-mode",
         choices=("kernel", "dataset"),
