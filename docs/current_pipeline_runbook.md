@@ -25,9 +25,15 @@ khong thay the duoc render that vi sample path media co the khong ton tai.
 
 ## 2. Cai moi truong
 
-Can cai Python 3.11 hoac 3.12 va system `ffmpeg`/`ffprobe`.
-Khong nen dung Python 3.13 voi requirements hien tai vi `torch==2.5.1`
-khong co wheel Windows phu hop cho Python 3.13.
+Can cai Python 3.11+ va system `ffmpeg`/`ffprobe`.
+Python 3.11/3.12 thuong on dinh nhat cho full local/dev stack.
+
+Co hai cach cai dependency:
+
+- Workflow nhe cho thanh vien moi: cai `requirements-terminal.txt`, chay Stage
+  1-6 tren Kaggle, review UI va render local.
+- Full local/dev stack: cai `requirements-dev.txt`, dung khi chay test hoac
+  chay Stage 1-6 truc tiep tren may local.
 
 PowerShell:
 
@@ -35,7 +41,7 @@ PowerShell:
 python -m venv .venv
 .\.venv\Scripts\python.exe -m ensurepip --upgrade
 .\.venv\Scripts\python.exe -m pip install --upgrade pip
-.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+.\.venv\Scripts\python.exe -m pip install -r requirements-terminal.txt
 ```
 
 Bash:
@@ -44,7 +50,7 @@ Bash:
 python -m venv .venv
 ./.venv/bin/python -m ensurepip --upgrade
 ./.venv/bin/python -m pip install --upgrade pip
-./.venv/bin/python -m pip install -r requirements-dev.txt
+./.venv/bin/python -m pip install -r requirements-terminal.txt
 ```
 
 Kiem tra cong cu he thong:
@@ -56,8 +62,11 @@ ffprobe -version
 
 Ghi chu:
 
-- `torch` trong `requirements.txt` la ban mac dinh. Neu may dung CUDA, cai ban
-  `torch` phu hop theo huong dan cua PyTorch roi moi chay CLIP that.
+- Neu can chay test/dev hoac full local Stage 1-6, cai them
+  `requirements-dev.txt`.
+- `torch` trong `requirements.txt` dung version range de pip tu chon wheel phu
+  hop. Neu may dung CUDA, co the cai ban `torch` phu hop theo huong dan cua
+  PyTorch roi moi chay CLIP that.
 - Smoke test nen dung `--fake-embeddings` truoc de tranh phu thuoc model CLIP,
   GPU, hoac tai model lon.
 
@@ -86,7 +95,13 @@ data/intermediate/matching_candidates.json
 data/intermediate/timeline.json
 ```
 
-## 4. Chay pipeline that tu raw media
+## 4. Chay pipeline that tu raw media local
+
+Phan nay can full local/dev stack:
+
+```powershell
+python -m pip install -r requirements-dev.txt
+```
 
 Dat file input vao `data/raw/`, vi du:
 

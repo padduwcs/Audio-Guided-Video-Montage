@@ -5,7 +5,7 @@ Trách nhiệm:
 - Đảm bảo atomic, chỉ mutate field được phép, preserve optional fields.
 """
 
-# TODO: Implement transaction functions
+# Transaction helpers below mutate only the allowed timeline fields.
 
 def replace_clip(project_data, segment_id, visual_item_id, candidate_clip_id, locked=False):
     """

@@ -24,7 +24,7 @@ Moi thanh vien can co:
 
 ```text
 1. Git de clone repo.
-2. Python 3.11 hoac 3.12 de tao virtualenv.
+2. Python de tao virtualenv.
 3. Kaggle account rieng.
 4. Kaggle API key file kaggle.json.
 5. FFmpeg + FFprobe de render video local.
@@ -88,16 +88,29 @@ C:\Users\YourName\Documents\Audio-Guided Video Montage
 
 ## 3. Cai Python Va Virtualenv
 
-Can Python 3.11 hoac Python 3.12.
+Can Python 3.11+.
 
-Khong nen dung Python 3.13 cho workflow hien tai, vi `requirements.txt` dang
-pin `torch==2.5.1` va ban torch nay chua co wheel phu hop cho Python 3.13 tren
-Windows. Neu dung Python 3.13, pip co the bao:
+Khuyen nghi cho nguoi moi:
 
 ```text
-ERROR: Could not find a version that satisfies the requirement torch==2.5.1
-ERROR: No matching distribution found for torch==2.5.1
+Python 3.11 hoac 3.12: on dinh nhat.
+Python 3.13: co the thu voi workflow nhe, nhung neu gap loi dependency thi
+fallback ve 3.12 se it rac roi hon.
 ```
+
+Ly do: workflow mac dinh cua repo chi can package nhe de submit Kaggle, mo
+Review UI va render local. Full local/dev stack co cac package ML nang hon nhu
+`torch`, `transformers`, `faster-whisper`, va cac package nay doi khi cham ho
+tro Python moi nhat.
+
+Neu pip bao loi kieu:
+
+```text
+No matching distribution found
+```
+
+thi do thuong la dependency chua co wheel phu hop cho Python dang dung. Cach
+don gian nhat la tao lai venv bang Python 3.12.
 
 Kiem tra:
 
@@ -142,7 +155,8 @@ cd "<PROJECT_DIR>"
 python --version
 ```
 
-Tao va kich hoat virtualenv. Neu chi co mot ban Python dung 3.11/3.12:
+Tao va kich hoat virtualenv. Neu `python --version` dang tro toi ban Python ban
+muon dung:
 
 ```bat
 python -m venv .venv
@@ -151,18 +165,25 @@ python -m venv .venv
 
 Khi thanh cong, dau dong terminal co `(.venv)`.
 
-Cap nhat pip va cai dependencies:
+Cap nhat pip va cai dependencies nhe cho workflow mac dinh:
 
 ```bat
 .venv\Scripts\python.exe -m ensurepip --upgrade
 .venv\Scripts\python.exe -m pip install --upgrade pip
-.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+.venv\Scripts\python.exe -m pip install -r requirements-terminal.txt
 ```
 
 Neu cai dependency that bai giua chung:
 
 ```bat
 .venv\Scripts\python.exe -m pip install --upgrade pip setuptools wheel
+.venv\Scripts\python.exe -m pip install -r requirements-terminal.txt
+```
+
+Chi cai full dev/local stack khi can chay test, chay pipeline local Stage 1-6,
+hoac phat trien module:
+
+```bat
 .venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 ```
 
@@ -370,7 +391,7 @@ set KAGGLE_USERNAME=<your_kaggle_username>
 Hoac truyen truc tiep vao lenh submit:
 
 ```bat
-.venv\Scripts\python.exe -B scripts\kaggle_job.py submit --username <your_kaggle_username> --wait --pull
+.venv\Scripts\python.exe -B scripts\kaggle_job.py submit --username <your_kaggle_username> --videos data\raw\my_video.mp4 --audio data\raw\my_voice.mp3 --wait --pull
 ```
 
 Moi account se tao/cap nhat dataset va kernel rieng theo dang:
@@ -647,16 +668,25 @@ ffprobe -version
 
 Neu khong nhan, them folder `bin` cua FFmpeg vao PATH.
 
-### pip install loi torch tren Python 3.13
+### pip install loi dependency tren Python moi
 
 Neu thay:
 
 ```text
-ERROR: Could not find a version that satisfies the requirement torch==2.5.1
-ERROR: No matching distribution found for torch==2.5.1
+ERROR: Could not find a version that satisfies the requirement ...
+ERROR: No matching distribution found for ...
 ```
 
-thi day thuong la do dang tao `.venv` bang Python 3.13. Cach sua:
+thi thu 2 cach theo thu tu:
+
+1. Neu chi muon chay workflow Kaggle + UI + render, dung file nhe:
+
+```bat
+.venv\Scripts\python.exe -m pip install -r requirements-terminal.txt
+```
+
+2. Neu van can full dev/local stack va dang dung Python qua moi, tao lai venv
+bang Python 3.12:
 
 ```bat
 deactivate
@@ -668,8 +698,8 @@ py -3.12 -m venv .venv
 .venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 ```
 
-Neu may khong co Python 3.12, cai Python 3.12 tu python.org roi lam lai cac
-lenh tren.
+Neu may khong co Python 3.12, co the cai them Python 3.12 tu python.org roi lam
+lai cac lenh tren. Khong can go Python cu; co the cai song song nhieu version.
 
 ### python -m kaggle bao No module named kaggle.__main__
 
@@ -695,6 +725,12 @@ cong. Hay sua loi pip install truoc.
 Thu cai lai dependencies trong venv:
 
 ```bat
+.venv\Scripts\python.exe -m pip install -r requirements-terminal.txt
+```
+
+Neu ban dang dev/chay full local Stage 1-6, cai them full dev stack:
+
+```bat
 .venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 ```
 
@@ -705,7 +741,7 @@ rmdir /S /Q .venv
 python -m venv .venv
 .venv\Scripts\activate
 .venv\Scripts\python.exe -m pip install --upgrade pip setuptools wheel
-.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+.venv\Scripts\python.exe -m pip install -r requirements-terminal.txt
 ```
 
 ### Output bi ghi de
@@ -777,9 +813,9 @@ Neu `data\final\final_video.mp4` ton tai, pipeline da hoan tat.
 ```text
 [ ] Cai Git
 [ ] Clone repo
-[ ] Cai Python 3.11 hoac 3.12
+[ ] Cai Python
 [ ] Tao .venv
-[ ] pip install -r requirements-dev.txt
+[ ] pip install -r requirements-terminal.txt
 [ ] Cai ffmpeg/ffprobe va verify version
 [ ] Tao Kaggle account
 [ ] Tao Kaggle API token

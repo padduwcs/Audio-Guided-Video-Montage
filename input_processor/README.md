@@ -1,44 +1,46 @@
 # Input Processor
 
-Module Stage 1 — chuẩn hóa media đầu vào và tạo metadata dùng chung.
+Stage 1 normalize raw media va tao metadata dung chung cho cac stage sau.
 
-## Trách nhiệm
-
-- Kiểm tra và trích metadata video/audio thô.
-- Chuẩn hóa media; gán `video_id`, `audio_id` ổn định.
-- Xuất `media_metadata.json` và `input_processing_log.json`.
-
-## Dữ liệu vào
+## Input
 
 ```text
-data/raw/video_*.mp4
-data/raw/video_*.mov
-data/raw/video_*.mkv
-data/raw/voiceover.*
+data/raw/*.mp4|*.mov|*.mkv
+data/raw/*.mp3|*.wav|*.m4a
 ```
 
-## Dữ liệu ra
+## Output
 
 ```text
 data/intermediate/media_metadata.json
 data/intermediate/input_processing_log.json
-data/normalized/video_*.mp4
-data/normalized/voiceover.wav
+data/normalized/*
 ```
 
-## Tài liệu
+Tat ca path ghi vao JSON la relative path trong repo.
 
-- Data Contract: `docs/details/02_data_contract.md`
-- Stage spec: `docs/details/03_stage_1_input_processing.md`
-- Schema: `docs/schemas/media_metadata.schema.md`
-- Mẫu: `docs/samples/media_metadata_sample.json`
+## Chay Doc Lap
 
-## Cách test (sẽ bổ sung khi có code)
+```powershell
+python -m input_processor.main --project-id demo_01 --videos data/raw/my_video.mp4 --audio data/raw/my_voice.mp3 --output-dir data --overwrite
+```
 
-- Input mẫu: `docs/samples/media_metadata_sample.json`
-- Validate output: `python scripts/validate_json.py --input-dir data/intermediate`
+Tham so huu ich:
 
-## Ranh giới
+- `--ffmpeg-path`, `--ffprobe-path`: chi ro binary neu khong nam tren PATH.
+- `--target-fps`, `--audio-sample-rate`, `--audio-channels`: cau hinh normalize.
+- `--no-normalize-video`, `--no-normalize-audio`: debug nhanh khi media da san sang.
 
-- Không chạy ASR hoặc tách clip candidate.
-- Không cắt khoảng lặng voice-over theo cách làm thay đổi timestamp.
+## Test / Validation
+
+```powershell
+python -m integration.run_pipeline --from-stage 1 --to-stage 1 --videos data/raw/my_video.mp4 --audio data/raw/my_voice.mp3 --overwrite
+python scripts/validate_json.py --input-dir data/intermediate
+```
+
+## Tai Lieu
+
+- `docs/details/03_stage_1_input_processing.md`
+- `docs/details/02_data_contract.md`
+- `docs/schemas/media_metadata.schema.md`
+- `docs/samples/media_metadata_sample.json`

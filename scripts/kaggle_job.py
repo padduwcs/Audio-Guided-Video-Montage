@@ -23,8 +23,6 @@ STATE_PATH = WORK_ROOT / "active_package.json"
 
 DEFAULT_DATASET = "audio-guided-video-montage-input"
 DEFAULT_KERNEL = "audio-guided-video-montage-runner"
-DEFAULT_VIDEO = ROOT / "data" / "raw" / "vd00_CP_overview.mp4"
-DEFAULT_AUDIO = ROOT / "data" / "raw" / "vd00_CP_overview.mp3"
 DEFAULT_TRANSFER_MODE = "dataset"
 
 EXCLUDED_DIR_NAMES = {
@@ -53,7 +51,7 @@ EXCLUDED_SUFFIXES = {
 }
 
 
-def default_kaggle_username() -> str:
+def default_kaggle_username() -> str | None:
     env_username = os.environ.get("KAGGLE_USERNAME")
     if env_username:
         return env_username
@@ -68,7 +66,7 @@ def default_kaggle_username() -> str:
         if username:
             return str(username)
 
-    return "padduwcs"
+    return None
 
 
 def parse_args() -> argparse.Namespace:
@@ -92,8 +90,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--dataset", default=DEFAULT_DATASET)
     parser.add_argument("--kernel", default=DEFAULT_KERNEL)
     parser.add_argument("--project-id", default="demo_01")
-    parser.add_argument("--videos", nargs="+", type=Path, default=[DEFAULT_VIDEO])
-    parser.add_argument("--audio", type=Path, default=DEFAULT_AUDIO)
+    parser.add_argument("--videos", nargs="+", type=Path, default=None)
+    parser.add_argument("--audio", type=Path, default=None)
     parser.add_argument("--from-stage", type=int, default=1)
     parser.add_argument("--to-stage", type=int, default=6)
     parser.add_argument("--fake-embeddings", action="store_true", default=True)
@@ -124,6 +122,11 @@ def rel_to_root(path: Path) -> str:
 
 
 def kaggle_ref(username: str, slug: str) -> str:
+    if not username:
+        raise ValueError(
+            "Missing Kaggle username. Set KAGGLE_USERNAME, create ~/.kaggle/kaggle.json, "
+            "or pass --username."
+        )
     return f"{username}/{slug}"
 
 
@@ -281,6 +284,11 @@ def write_kernel_runner(dataset_videos: list[str], dataset_audio: str) -> None:
 
 
 def copy_inputs(args: argparse.Namespace) -> list[str]:
+    if not args.videos:
+        raise ValueError("Missing --videos. Pass one or more files under data/raw.")
+    if args.audio is None:
+        raise ValueError("Missing --audio. Pass the voice/audio file under data/raw.")
+
     raw_dir = DATASET_DIR / "raw"
     raw_dir.mkdir(parents=True, exist_ok=True)
     dataset_video_paths: list[str] = []

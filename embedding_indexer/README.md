@@ -1,14 +1,9 @@
 # Embedding Indexer
 
-Module Stage 4 — embedding text/visual và index truy xuất.
+Stage 4 tao embedding text/visual trong cung khong gian vector va xuat metadata
+cho Matching Engine.
 
-## Trách nhiệm
-
-- Text embedding cho mỗi segment (`source_text` ưu tiên `translated_query`).
-- Visual embedding cho clip/keyframe (`status` = `usable` hoặc `low_quality`).
-- Lưu vector và index; xuất `embedding_metadata.json`.
-
-## Dữ liệu vào
+## Input
 
 ```text
 data/intermediate/audio_segments.json
@@ -16,29 +11,46 @@ data/intermediate/clip_metadata.json
 data/keyframes/*.jpg
 ```
 
-## Dữ liệu ra
+## Output
 
 ```text
 data/intermediate/embedding_metadata.json
-data/intermediate/embeddings/
-data/intermediate/index/
 data/intermediate/embedding_indexing_log.json
+data/intermediate/embeddings/*.npy
+data/intermediate/index/*
 ```
 
-## Tài liệu
+## Chay Doc Lap
 
-- Data Contract: `docs/details/02_data_contract.md`
-- Stage spec: `docs/details/06_stage_4_embedding_indexing.md`
-- Schema: `docs/schemas/embedding_metadata.schema.md`
-- Mẫu: `docs/samples/embedding_metadata_sample.json`, `docs/samples/embedding_index_sample/`
+Fake backend, phu hop smoke test nhanh:
 
-## Cách test (sẽ bổ sung khi có code)
+```powershell
+python -m embedding_indexer.main --audio-segments data/intermediate/audio_segments.json --clip-metadata data/intermediate/clip_metadata.json --output-dir data/intermediate --embedding-dir data/intermediate/embeddings --index-dir data/intermediate/index --fake --overwrite
+```
 
-- Input mẫu: `docs/samples/audio_segments_sample.json`, `clip_metadata_sample.json`
-- Output mẫu: `docs/samples/embedding_metadata_sample.json`
-- Validate: `python scripts/validate_json.py --input-dir data/intermediate`
+Backend CLIP that:
 
-## Ranh giới
+```powershell
+python -m embedding_indexer.main --audio-segments data/intermediate/audio_segments.json --clip-metadata data/intermediate/clip_metadata.json --output-dir data/intermediate --embedding-dir data/intermediate/embeddings --index-dir data/intermediate/index --overwrite
+```
 
-- Không sửa transcript/query.
-- Không xếp hạng clip hoặc tạo `matching_candidates.json`.
+## Ghi Chu
+
+- Fake backend khong can `torch`/`transformers` va du de test pipeline.
+- CLIP that can dependency trong `requirements.txt` hoac `requirements-dev.txt`.
+- Text source uu tien `translated_query` neu co, fallback ve `query`.
+- Chi embed clip co status `usable` hoac `low_quality`.
+
+## Test / Validation
+
+```powershell
+python -m integration.run_pipeline --from-stage 4 --to-stage 4 --fake-embeddings --overwrite
+python scripts/validate_json.py --input-dir data/intermediate
+```
+
+## Tai Lieu
+
+- `docs/details/06_stage_4_embedding_indexing.md`
+- `docs/details/02_data_contract.md`
+- `docs/schemas/embedding_metadata.schema.md`
+- `docs/samples/embedding_metadata_sample.json`
