@@ -1,5 +1,10 @@
 # Audio-Guided Video Montage
 
+> **Team onboarding / clone-and-run guide:** Thanh vien moi clone repo nen bat dau
+> voi [`docs/team_setup_and_full_pipeline.md`](docs/team_setup_and_full_pipeline.md).
+> File nay gom cai dat Python, FFmpeg, Kaggle API key, dat input, chay Kaggle
+> Stage 1-6, Review UI va render video cuoi.
+
 > **Cập nhật vận hành hiện tại:** Repo đã có implementation cho các module
 > Stage 1-8 và integration runner đã gọi được module thật theo từng stage.
 > Một số đoạn README/docs cũ còn mô tả trạng thái skeleton; khi cần chạy hoặc

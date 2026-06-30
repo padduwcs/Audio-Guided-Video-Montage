@@ -23,6 +23,10 @@ __pycache__/
 *.pyc
 .DS_Store
 tmp/
+.gradio/
+runs/
+.kaggle_work/
+kaggle.json
 
 # Python virtual environments
 env*/

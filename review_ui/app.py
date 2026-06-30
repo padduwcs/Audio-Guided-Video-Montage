@@ -11,6 +11,7 @@ import os
 import tempfile
 import time
 import gradio as gr
+import gradio_client.utils as gradio_client_utils
 import soundfile as sf
 import numpy as np
 
@@ -24,6 +25,19 @@ from renderer.core import render_timeline
 
 # Resolve Repo Root Path
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+_ORIGINAL_JSON_SCHEMA_TO_PYTHON_TYPE = gradio_client_utils._json_schema_to_python_type
+
+
+def _json_schema_to_python_type_compat(schema, defs):
+    """Handle boolean JSON-schema nodes produced by newer Pydantic/FastAPI."""
+    if isinstance(schema, bool):
+        return "Any"
+    return _ORIGINAL_JSON_SCHEMA_TO_PYTHON_TYPE(schema, defs)
+
+
+gradio_client_utils._json_schema_to_python_type = _json_schema_to_python_type_compat
+
 
 def make_abs(path):
     if not path:
@@ -851,5 +865,9 @@ def launch_review_ui(
         )
 
     # Launch Gradio app with explicit allowed_paths whitelisting for local media serving
-    demo.launch(server_name=host, server_port=port, allowed_paths=[REPO_ROOT])
+    demo.launch(
+        server_name=host,
+        server_port=port,
+        allowed_paths=[REPO_ROOT],
+    )
 
