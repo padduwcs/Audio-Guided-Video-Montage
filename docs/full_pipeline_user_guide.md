@@ -65,7 +65,7 @@ cd /d "D:\Computational Thinking\Audio-Guided Video Montage"
 Kiem tra Kaggle CLI:
 
 ```bat
-.venv\Scripts\python.exe -m kaggle --version
+.venv\Scripts\kaggle.exe --version
 ```
 
 Kiem tra FFmpeg:

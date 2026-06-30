@@ -24,7 +24,7 @@ Moi thanh vien can co:
 
 ```text
 1. Git de clone repo.
-2. Python 3.11+ de tao virtualenv.
+2. Python 3.11 hoac 3.12 de tao virtualenv.
 3. Kaggle account rieng.
 4. Kaggle API key file kaggle.json.
 5. FFmpeg + FFprobe de render video local.
@@ -88,12 +88,39 @@ C:\Users\YourName\Documents\Audio-Guided Video Montage
 
 ## 3. Cai Python Va Virtualenv
 
-Can Python 3.11+.
+Can Python 3.11 hoac Python 3.12.
+
+Khong nen dung Python 3.13 cho workflow hien tai, vi `requirements.txt` dang
+pin `torch==2.5.1` va ban torch nay chua co wheel phu hop cho Python 3.13 tren
+Windows. Neu dung Python 3.13, pip co the bao:
+
+```text
+ERROR: Could not find a version that satisfies the requirement torch==2.5.1
+ERROR: No matching distribution found for torch==2.5.1
+```
 
 Kiem tra:
 
 ```bat
 python --version
+```
+
+Neu may co nhieu ban Python, kiem tra bang Python Launcher:
+
+```bat
+py -0p
+```
+
+Neu co Python 3.12, nen tao venv bang:
+
+```bat
+py -3.12 -m venv .venv
+```
+
+Neu co Python 3.11, co the dung:
+
+```bat
+py -3.11 -m venv .venv
 ```
 
 Neu CMD bao `'python' is not recognized`, cai Python:
@@ -115,7 +142,7 @@ cd "<PROJECT_DIR>"
 python --version
 ```
 
-Tao va kich hoat virtualenv:
+Tao va kich hoat virtualenv. Neu chi co mot ban Python dung 3.11/3.12:
 
 ```bat
 python -m venv .venv
@@ -142,9 +169,13 @@ Neu cai dependency that bai giua chung:
 Kiem tra cac package quan trong:
 
 ```bat
-.venv\Scripts\python.exe -m kaggle --version
+.venv\Scripts\kaggle.exe --version
 .venv\Scripts\python.exe -c "import gradio; print(gradio.__version__)"
 ```
+
+Khong dung `.venv\Scripts\python.exe -m kaggle --version` de kiem tra trong
+repo nay, vi repo co thu muc local `kaggle/` va co the lam Python import nham
+khi package Kaggle CLI chua cai xong.
 
 ## 4. Cai FFmpeg Va FFprobe
 
@@ -315,7 +346,7 @@ man hinh/share noi dung `key`.
 Kiem tra Kaggle CLI doc duoc key:
 
 ```bat
-.venv\Scripts\python.exe -m kaggle datasets list --mine
+.venv\Scripts\kaggle.exe datasets list --mine
 ```
 
 Neu lenh tren tra ve danh sach dataset hoac bang rong la OK. Neu bao
@@ -562,7 +593,7 @@ Kiem tra:
 
 ```bat
 dir "%USERPROFILE%\.kaggle\kaggle.json"
-.venv\Scripts\python.exe -m kaggle datasets list --mine
+.venv\Scripts\kaggle.exe datasets list --mine
 ```
 
 Neu van loi, tao lai API token tren Kaggle va thay file `kaggle.json`.
@@ -615,6 +646,49 @@ ffprobe -version
 ```
 
 Neu khong nhan, them folder `bin` cua FFmpeg vao PATH.
+
+### pip install loi torch tren Python 3.13
+
+Neu thay:
+
+```text
+ERROR: Could not find a version that satisfies the requirement torch==2.5.1
+ERROR: No matching distribution found for torch==2.5.1
+```
+
+thi day thuong la do dang tao `.venv` bang Python 3.13. Cach sua:
+
+```bat
+deactivate
+rmdir /S /Q .venv
+py -0p
+py -3.12 -m venv .venv
+.venv\Scripts\activate
+.venv\Scripts\python.exe -m pip install --upgrade pip setuptools wheel
+.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+```
+
+Neu may khong co Python 3.12, cai Python 3.12 tu python.org roi lam lai cac
+lenh tren.
+
+### python -m kaggle bao No module named kaggle.__main__
+
+Neu thay:
+
+```text
+No module named kaggle.__main__; 'kaggle' is a package and cannot be directly executed
+```
+
+thi khong dung lenh `python -m kaggle` de kiem tra CLI. Trong repo nay co thu
+muc local `kaggle/`, nen hay dung executable cua CLI:
+
+```bat
+.venv\Scripts\kaggle.exe --version
+.venv\Scripts\kaggle.exe datasets list --mine
+```
+
+Neu `.venv\Scripts\kaggle.exe` khong ton tai, dependency install chua thanh
+cong. Hay sua loi pip install truoc.
 
 ### ImportError hoac No module named ...
 
@@ -703,7 +777,7 @@ Neu `data\final\final_video.mp4` ton tai, pipeline da hoan tat.
 ```text
 [ ] Cai Git
 [ ] Clone repo
-[ ] Cai Python 3.11+
+[ ] Cai Python 3.11 hoac 3.12
 [ ] Tao .venv
 [ ] pip install -r requirements-dev.txt
 [ ] Cai ffmpeg/ffprobe va verify version

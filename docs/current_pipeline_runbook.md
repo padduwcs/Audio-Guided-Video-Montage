@@ -25,7 +25,9 @@ khong thay the duoc render that vi sample path media co the khong ton tai.
 
 ## 2. Cai moi truong
 
-Can cai Python 3.11+ va system `ffmpeg`/`ffprobe`.
+Can cai Python 3.11 hoac 3.12 va system `ffmpeg`/`ffprobe`.
+Khong nen dung Python 3.13 voi requirements hien tai vi `torch==2.5.1`
+khong co wheel Windows phu hop cho Python 3.13.
 
 PowerShell:
 
