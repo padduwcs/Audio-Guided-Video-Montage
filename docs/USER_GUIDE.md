@@ -73,6 +73,9 @@ Mo trinh duyet tai:
 http://127.0.0.1:7860
 ```
 
+Neu cong `7860` dang ban, ung dung se tu dung cong tiep theo. Hay mo dung URL
+duoc in trong terminal.
+
 Ung dung co 3 tab chinh:
 
 ```text

@@ -36,6 +36,7 @@ Mo Launcher UI:
 ```
 
 Trong trinh duyet, lam theo 3 tab: `Bat dau`, `Chinh sua`, `Xuat video`.
+Neu cong `7860` dang ban, mo URL ma terminal in ra.
 
 Thanh pham nam tai:
 

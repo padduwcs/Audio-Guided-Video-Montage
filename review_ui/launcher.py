@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import os
+import socket
+
 import gradio as gr
 
 from review_ui.launcher_backend import (
@@ -230,9 +233,35 @@ def build_launcher() -> gr.Blocks:
     return demo
 
 
+def _port_is_available(port: int) -> bool:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        try:
+            sock.bind(("127.0.0.1", port))
+        except OSError:
+            return False
+    return True
+
+
+def _pick_server_port(default_port: int = 7860, attempts: int = 20) -> int:
+    env_port = os.environ.get("GRADIO_SERVER_PORT")
+    if env_port:
+        try:
+            return int(env_port)
+        except ValueError as exc:
+            raise ValueError("GRADIO_SERVER_PORT phai la mot so nguyen.") from exc
+
+    for port in range(default_port, default_port + attempts):
+        if _port_is_available(port):
+            return port
+
+    last_port = default_port + attempts - 1
+    raise OSError(f"Khong tim thay cong trong trong khoang {default_port}-{last_port}.")
+
+
 def main() -> None:
     app = build_launcher()
-    app.launch(server_name="127.0.0.1", server_port=7860, show_api=False)
+    port = _pick_server_port()
+    app.launch(server_name="127.0.0.1", server_port=port, show_api=False)
 
 
 if __name__ == "__main__":
