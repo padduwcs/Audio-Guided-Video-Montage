@@ -1,5 +1,9 @@
 # Kaggle Terminal Workflow
 
+Neu ban chi muon chay pipeline tu dau den cuoi, doc
+[USER_GUIDE.md](USER_GUIDE.md) truoc. File nay di sau vao cach
+`scripts/kaggle_job.py` dong goi, submit, wait, logs va pull output.
+
 Tai lieu nay mo ta cach dung `scripts/kaggle_job.py` de chay Stage 1-6 tren
 Kaggle tu terminal. Khong can upload/download thu cong tren web.
 

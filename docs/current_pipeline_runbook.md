@@ -1,5 +1,9 @@
 # Current Pipeline Runbook
 
+Runbook nay danh cho dev/integration khi can doi chieu code hien tai. Nguoi
+dung cuoi nen bat dau bang [USER_GUIDE.md](USER_GUIDE.md); dev moi nen bat dau
+bang [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md).
+
 Tai lieu nay mo ta cach cai moi truong va chay pipeline theo code hien tai.
 Neu README cu mau thuan voi file nay, uu tien file nay va code trong cac
 module.

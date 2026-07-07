@@ -10,7 +10,7 @@
     "fps": 30,
     "format": "mp4",
     "default_transition": "cut",
-    "crop_mode": "center_crop",
+    "crop_mode": "fit",
     "keep_original_audio": false,
     "original_audio_volume": 0.0
   },
@@ -40,7 +40,7 @@
           "speed": 1.0,
           "transition": "fade",
           "effect": null,
-          "crop_mode": "center_crop",
+          "crop_mode": "fit",
           "volume": 0.0,
           "source_candidate_rank": 1,
           "locked": false
@@ -72,7 +72,7 @@
           "speed": 1.0,
           "transition": "cut",
           "effect": null,
-          "crop_mode": "center_crop",
+          "crop_mode": "fit",
           "volume": 0.0,
           "source_candidate_rank": 1,
           "locked": false
@@ -104,7 +104,7 @@
           "speed": 1.0,
           "transition": "cut",
           "effect": null,
-          "crop_mode": "center_crop",
+          "crop_mode": "fit",
           "volume": 0.0,
           "source_candidate_rank": 1,
           "locked": false
@@ -121,7 +121,7 @@
           "speed": 1.0,
           "transition": "cut",
           "effect": null,
-          "crop_mode": "center_crop",
+          "crop_mode": "fit",
           "volume": 0.0,
           "source_candidate_rank": 2,
           "locked": false

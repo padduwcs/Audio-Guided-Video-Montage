@@ -124,9 +124,9 @@ def parse_args() -> argparse.Namespace:
 
 def _path_text(path: Path) -> str:
     try:
-        return str(path.relative_to(repo_root()))
+        return path.relative_to(repo_root()).as_posix()
     except ValueError:
-        return str(path)
+        return path.as_posix()
 
 
 def _input_dir(args: argparse.Namespace) -> Path:
@@ -373,7 +373,7 @@ def _write_render_config(args: argparse.Namespace, input_dir: Path, output_video
             "original_audio_volume": settings.get("original_audio_volume", 0.0),
         },
         "video": {
-            "crop_mode": settings.get("crop_mode", "center_crop"),
+            "crop_mode": settings.get("crop_mode", "fit"),
             "default_transition": settings.get("default_transition", "cut"),
         },
     }
@@ -472,7 +472,7 @@ def main() -> int:
             _run_stage(args, stage_number, input_dir=input_dir)
         if args.preview_render and 8 in selected:
             print("[validate] skipped complete contract validation for preview render")
-        else:
+        elif args.validate_when_complete or 8 in selected:
             _validate_if_complete(input_dir)
     except Exception as exc:
         print(f"ERROR: {exc}", file=sys.stderr)

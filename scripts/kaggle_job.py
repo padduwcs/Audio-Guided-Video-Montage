@@ -209,6 +209,17 @@ def kaggle_command(*args: str) -> list[str]:
     return [sys.executable, "-m", "kaggle", *args]
 
 
+def output_lines(output: str) -> list[str]:
+    return [line.strip() for line in output.splitlines() if line.strip()]
+
+
+def kaggle_status_value(output: str) -> str:
+    lines = output_lines(output)
+    if not lines:
+        return ""
+    return lines[-1].lower()
+
+
 def ensure_inside_workspace(path: Path) -> Path:
     candidate = path if path.is_absolute() else ROOT / path
     resolved = candidate.resolve()
@@ -464,21 +475,39 @@ def wait_for_dataset(args: argparse.Namespace) -> None:
 
     dataset_ref = kaggle_ref(args.username, args.dataset)
     deadline = time.time() + (args.dataset_max_wait_minutes * 60)
+    config_path = DATASET_DIR / "kaggle_job_config.json"
+    config = json.loads(config_path.read_text(encoding="utf-8")) if config_path.is_file() else {}
+    expected_files = [
+        "kaggle_job_config.json",
+        *config.get("videos", []),
+        config.get("audio", ""),
+        f"{config.get('source_dir', '')}/requirements-kaggle.txt" if config.get("source_dir") else "",
+        f"{config.get('source_dir', '')}/integration/run_pipeline.py" if config.get("source_dir") else "",
+    ]
+    expected_files = [item.lower() for item in expected_files if item]
     while True:
         status = run(kaggle_command("datasets", "status", dataset_ref), check=False)
+        status_value = kaggle_status_value(status.stdout)
         files = run(
             kaggle_command("datasets", "files", dataset_ref, "--page-size", "200"),
             check=False,
         )
-        status_text = status.stdout.strip().lower()
         files_output = files.stdout.lower()
-        if status_text == "ready" and files.returncode == 0 and "kaggle_job_config.json" in files_output:
+        if status_value == "ready":
+            if files.returncode == 0:
+                missing = [
+                    expected
+                    for expected in expected_files
+                    if expected not in files_output
+                ]
+                if missing:
+                    print(
+                        "[dataset] ready, but file listing did not show: "
+                        + ", ".join(missing)
+                    )
             print("[dataset] ready for kernel attachment")
             return
-        if status.returncode == 0 and any(
-            word in status.stdout.lower()
-            for word in ("error", "failed", "cancel")
-        ):
+        if status.returncode == 0 and status_value in {"error", "failed", "cancelled", "canceled"}:
             raise RuntimeError("Kaggle dataset creation/versioning failed.")
         if time.time() > deadline:
             raise TimeoutError(
@@ -522,8 +551,30 @@ def print_status(args: argparse.Namespace) -> str:
 
 
 def print_logs(args: argparse.Namespace) -> str:
-    result = run(kaggle_command("kernels", "logs", kaggle_ref(args.username, args.kernel)), check=False)
-    return result.stdout
+    try:
+        pull_outputs(args, copy_to_data=False)
+    except Exception as exc:
+        message = (
+            "Could not download kernel output for logs. "
+            f"Open https://www.kaggle.com/code/{kaggle_ref(args.username, args.kernel)} "
+            f"for the Kaggle run log. Details: {exc}"
+        )
+        print(message)
+        return message
+
+    log_path = EXTRACT_DIR / "job.log"
+    if not log_path.is_file():
+        message = (
+            f"job.log not found in downloaded kernel output. "
+            f"Open https://www.kaggle.com/code/{kaggle_ref(args.username, args.kernel)} "
+            "for the Kaggle run log."
+        )
+        print(message)
+        return message
+
+    output = log_path.read_text(encoding="utf-8", errors="replace")
+    print(output, end="" if output.endswith("\n") else "\n")
+    return output
 
 
 def wait_for_kernel(args: argparse.Namespace) -> None:
@@ -543,11 +594,9 @@ def wait_for_kernel(args: argparse.Namespace) -> None:
         time.sleep(args.poll_seconds)
 
 
-def pull_outputs(args: argparse.Namespace, *, wait: bool = False) -> None:
+def pull_outputs(args: argparse.Namespace, *, copy_to_data: bool = True) -> None:
     reset_dir(OUTPUT_DIR)
     command = kaggle_command("kernels", "output", kaggle_ref(args.username, args.kernel), "-p", str(OUTPUT_DIR))
-    if wait:
-        command.append("-w")
     run(command)
 
     zip_candidates = list(OUTPUT_DIR.rglob("kaggle_outputs.zip"))
@@ -561,6 +610,10 @@ def pull_outputs(args: argparse.Namespace, *, wait: bool = False) -> None:
     output_data = EXTRACT_DIR / "output_data"
     if not output_data.is_dir():
         raise FileNotFoundError(f"Extracted output_data directory not found: {output_data}")
+
+    if not copy_to_data:
+        print(f"[pull] downloaded Kaggle outputs into {EXTRACT_DIR}")
+        return
 
     local_data = ROOT / "data"
     for child in output_data.iterdir():
@@ -589,7 +642,9 @@ def main() -> int:
         elif args.command == "logs":
             print_logs(args)
         elif args.command == "pull":
-            pull_outputs(args, wait=args.wait)
+            if args.wait:
+                wait_for_kernel(args)
+            pull_outputs(args, copy_to_data=True)
         elif args.command == "submit":
             build_package(args)
             if args.transfer_mode == "dataset":
@@ -599,7 +654,7 @@ def main() -> int:
             if args.wait:
                 wait_for_kernel(args)
             if args.pull:
-                pull_outputs(args, wait=False)
+                pull_outputs(args, copy_to_data=True)
         else:
             raise RuntimeError(f"Unsupported command: {args.command}")
     except Exception as exc:

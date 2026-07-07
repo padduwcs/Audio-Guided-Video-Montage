@@ -21,7 +21,7 @@ def has_audio_stream(source_path):
 
 def extract_segment_ffmpeg(
     source_path, start, end, output_path,
-    speed=1.0, width=None, height=None, fps=None, crop_mode="center_crop",
+    speed=1.0, width=None, height=None, fps=None, crop_mode="fit",
     video_codec="libx264", video_bitrate=None,
     audio_codec="aac", audio_bitrate=None,
     hwaccel=None,
@@ -29,12 +29,13 @@ def extract_segment_ffmpeg(
 ):
     """Extract a video segment using ffmpeg with speed and crop filters."""
     duration = end - start
+    output_duration = duration / speed if speed else duration
     cmd = ["ffmpeg", "-y"]
     if hwaccel:
         cmd += ["-hwaccel", hwaccel]
         
     cmd += ["-ss", str(start), "-i", source_path]
-    cmd += ["-f", "lavfi", "-t", str(duration), "-i", "anullsrc=channel_layout=stereo:sample_rate=44100"]
+    cmd += ["-f", "lavfi", "-t", str(output_duration), "-i", "anullsrc=channel_layout=stereo:sample_rate=44100"]
     
     has_audio = has_audio_stream(source_path)
     effective_vol = volume if volume is not None else original_audio_volume
@@ -84,12 +85,59 @@ def extract_segment_ffmpeg(
     if audio_bitrate:
         cmd += ["-b:a", audio_bitrate]
         
-    cmd += ["-t", str(duration)]
+    cmd += ["-t", str(output_duration)]
     cmd.append(output_path)
     
     result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if result.returncode != 0:
         raise RuntimeError(f"ffmpeg failed: {result.stderr.decode()}")
+
+
+def create_gap_segment_ffmpeg(
+    duration,
+    output_path,
+    width=None,
+    height=None,
+    fps=None,
+    video_codec="libx264",
+    audio_codec="aac",
+    audio_bitrate=None,
+):
+    """Create a black filler segment for silence gaps between ASR segments."""
+    width = int(width or 1920)
+    height = int(height or 1080)
+    fps = fps or 30
+    cmd = [
+        "ffmpeg",
+        "-y",
+        "-f",
+        "lavfi",
+        "-i",
+        f"color=c=black:s={width}x{height}:r={fps}",
+        "-f",
+        "lavfi",
+        "-i",
+        "anullsrc=channel_layout=stereo:sample_rate=44100",
+        "-t",
+        str(duration),
+        "-c:v",
+        video_codec,
+        "-pix_fmt",
+        "yuv420p",
+        "-c:a",
+        audio_codec,
+        "-ar",
+        "44100",
+        "-ac",
+        "2",
+    ]
+    if audio_bitrate:
+        cmd += ["-b:a", audio_bitrate]
+    cmd.append(output_path)
+
+    result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if result.returncode != 0:
+        raise RuntimeError(f"ffmpeg gap segment failed: {result.stderr.decode()}")
 
 def get_transition_type(visual_item, default_transition="cut"):
     return visual_item.get("transition") or default_transition
@@ -129,7 +177,7 @@ def render_timeline(
     width = render_settings.get("width")
     height = render_settings.get("height")
     fps = render_settings.get("fps")
-    default_crop_mode = render_settings.get("crop_mode", "center_crop")
+    default_crop_mode = render_settings.get("crop_mode", "fit")
     keep_original_audio = render_settings.get("keep_original_audio", False)
     original_audio_volume = render_settings.get("original_audio_volume", 0.0)
     default_transition = render_settings.get("default_transition", "cut")
@@ -141,25 +189,49 @@ def render_timeline(
         audio_bitrate = "64k"
         video_codec = video_codec or "libx264"
         
-    temp_dir = tempfile.mkdtemp(prefix="render_segments_")
+    temp_dir = os.path.join(os.getcwd(), "tmp", "render_segments")
+    if os.path.exists(temp_dir):
+        shutil.rmtree(temp_dir, ignore_errors=True)
+    os.makedirs(temp_dir, exist_ok=True)
     segment_files = []
     transitions = []
 
     try:
-        total_segs = len(segments)
-        for idx, item in enumerate(tqdm(segments, desc="Extracting segments", unit="seg")):
-            seg_id = item.get("segment_id", f"seg_{idx}")
+        visual_tasks = []
+        for item_idx, item in enumerate(segments):
+            for visual_idx, visual_item in enumerate(item.get("visual_items", [])):
+                visual_tasks.append((item_idx, item, visual_idx, visual_item))
+
+        total_segs = len(visual_tasks)
+        previous_timeline_end = 0.0
+        output_index = 1
+        for idx, (item_idx, item, _visual_idx, vi) in enumerate(tqdm(visual_tasks, desc="Extracting segments", unit="seg")):
+            seg_id = item.get("segment_id", f"seg_{item_idx}")
             if progress_callback:
                 progress_callback(idx / (total_segs + 1), f"Đang trích xuất segment {idx+1}/{total_segs}...")
             
-            visual_items = item.get("visual_items", [])
-            if not visual_items:
-                err_msg = f"Missing visual_items for segment {seg_id}"
-                errors.append(err_msg)
-                raise ValueError(err_msg)
-                
-            # MVP: Use first visual item
-            vi = visual_items[0]
+            timeline_start = float(vi.get("timeline_start", previous_timeline_end))
+            if timeline_start > previous_timeline_end + 0.01:
+                gap_duration = timeline_start - previous_timeline_end
+                gap_out = os.path.join(temp_dir, f"segment_{output_index:04d}_gap.mp4")
+                try:
+                    create_gap_segment_ffmpeg(
+                        gap_duration,
+                        gap_out,
+                        width=width,
+                        height=height,
+                        fps=fps,
+                        video_codec=video_codec or "libx264",
+                        audio_codec=audio_codec or "aac",
+                        audio_bitrate=audio_bitrate,
+                    )
+                    segment_files.append(gap_out)
+                    output_index += 1
+                except Exception as e:
+                    err_msg = f"Gap before segment {seg_id} failed to create: {e}"
+                    errors.append(err_msg)
+                    raise ValueError(err_msg)
+
             source_path = vi.get("source_path")
             clip_start = vi.get("clip_start")
             clip_end = vi.get("clip_end")
@@ -175,7 +247,7 @@ def render_timeline(
                 errors.append(err_msg)
                 raise ValueError(err_msg)
                 
-            seg_out = os.path.join(temp_dir, f"segment_{idx+1}.mp4")
+            seg_out = os.path.join(temp_dir, f"segment_{output_index:04d}.mp4")
             
             speed = vi.get("speed", 1.0)
             crop_mode = vi.get("crop_mode") or default_crop_mode
@@ -193,13 +265,19 @@ def render_timeline(
                     volume=volume
                 )
                 segment_files.append(seg_out)
+                output_index += 1
             except Exception as e:
                 err_msg = f"Segment {seg_id} failed to extract: {e}"
                 errors.append(err_msg)
                 raise ValueError(err_msg)
+
+            previous_timeline_end = max(
+                previous_timeline_end,
+                float(vi.get("timeline_end", previous_timeline_end)),
+            )
                 
-            if idx < len(segments) - 1:
-                next_vi = segments[idx + 1].get("visual_items", [{}])[0]
+            if idx < len(visual_tasks) - 1:
+                next_vi = visual_tasks[idx + 1][3]
                 transitions.append(get_transition_type(next_vi, default_transition))
                 
         if not segment_files:
@@ -241,7 +319,8 @@ def render_timeline(
             raise NotImplementedError("Complex transitions not implemented completely.")
 
         render_time = time.time() - start_time
-        _write_log(log_path, "1.0", project_id, started_at, "success", output_path, sum(item.get("duration", 0) for item in segments), render_time, warnings, errors)
+        timeline_duration = previous_timeline_end or sum(item.get("duration", 0) for item in segments)
+        _write_log(log_path, "1.0", project_id, started_at, "success", output_path, timeline_duration, render_time, warnings, errors)
 
         if progress_callback:
             progress_callback(1.0, "Hoàn tất render video!")
@@ -251,18 +330,24 @@ def render_timeline(
         _write_log(log_path, "1.0", project_id, started_at, "failed", output_path, 0, render_time, warnings, errors)
         raise e
     finally:
-        shutil.rmtree(temp_dir)
+        shutil.rmtree(temp_dir, ignore_errors=True)
 
 def _write_log(log_path, schema_version, project_id, started_at, status, output_path, duration, render_time, warnings, errors):
     if not log_path:
         return
+    logged_output_path = output_path
+    if output_path:
+        try:
+            logged_output_path = os.path.relpath(output_path, start=os.getcwd()).replace(os.sep, "/")
+        except ValueError:
+            logged_output_path = output_path
     log_data = {
         "schema_version": schema_version,
         "project_id": project_id,
         "started_at": started_at,
         "finished_at": datetime.now(timezone.utc).isoformat(),
         "status": status,
-        "output_path": output_path,
+        "output_path": logged_output_path,
         "duration": duration,
         "render_time": render_time,
         "warnings": warnings,

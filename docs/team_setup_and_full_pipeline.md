@@ -1,5 +1,11 @@
 # Team Setup And Full Pipeline Guide
 
+> Guide nay duoc giu lam ban chi tiet/legacy cho nhom. Neu ban la nguoi dung
+> cuoi va chi muon clone repo de tao video, hay bat dau bang
+> [USER_GUIDE.md](USER_GUIDE.md). Neu ban la dev, doc
+> [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) truoc roi quay lai file nay khi can
+> cac buoc setup Windows/Kaggle that chi tiet.
+
 Tai lieu nay danh cho thanh vien moi clone repo tu GitHub ve may rieng va muon
 chay thu mot vi du tu dau den cuoi.
 

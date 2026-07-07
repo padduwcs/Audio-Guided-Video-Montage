@@ -144,7 +144,7 @@ class CLIPModelBackend(BaseBackend):
         self.device = device
         hf_id = name if "/" in name else f"openai/{name}"
         self.model = CLIPModel.from_pretrained(hf_id).to(self.device)
-        self.processor = CLIPProcessor.from_pretrained(hf_id)
+        self.processor = CLIPProcessor.from_pretrained(hf_id, use_fast=False)
         self.model.eval()
         self.name = name
         # Dimension that cua model (projection dim)
@@ -157,14 +157,44 @@ class CLIPModelBackend(BaseBackend):
     def _to_device(self, inputs):
         return {key: value.to(self.device) for key, value in inputs.items()}
 
+    def _as_projected_features(self, output, *, kind: str):
+        if self._torch.is_tensor(output):
+            return output
+
+        embed_attr = "text_embeds" if kind == "text" else "image_embeds"
+        embeds = getattr(output, embed_attr, None)
+        if embeds is not None:
+            return embeds
+
+        pooled = getattr(output, "pooler_output", None)
+        if pooled is None and isinstance(output, (tuple, list)) and output:
+            candidate = output[1] if len(output) > 1 else output[0]
+            if self._torch.is_tensor(candidate):
+                pooled = candidate
+        if pooled is None:
+            raise TypeError(
+                f"Unsupported CLIP {kind} output type: {type(output).__name__}"
+            )
+
+        projection = (
+            self.model.text_projection
+            if kind == "text"
+            else self.model.visual_projection
+        )
+        return projection(pooled)
+
+    def _features_to_numpy(self, features) -> np.ndarray:
+        return features.detach().cpu().numpy().astype("float32")
+
     def encode_text(self, text: str) -> np.ndarray:
         # Translate Vietnamese → English before CLIP encoding
         en_text = translate_to_english(text)
         inputs = self.processor(text=[en_text], return_tensors="pt", padding=True, truncation=True)
         inputs = self._to_device(inputs)
-        with self._torch.no_grad():
-            feats = self.model.get_text_features(**inputs)
-        return l2_normalize(feats[0].cpu().numpy().astype("float32"))
+        with self._torch.inference_mode():
+            output = self.model.get_text_features(**inputs)
+            feats = self._as_projected_features(output, kind="text")
+        return l2_normalize(self._features_to_numpy(feats[0]))
 
     def encode_texts(self, texts: list[str]) -> list[np.ndarray]:
         if not texts:
@@ -173,9 +203,10 @@ class CLIPModelBackend(BaseBackend):
         en_texts = translate_batch(texts)
         inputs = self.processor(text=en_texts, return_tensors="pt", padding=True, truncation=True)
         inputs = self._to_device(inputs)
-        with self._torch.no_grad():
-            feats = self.model.get_text_features(**inputs)
-        mat = l2_normalize(feats.cpu().numpy().astype("float32"))
+        with self._torch.inference_mode():
+            output = self.model.get_text_features(**inputs)
+            feats = self._as_projected_features(output, kind="text")
+        mat = l2_normalize(self._features_to_numpy(feats))
         return [mat[i] for i in range(mat.shape[0])]
 
     def encode_image(self, image_path: str) -> np.ndarray:
@@ -183,9 +214,10 @@ class CLIPModelBackend(BaseBackend):
         image = Image.open(image_path).convert("RGB")
         inputs = self.processor(images=image, return_tensors="pt")
         inputs = self._to_device(inputs)
-        with self._torch.no_grad():
-            feats = self.model.get_image_features(**inputs)
-        return l2_normalize(feats[0].cpu().numpy().astype("float32"))
+        with self._torch.inference_mode():
+            output = self.model.get_image_features(**inputs)
+            feats = self._as_projected_features(output, kind="image")
+        return l2_normalize(self._features_to_numpy(feats[0]))
 
     def encode_images(self, image_paths: list[str]) -> list[np.ndarray]:
         if not image_paths:
@@ -194,9 +226,10 @@ class CLIPModelBackend(BaseBackend):
         images = [Image.open(p).convert("RGB") for p in image_paths]
         inputs = self.processor(images=images, return_tensors="pt")
         inputs = self._to_device(inputs)
-        with self._torch.no_grad():
-            feats = self.model.get_image_features(**inputs)
-        mat = l2_normalize(feats.cpu().numpy().astype("float32"))
+        with self._torch.inference_mode():
+            output = self.model.get_image_features(**inputs)
+            feats = self._as_projected_features(output, kind="image")
+        mat = l2_normalize(self._features_to_numpy(feats))
         return [mat[i] for i in range(mat.shape[0])]
 
 

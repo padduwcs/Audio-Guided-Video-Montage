@@ -21,12 +21,17 @@ data/final/*
 
 __pycache__/
 *.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 .DS_Store
 tmp/
 .gradio/
 runs/
 .kaggle_work/
 kaggle.json
+*.log
+kaggle_log.txt
 
 # Python virtual environments
 env*/

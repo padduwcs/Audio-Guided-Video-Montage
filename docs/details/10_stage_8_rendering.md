@@ -277,10 +277,10 @@ Output segment duration = `timeline_duration`. FFmpeg: `setpts` cho video speed.
 
 | `crop_mode` | MVP |
 |-------------|-----|
-| `fit` | Giữ aspect ratio + padding |
-| `fill` | Scale phủ frame, có thể crop |
-| `center_crop` | Scale + crop giữa (default) |
-| `blur_background` | Nền blur fill + foreground fit giữa |
+| `fit` | Giu tron noi dung, them padding khi aspect ratio khac output (default; on dinh va nhanh) |
+| `fill` | Scale phu frame, co the crop |
+| `blur_background` | Nen blur fill + foreground fit giua |
+| `center_crop` | Scale + crop giua |
 
 Visual `crop_mode` override `render_settings.crop_mode`; `null` → dùng render default.
 
@@ -415,7 +415,7 @@ Chi tiết Evaluation input: [`02` §12](./02_data_contract.md#12-evaluation_rep
 | T02 | Nhiều segment liên tiếp | Đúng thứ tự; không gap/overlap bất thường |
 | T03 | `speed=0.8` | Output duration = `timeline_end - timeline_start` |
 | T04 | `speed=1.2` | Tương tự T03 |
-| T05 | Crop modes `fit`, `fill`, `center_crop` | Resolution đúng; không méo |
+| T05 | Crop modes `fit`, `fill`, `center_crop`, `blur_background` | Resolution đúng; không méo |
 | T06 | `source_path` không tồn tại | Không final mới; `status=failed`; error ghi path |
 | T07 | Voice-over missing | Fail; error audio chính |
 | T08 | `visual_items=[]` | **MVP fail**; error ghi segment |

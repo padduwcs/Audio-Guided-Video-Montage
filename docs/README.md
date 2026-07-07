@@ -1,39 +1,38 @@
 # Docs Hub
 
-Thu muc nay la nguon tham chieu cho kien truc, data contract va cach van hanh
-pipeline Audio-Guided Video Montage.
+Day la ban do tai lieu cua repo Audio-Guided Video Montage.
 
-## Nen Doc File Nao Truoc
+## Doc Theo Vai Tro
 
-Thanh vien moi muon clone ve chay demo:
+Nguoi dung cuoi:
 
-1. `team_setup_and_full_pipeline.md`
-2. `current_pipeline_runbook.md`
-3. README cua module minh phu trach
+1. [USER_GUIDE.md](USER_GUIDE.md)
+2. [kaggle_terminal_workflow.md](kaggle_terminal_workflow.md) neu can debug Kaggle
 
-Thanh vien code module:
+Dev:
 
-1. `details/00_project_scope.md`
-2. `details/01_system_architecture.md`
-3. `details/02_data_contract.md`
-4. Stage spec tuong ung trong `details/03` den `details/10`
-5. Schema va sample JSON lien quan trong `schemas/` va `samples/`
+1. [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md)
+2. [details/02_data_contract.md](details/02_data_contract.md)
+3. Stage spec tuong ung trong `details/03` den `details/10`
+4. README cua module dang sua
 
-Leader/integration:
+Integration/leader:
 
-1. Tat ca file tren
-2. `details/12_integration_plan.md`
-3. `integration/README.md`
-4. `current_pipeline_runbook.md`
+1. [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md)
+2. [current_pipeline_runbook.md](current_pipeline_runbook.md)
+3. [details/01_system_architecture.md](details/01_system_architecture.md)
+4. [details/12_integration_plan.md](details/12_integration_plan.md)
 
-## Ban Do Tai Lieu
+## Tai Lieu Chinh
 
 ```text
 docs/
   README.md                         file nay
-  team_setup_and_full_pipeline.md   onboarding clone-and-run cho ca nhom
+  USER_GUIDE.md                     clone-and-run cho nguoi dung cuoi
+  DEVELOPER_GUIDE.md                ban do repo, contract, test cho dev
   current_pipeline_runbook.md       runbook ngan theo code hien tai
   kaggle_terminal_workflow.md       chi tiet scripts/kaggle_job.py
+  team_setup_and_full_pipeline.md   legacy/detail guide cho setup nhom
   problem.md                        bai toan goc
   analysis.md                       phan tich huong giai quyet
   design_system.md                  ghi chu UI/design neu can
@@ -65,31 +64,31 @@ Data contract chinh:
 docs/details/02_data_contract.md
 ```
 
-Sample contract:
+Validate sample contract:
 
 ```powershell
 python scripts\validate_json.py
 ```
 
-Runtime contract:
+Validate runtime contract:
 
 ```powershell
 python scripts\validate_json.py --input-dir data/intermediate
 ```
 
-Khi thay doi format JSON, can cap nhat dong thoi:
+Khi thay doi format JSON, cap nhat dong thoi:
 
 1. `details/02_data_contract.md`
 2. file schema trong `schemas/`
 3. sample JSON trong `samples/`
-4. README/runbook lien quan
-5. code doc/ghi JSON
+4. code doc/ghi JSON
+5. README/runbook lien quan
 
 ## Trang Thai Code Hien Tai
 
-Tat ca Stage 1-8 da co code. `integration.run_pipeline` la entrypoint chinh de
-noi cac module. `--use-sample-data` chi dung cho contract demo; render that can
-media path that.
+Tat ca Stage 1-8 da co code. `integration.run_pipeline` la entrypoint chinh.
+`--use-sample-data` chi dung cho contract demo; render that can media path
+that.
 
 Gioi han van hanh dang can nho:
 

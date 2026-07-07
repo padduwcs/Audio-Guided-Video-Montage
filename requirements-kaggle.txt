@@ -12,3 +12,5 @@ pillow>=11,<12
 transformers>=4.47,<5
 deep-translator>=1.11,<2
 faiss-cpu>=1.9,<2
+transformers>=4.47,<5
+deep-translator>=1.11,<2

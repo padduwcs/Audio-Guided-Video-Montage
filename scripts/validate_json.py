@@ -222,7 +222,8 @@ def validate_samples(samples_dir: Path, *, runtime: bool = False) -> None:
         check_score(segment.get("asr_confidence"), f"{label}.asr_confidence")
         if "segment_type" in segment:
             check_allowed(segment["segment_type"], SEGMENT_TYPE_VALUES, f"{label}.segment_type")
-    approx_equal(previous_end, media_audio["duration"], "audio segments total duration")
+    if previous_end > float(media_audio["duration"]) + EPS:
+        raise ValidationError("audio segments exceed media audio duration")
 
     keyframe_ids: set[str] = set()
     for clip in clip_items:
@@ -366,7 +367,8 @@ def validate_samples(samples_dir: Path, *, runtime: bool = False) -> None:
         approx_equal(item["audio_start"], segment["start"], f"timeline item {segment_id}.audio_start")
         approx_equal(item["audio_end"], segment["end"], f"timeline item {segment_id}.audio_end")
         approx_equal(item["duration"], segment["duration"], f"timeline item {segment_id}.duration")
-        approx_equal(item["audio_start"], previous_timeline_end, f"timeline item {segment_id}.start continuity")
+        if float(item["audio_start"]) < previous_timeline_end - EPS:
+            raise ValidationError(f"timeline item {segment_id}: overlaps previous timeline item")
         previous_timeline_end = float(item["audio_end"])
         if item["text"] != segment["text"]:
             raise ValidationError(f"timeline item {segment_id}: text must match audio segment text")

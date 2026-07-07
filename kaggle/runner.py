@@ -16,13 +16,44 @@ WORK_ROOT = Path("/kaggle/working")
 PROJECT_ROOT = WORK_ROOT / "audio-guided-video-montage"
 OUTPUT_DATA = WORK_ROOT / "output_data"
 OUTPUT_ZIP = WORK_ROOT / "kaggle_outputs.zip"
+JOB_LOG = WORK_ROOT / "job.log"
 INPUT_ROOT = SCRIPT_ROOT
 EMBEDDED_FILES: dict[str, str] = {}
 
 
+def log(message: str) -> None:
+    print(message, flush=True)
+    JOB_LOG.parent.mkdir(parents=True, exist_ok=True)
+    with JOB_LOG.open("a", encoding="utf-8") as f:
+        f.write(message + "\n")
+
+
 def run(command: list[str], *, cwd: Path | None = None) -> None:
-    print("+", " ".join(command), flush=True)
-    subprocess.run(command, cwd=str(cwd) if cwd else None, check=True)
+    log("+ " + " ".join(command))
+    process = subprocess.Popen(
+        command,
+        cwd=str(cwd) if cwd else None,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+    assert process.stdout is not None
+    for line in process.stdout:
+        text = line.rstrip("\n")
+        print(text, flush=True)
+        JOB_LOG.parent.mkdir(parents=True, exist_ok=True)
+        with JOB_LOG.open("a", encoding="utf-8") as f:
+            f.write(text + "\n")
+    return_code = process.wait()
+    if return_code != 0:
+        raise subprocess.CalledProcessError(return_code, command)
+
+
+def reset_job_log() -> None:
+    if JOB_LOG.exists():
+        JOB_LOG.unlink()
 
 
 def read_config() -> dict:
@@ -178,10 +209,11 @@ def zip_outputs() -> None:
             log_path = WORK_ROOT / log_name
             if log_path.is_file():
                 archive.write(log_path, log_path.name)
-    print(f"Wrote {OUTPUT_ZIP}", flush=True)
+    log(f"Wrote {OUTPUT_ZIP}")
 
 
 def main() -> None:
+    reset_job_log()
     try:
         config = read_config()
         unpack_source(config)

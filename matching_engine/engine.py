@@ -405,6 +405,26 @@ def build_candidate_set(
     # (clip_id đã unique vì score_segment tính theo clip, không keyframe)
     candidates.sort(key=lambda c: c["final_score"], reverse=True)
     top_k_candidates = candidates[: cfg.top_k]
+    if dp_selected_clip_id and top_k_candidates and not any(
+        c["clip_id"] == dp_selected_clip_id for c in top_k_candidates
+    ):
+        dp_candidate = next(
+            (c for c in candidates if c["clip_id"] == dp_selected_clip_id),
+            None,
+        )
+        if dp_candidate is not None:
+            top_k_candidates[-1] = dp_candidate
+            top_k_candidates.sort(key=lambda c: c["final_score"], reverse=True)
+            log.setdefault("warnings", []).append(
+                f"DP-selected clip {dp_selected_clip_id} was outside top_k "
+                f"for segment {seg_id}; included it to keep contract valid."
+            )
+        else:
+            log.setdefault("warnings", []).append(
+                f"DP-selected clip {dp_selected_clip_id} was not scored "
+                f"for segment {seg_id}; falling back to rank 1."
+            )
+            dp_selected_clip_id = None
 
     # Gán rank
     for i, c in enumerate(top_k_candidates, start=1):
