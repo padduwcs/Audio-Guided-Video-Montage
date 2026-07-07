@@ -109,8 +109,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--video-method", choices=("content", "fixed_window"), default="fixed_window")
     parser.add_argument("--asr-model", default="base")
     parser.add_argument("--language", choices=("auto", "vi", "en"), default="auto")
-    parser.add_argument("--device", choices=("auto", "cpu", "cuda"), default="cuda")
-    parser.add_argument("--compute-type", default="float16")
+    parser.add_argument("--device", choices=("auto", "cpu", "cuda"), default="auto")
+    parser.add_argument("--compute-type", default="int8")
     parser.add_argument(
         "--transfer-mode",
         choices=("kernel", "dataset"),

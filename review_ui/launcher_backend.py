@@ -188,8 +188,8 @@ def run_kaggle_draft(
     audio: Path | str,
     *,
     project_id: str = "demo_01",
-    device: str = "cuda",
-    compute_type: str = "float16",
+    device: str = "auto",
+    compute_type: str = "int8",
     fake_embeddings: bool = False,
 ):
     if not videos or not audio:
@@ -201,6 +201,9 @@ def run_kaggle_draft(
             raise ValueError(f"Duong dan phai nam trong repo: {path}")
         if not path.is_file():
             raise FileNotFoundError(f"Khong tim thay file: {path}")
+
+    device = (device or "auto").strip()
+    compute_type = (compute_type or "int8").strip()
 
     command = [
         sys.executable,

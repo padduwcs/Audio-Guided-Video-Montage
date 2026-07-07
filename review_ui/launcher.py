@@ -124,10 +124,14 @@ def build_launcher() -> gr.Blocks:
                             project_id_box = gr.Textbox(label="Ten du an", value="demo_01")
                             device_dropdown = gr.Dropdown(
                                 label="Thiet bi Kaggle",
-                                choices=["cuda", "cpu", "auto"],
-                                value="cuda",
+                                choices=["auto", "cpu", "cuda"],
+                                value="auto",
                             )
-                            compute_type_box = gr.Textbox(label="Compute type", value="float16")
+                            compute_type_box = gr.Dropdown(
+                                label="Compute type",
+                                choices=["int8", "float16", "auto"],
+                                value="int8",
+                            )
                             fake_embeddings_box = gr.Checkbox(label="Test nhanh bang fake embeddings", value=False)
 
                     gr.Markdown("### Tao ban nhap")
