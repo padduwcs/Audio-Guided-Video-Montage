@@ -184,11 +184,12 @@ data/final/
 Neu can giu ket qua cu, copy cac thu muc nay sang `runs/<ten_case>/` truoc khi
 chay case moi.
 
-Muon xoa output render/intermediate de chay lai:
+Muon xoa output de chay lai, dung lenh goi PowerShell ro rang. Cach nay chay
+duoc ca khi ban dang o CMD:
 
 ```powershell
-.\scripts\clean_outputs.ps1
-.\scripts\clean_outputs.ps1 -Yes
+powershell -ExecutionPolicy Bypass -File .\scripts\clean_outputs.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\clean_outputs.ps1 -Yes
 ```
 
 Lenh dau la dry run; lenh thu hai moi xoa.

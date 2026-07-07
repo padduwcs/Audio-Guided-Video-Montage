@@ -20,7 +20,7 @@ if (-not $Yes) {
         Write-Host "  $target"
     }
     Write-Host ""
-    Write-Host "Run .\scripts\clean_outputs.ps1 -Yes to remove them."
+    Write-Host "Run powershell -ExecutionPolicy Bypass -File .\scripts\clean_outputs.ps1 -Yes to remove them."
     exit 0
 }
 
