@@ -115,7 +115,7 @@ def check_kaggle_credentials(timeout_seconds: int = 45) -> str:
     if not username:
         return "Chua tim thay Kaggle API. Hay nhap username va API key roi bam Luu."
 
-    command = kaggle_command("datasets", "list", "--mine", "--page-size", "1")
+    command = kaggle_command("datasets", "list", "--mine")
     try:
         result = subprocess.run(
             command,
