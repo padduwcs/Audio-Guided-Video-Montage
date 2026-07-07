@@ -1,7 +1,8 @@
 # User Guide
 
-Huong dan nay danh cho nguoi dung cuoi: clone repo, dua video/audio vao, chay
-pipeline va lay video thanh pham. Ban khong can hieu tung module ben trong.
+Huong dan nay danh cho nguoi dung cuoi: clone repo, mo giao dien local, chon
+video/audio, chay tao ban nhap, chinh sua va xuat video. Ban khong can hieu
+tung module ben trong.
 
 ## Ket Qua Can Dat
 
@@ -13,9 +14,9 @@ Luong mac dinh:
 
 ```text
 Raw video/audio
-  -> Kaggle chay Stage 1-6
-  -> Review UI local
-  -> Render local
+  -> Bat dau tren Launcher UI
+  -> Chinh sua ban dung
+  -> Xuat video
   -> final_video.mp4
 ```
 
@@ -26,7 +27,7 @@ Can co:
 - Git de clone repo.
 - Python 3.11 hoac 3.12.
 - FFmpeg va FFprobe tren PATH.
-- Kaggle account va file `kaggle.json`.
+- Kaggle account va API key.
 - It nhat 1 video nguon va 1 file audio/voice.
 
 Kiem tra nhanh:
@@ -58,121 +59,107 @@ python -m venv .venv
 ./.venv/bin/python -m pip install -r requirements-terminal.txt
 ```
 
-## 3. Cau Hinh Kaggle
+## 3. Mo Ung Dung
 
-Tren Kaggle:
+Chay Launcher UI:
+
+```powershell
+.\.venv\Scripts\python.exe -B -m review_ui.launcher
+```
+
+Mo trinh duyet tai:
+
+```text
+http://127.0.0.1:7860
+```
+
+Ung dung co 3 tab chinh:
+
+```text
+Bat dau     chon file, cau hinh Kaggle, tao ban nhap
+Chinh sua   mo Review UI de doi clip/chinh timeline
+Xuat video  render va xem video cuoi
+```
+
+## 4. Cau Hinh Kaggle Tren UI
+
+Tren Kaggle web:
 
 1. Vao account Settings.
 2. Tim muc API.
 3. Bam Create New Token.
 4. Tai file `kaggle.json`.
 
-Dat file vao:
+Trong tab `Bat dau`, nhap:
 
 ```text
-Windows: %USERPROFILE%\.kaggle\kaggle.json
-macOS/Linux: ~/.kaggle/kaggle.json
+Username
+API key
 ```
 
-Kiem tra Kaggle CLI:
-
-```powershell
-.\.venv\Scripts\kaggle.exe datasets list --mine
-```
-
-Dung `kaggle.exe` trong `.venv\Scripts\` tren Windows. Khong dung
-`python -m kaggle` trong repo nay vi repo co thu muc local `kaggle/`.
-
-## 4. Dat Input
-
-Dat file vao `data/raw/`:
+Bam:
 
 ```text
-data/raw/my_video.mp4
-data/raw/my_voice.mp3
+Luu Kaggle
+Kiem tra
 ```
 
-Ho tro nhieu video:
+Ung dung chi luu API key tren may cua ban tai `~/.kaggle/kaggle.json`. Key
+khong duoc ghi vao repo, log hay output.
+
+## 5. Tao Ban Nhap
+
+Trong tab `Bat dau`:
 
 ```text
-data/raw/video_01.mp4
-data/raw/video_02.mp4
-data/raw/voice.mp3
+1. Chon mot hoac nhieu video nguon.
+2. Chon mot file voice-over/audio.
+3. Bam Dung cac file nay.
+4. Bam Tao ban nhap video.
 ```
 
-Khong commit media len GitHub. Cac file trong `data/raw/` da duoc ignore.
-
-## 5. Chay Stage 1-6 Tren Kaggle
-
-Mot video:
-
-```powershell
-.\.venv\Scripts\python.exe -B scripts\kaggle_job.py submit --videos data\raw\my_video.mp4 --audio data\raw\my_voice.mp3 --device cpu --compute-type int8 --wait --pull
-```
-
-Nhieu video:
-
-```powershell
-.\.venv\Scripts\python.exe -B scripts\kaggle_job.py submit --videos data\raw\video_01.mp4 data\raw\video_02.mp4 --audio data\raw\voice.mp3 --device cpu --compute-type int8 --wait --pull
-```
-
-Lenh tren se:
-
-1. Dong goi source code hien tai.
-2. Upload source + raw media len private Kaggle Dataset cua account ban.
-3. Chay Kaggle Kernel runner.
-4. Tao artifact Stage 1-6.
-5. Tai output ve `data/`.
-
-Khi thanh cong, cac file nay se ton tai:
+Ung dung se tu:
 
 ```text
-data/intermediate/media_metadata.json
-data/intermediate/audio_segments.json
-data/intermediate/clip_metadata.json
-data/intermediate/embedding_metadata.json
-data/intermediate/matching_candidates.json
+copy input vao data/raw
+upload len Kaggle
+chay phan tich video/audio
+tai timeline ve may
+```
+
+Khi xong, ban nhap nam trong:
+
+```text
 data/intermediate/timeline.json
 ```
 
 ## 6. Review Timeline
 
-Mo Review UI local:
+Trong tab `Chinh sua`, bam:
 
-```powershell
-.\.venv\Scripts\python.exe -B -m integration.run_pipeline --from-stage 7 --to-stage 7 --launch-ui --no-ui-backup --ui-port 7870
+```text
+Mo man hinh chinh sua
 ```
 
-Khi terminal hien local URL, mo trinh duyet:
+Ung dung se mo Review UI tai:
 
 ```text
 http://127.0.0.1:7870
 ```
 
-Trong UI, review tung segment, doi candidate neu can, roi bam Save de ghi lai
-`data/intermediate/timeline.json`.
+Trong Review UI, xem tung doan, doi clip neu can, roi bam `Luu Thay Doi`.
 
-Khi review xong, quay lai terminal dang chay UI va bam:
+## 7. Xuat Video Cuoi
+
+Quay lai Launcher UI, vao tab `Xuat video`, bam `Xuat video`.
+
+Thanh pham nam tai:
 
 ```text
-Ctrl + C
-```
-
-## 7. Render Video Cuoi
-
-```powershell
-.\.venv\Scripts\python.exe -B -m integration.run_pipeline --from-stage 8 --to-stage 8 --overwrite
-```
-
-Kiem tra thanh pham:
-
-```powershell
-dir data\final\final_video.mp4
+data/final/final_video.mp4
 ```
 
 ## 8. Chay Lai Case Moi
-
-Pipeline ghi output vao cac thu muc co dinh:
 
 ```text
 data/intermediate/
@@ -232,11 +219,12 @@ Review UI bi cache port cu:
 [ ] Tao .venv
 [ ] pip install -r requirements-terminal.txt
 [ ] FFmpeg/FFprobe chay duoc
-[ ] Kaggle CLI doc duoc kaggle.json
-[ ] Dat media vao data/raw
-[ ] Chay scripts/kaggle_job.py submit --wait --pull
-[ ] Mo Review UI va Save timeline
-[ ] Render Stage 8
+[ ] Mo Launcher UI
+[ ] Luu va kiem tra Kaggle tren UI
+[ ] Chon video/audio tren UI
+[ ] Tao ban nhap video
+[ ] Mo man hinh chinh sua va Save timeline
+[ ] Xuat video
 [ ] Kiem tra data/final/final_video.mp4
 ```
 

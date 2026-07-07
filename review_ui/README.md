@@ -1,8 +1,19 @@
 # Review UI
 
-Stage 7 validate va review timeline truoc khi render. UI dung Gradio; trong
-integration, Stage 7 mac dinh chay validation non-interactive va chi mo UI khi
-co `--launch-ui`.
+Review UI gom hai lop giao dien Gradio:
+
+- `review_ui.launcher`: giao dien cho nguoi dung cuoi, gom Bat dau, Chinh sua,
+  Xuat video.
+- `review_ui.app`: man hinh review timeline chi tiet sau khi da co ban nhap.
+
+Trong integration, Stage 7 mac dinh chay validation non-interactive va chi mo UI
+khi co `--launch-ui`.
+
+## Chay Ung Dung Cho Nguoi Dung
+
+```powershell
+python -m review_ui.launcher
+```
 
 ## Input
 

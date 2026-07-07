@@ -9,10 +9,9 @@ footage, cho nguoi dung review, roi render thanh mot file video cuoi.
 Neu ban chi muon clone repo va tao video:
 
 1. Doc [docs/USER_GUIDE.md](docs/USER_GUIDE.md)
-2. Dat video/audio vao `data/raw/`
-3. Chay Stage 1-6 tren Kaggle
-4. Review local bang UI
-5. Render `data/final/final_video.mp4`
+2. Chay Launcher UI local
+3. Chon video, voice-over va cau hinh Kaggle tren UI
+4. Bam tao ban nhap, chinh sua, roi xuat video
 
 Neu ban la dev hoac muon toi uu pipeline:
 
@@ -30,30 +29,13 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements-terminal.txt
 ```
 
-Dat input:
-
-```text
-data/raw/my_video.mp4
-data/raw/my_voice.mp3
-```
-
-Chay phan nang tren Kaggle va tai output ve may:
+Mo Launcher UI:
 
 ```powershell
-.\.venv\Scripts\python.exe -B scripts\kaggle_job.py submit --videos data\raw\my_video.mp4 --audio data\raw\my_voice.mp3 --device cpu --compute-type int8 --wait --pull
+.\.venv\Scripts\python.exe -B -m review_ui.launcher
 ```
 
-Mo Review UI:
-
-```powershell
-.\.venv\Scripts\python.exe -B -m integration.run_pipeline --from-stage 7 --to-stage 7 --launch-ui --no-ui-backup --ui-port 7870
-```
-
-Render video cuoi:
-
-```powershell
-.\.venv\Scripts\python.exe -B -m integration.run_pipeline --from-stage 8 --to-stage 8 --overwrite
-```
+Trong trinh duyet, lam theo 3 tab: `Bat dau`, `Chinh sua`, `Xuat video`.
 
 Thanh pham nam tai:
 
