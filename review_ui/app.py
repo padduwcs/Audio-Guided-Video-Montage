@@ -593,6 +593,15 @@ def launch_review_ui(
                     html_timeline
                 ]
 
+        def load_initial_segment(data):
+            items = data.timeline.get("items", [])
+            initial_segment_id = items[0]["segment_id"] if items else None
+            segment_options = get_segment_options(data, "all")
+            return [
+                gr.update(choices=segment_options, value=initial_segment_id),
+                *load_segment_data(initial_segment_id, data),
+            ]
+
         def load_visual_item_data(segment_id, vi_id, data):
             if not segment_id or not vi_id:
                 return [None, "", "", "", 0, 0, 1.0, "cut", "fit", 0.0, False, vi_id]
@@ -870,9 +879,10 @@ def launch_review_ui(
         }
         """
         demo.load(
-            fn=load_segment_data,
-            inputs=[segment_dropdown, project_state],
+            fn=load_initial_segment,
+            inputs=[project_state],
             outputs=[
+                segment_dropdown,
                 status_box, audio_player, transcript_box, conf_box, score_box, needs_review_cb, notes_box,
                 vi_dropdown, inspector_group, create_vi_btn,
                 clip_id_input, video_id_input, source_path_input, clip_start_input, clip_end_input, speed_input, transition_input, crop_mode_input, volume_input, locked_input,
