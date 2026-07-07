@@ -151,7 +151,7 @@ Khi doi format JSON, hay cap nhat:
 2. file schema trong `docs/schemas/`
 3. sample JSON trong `docs/samples/`
 4. code doc/ghi JSON
-5. README/runbook lien quan
+5. README/guide lien quan
 
 ## Cau Truc Thu Muc
 
@@ -208,8 +208,8 @@ python scripts\validate_json.py --input-dir data/intermediate
 
 ## Tai Lieu Sau Hon
 
-- [current_pipeline_runbook.md](current_pipeline_runbook.md): runbook theo code hien tai.
 - [kaggle_terminal_workflow.md](kaggle_terminal_workflow.md): chi tiet `scripts/kaggle_job.py`.
 - [details/01_system_architecture.md](details/01_system_architecture.md): kien truc.
 - [details/02_data_contract.md](details/02_data_contract.md): contract chinh.
+- `details/03` den `details/10`: spec theo tung stage.
 - `*/README.md`: README rieng cua tung module.

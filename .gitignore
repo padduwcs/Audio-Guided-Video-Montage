@@ -24,13 +24,21 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.coverage
+htmlcov/
+.ipynb_checkpoints/
 .DS_Store
+.agents/
 tmp/
 .gradio/
 runs/
 .kaggle_work/
 kaggle.json
+.env
+.env.*
 *.log
+*.tmp
+*.bak
 kaggle_log.txt
 
 # Python virtual environments

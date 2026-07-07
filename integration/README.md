@@ -58,7 +58,7 @@ python -m integration.run_pipeline `
   --to-stage 8
 ```
 
-Chi tiết môi trường, tham số và quy trình debug: `docs/current_pipeline_runbook.md`.
+Chi tiết môi trường, tham số và quy trình debug: `docs/DEVELOPER_GUIDE.md`.
 
 ## Cách test
 
@@ -72,7 +72,7 @@ python scripts/validate_json.py --input-dir data/intermediate
 
 - `docs/details/01_system_architecture.md`
 - `docs/details/02_data_contract.md`
-- `docs/details/12_integration_plan.md`
+- `docs/DEVELOPER_GUIDE.md`
 
 ## Kiểm tra trước khi chạy
 

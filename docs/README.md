@@ -19,9 +19,8 @@ Dev:
 Integration/leader:
 
 1. [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md)
-2. [current_pipeline_runbook.md](current_pipeline_runbook.md)
-3. [details/01_system_architecture.md](details/01_system_architecture.md)
-4. [details/12_integration_plan.md](details/12_integration_plan.md)
+2. [details/01_system_architecture.md](details/01_system_architecture.md)
+3. [details/02_data_contract.md](details/02_data_contract.md)
 
 ## Tai Lieu Chinh
 
@@ -30,12 +29,7 @@ docs/
   README.md                         file nay
   USER_GUIDE.md                     clone-and-run cho nguoi dung cuoi
   DEVELOPER_GUIDE.md                ban do repo, contract, test cho dev
-  current_pipeline_runbook.md       runbook ngan theo code hien tai
   kaggle_terminal_workflow.md       chi tiet scripts/kaggle_job.py
-  team_setup_and_full_pipeline.md   legacy/detail guide cho setup nhom
-  problem.md                        bai toan goc
-  analysis.md                       phan tich huong giai quyet
-  design_system.md                  ghi chu UI/design neu can
 
   details/
     00_project_scope.md
@@ -49,8 +43,6 @@ docs/
     08_stage_6_timeline_planning.md
     09_stage_7_review_ui.md
     10_stage_8_rendering.md
-    11_team_assignment.md
-    12_integration_plan.md
 
   schemas/                          schema toi thieu cho JSON contract
   samples/                          sample JSON hop le de test contract
@@ -82,7 +74,7 @@ Khi thay doi format JSON, cap nhat dong thoi:
 2. file schema trong `schemas/`
 3. sample JSON trong `samples/`
 4. code doc/ghi JSON
-5. README/runbook lien quan
+5. README/guide lien quan
 
 ## Trang Thai Code Hien Tai
 

@@ -384,7 +384,7 @@ File correction nội bộ (không phải contract MVP). Ví dụ:
 }
 ```
 
-Sau khi áp dụng correction, chạy lại Stage 2 rồi pipeline từ Embedding Indexer trở đi (xem [`12_integration_plan.md`](12_integration_plan.md) §12.2).
+Sau khi áp dụng correction, chạy lại Stage 2 rồi pipeline từ Embedding Indexer trở đi.
 
 ## 8. Error / fallback / re-run behavior
 

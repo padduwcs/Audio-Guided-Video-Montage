@@ -6,6 +6,8 @@ cd "$ROOT_DIR"
 
 TARGETS=(
   "data/intermediate"
+  "data/normalized"
+  "data/keyframes"
   "data/final"
 )
 
@@ -19,9 +21,13 @@ fi
 
 for target in "${TARGETS[@]}"; do
   if [[ -d "$target" ]]; then
-    rm -rf -- "$target"
-    echo "Removed $target"
+    mkdir -p "$target"
+    find "$target" -mindepth 1 ! -name ".gitkeep" -exec rm -rf {} +
+    touch "$target/.gitkeep"
+    echo "Cleaned $target (kept .gitkeep)"
   else
-    echo "Skipped $target (not found)"
+    mkdir -p "$target"
+    touch "$target/.gitkeep"
+    echo "Created $target with .gitkeep"
   fi
 done
