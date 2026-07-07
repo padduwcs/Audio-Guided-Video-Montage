@@ -109,7 +109,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--video-method", choices=("content", "fixed_window"), default="fixed_window")
     parser.add_argument("--asr-model", default="base")
     parser.add_argument("--language", choices=("auto", "vi", "en"), default="auto")
-    parser.add_argument("--device", choices=("auto", "cpu", "cuda"), default="auto")
+    parser.add_argument("--device", choices=("auto", "cpu", "cuda"), default="cpu")
     parser.add_argument("--compute-type", default="int8")
     parser.add_argument(
         "--transfer-mode",
@@ -393,8 +393,8 @@ def build_package(args: argparse.Namespace) -> None:
                 "video_method": args.video_method,
                 "asr_model": args.asr_model,
                 "language": args.language,
-                "device": None if args.device == "auto" else args.device,
-                "compute_type": None if args.compute_type == "auto" else args.compute_type,
+                "device": args.device,
+                "compute_type": args.compute_type,
                 "source_dir": source_dir_name,
             },
             indent=2,

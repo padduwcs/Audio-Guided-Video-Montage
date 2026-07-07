@@ -25,8 +25,8 @@ Kiem tra:
 
 ## Lenh Chay Khuyen Nghi
 
-Mac dinh, repo chay Stage 1-6 tren Kaggle bang real CLIP embeddings, tu chon
-thiet bi va dung `int8` de tuong thich tot hon voi moi truong Kaggle.
+Mac dinh, repo chay Stage 1-6 tren Kaggle bang real CLIP embeddings va dung
+`cpu/int8` cho ASR de tuong thich tot hon voi moi truong Kaggle.
 
 ```bat
 .venv\Scripts\python.exe -B scripts\kaggle_job.py submit --videos data\raw\my_video.mp4 --audio data\raw\my_voice.mp3 --wait --pull
@@ -104,9 +104,10 @@ Render local:
 
 ## Ghi Chu
 
-- Mac dinh script dung real embeddings, `--device auto`, `--compute-type int8`.
+- Mac dinh script dung real embeddings, `--device cpu`, `--compute-type int8`.
 - Neu muon thu GPU float16, co the truyen `--device cuda --compute-type float16`.
-  Neu gap loi backend khong ho tro float16, quay ve `--compute-type int8`.
+  Neu gap loi backend khong ho tro compute type tren CUDA, quay ve
+  `--device cpu --compute-type int8`.
 - Chi dung `--fake-embeddings` khi can debug pipeline that nhanh va khong can
   matching theo ngu nghia.
 - Mac dinh transfer mode la `dataset`; mode nay phu hop media lon hon kernel

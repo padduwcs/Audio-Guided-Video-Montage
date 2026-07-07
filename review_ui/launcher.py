@@ -124,8 +124,8 @@ def build_launcher() -> gr.Blocks:
                             project_id_box = gr.Textbox(label="Ten du an", value="demo_01")
                             device_dropdown = gr.Dropdown(
                                 label="Thiet bi Kaggle",
-                                choices=["auto", "cpu", "cuda"],
-                                value="auto",
+                                choices=["cpu", "auto", "cuda"],
+                                value="cpu",
                             )
                             compute_type_box = gr.Dropdown(
                                 label="Compute type",

@@ -188,7 +188,7 @@ def run_kaggle_draft(
     audio: Path | str,
     *,
     project_id: str = "demo_01",
-    device: str = "auto",
+    device: str = "cpu",
     compute_type: str = "int8",
     fake_embeddings: bool = False,
 ):
@@ -202,7 +202,7 @@ def run_kaggle_draft(
         if not path.is_file():
             raise FileNotFoundError(f"Khong tim thay file: {path}")
 
-    device = (device or "auto").strip()
+    device = (device or "cpu").strip()
     compute_type = (compute_type or "int8").strip()
 
     command = [

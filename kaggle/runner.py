@@ -148,8 +148,8 @@ def run_pipeline(config: dict) -> None:
     config = prepare_project_inputs(config)
     audio = str(PROJECT_ROOT / config["audio"])
     videos = [str(PROJECT_ROOT / path) for path in config["videos"]]
-    device = config.get("device") or "cuda"
-    compute_type = config.get("compute_type") or "float16"
+    device = config.get("device") or "cpu"
+    compute_type = config.get("compute_type") or "int8"
     print(
         f"ASR runtime options: device={device}, compute_type={compute_type}",
         flush=True,

@@ -209,11 +209,11 @@ Kaggle kernel loi:
 .\.venv\Scripts\python.exe -B scripts\kaggle_job.py logs
 ```
 
-Loi `Requested float16 compute type`:
+Loi `Requested ... compute type` tren CUDA:
 
 ```text
 Mo Tuy chon nang cao trong tab Bat dau
-Chon Thiet bi Kaggle = auto
+Chon Thiet bi Kaggle = cpu
 Chon Compute type = int8
 Chay Tao ban nhap video lai
 ```

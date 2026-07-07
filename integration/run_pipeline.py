@@ -205,14 +205,14 @@ def _run_audio_analyzer(args: argparse.Namespace, input_dir: Path) -> None:
             min_similarity=args.query_min_similarity,
         )
 
-    backend = FasterWhisperBackend(
-        model=args.asr_model,
-        language=args.language,
-        device=args.device,
-        compute_type=args.compute_type,
-    )
-    try:
-        result = run_pipeline(
+    def run_with_backend(device: str, compute_type: str):
+        backend = FasterWhisperBackend(
+            model=args.asr_model,
+            language=args.language,
+            device=device,
+            compute_type=compute_type,
+        )
+        return run_pipeline(
             media_metadata_path=input_dir / "media_metadata.json",
             output_dir=input_dir,
             asr_backend=backend,
@@ -221,8 +221,21 @@ def _run_audio_analyzer(args: argparse.Namespace, input_dir: Path) -> None:
             query_reranker=query_reranker,
             project_root=repo_root(),
         )
+
+    try:
+        result = run_with_backend(args.device, args.compute_type)
     except PipelineError as exc:
-        raise RuntimeError(f"Audio Analyzer failed: {exc}") from exc
+        can_retry_cpu = (args.device, args.compute_type) != ("cpu", "int8")
+        if not can_retry_cpu or "failed to load faster-whisper model" not in str(exc):
+            raise RuntimeError(f"Audio Analyzer failed: {exc}") from exc
+        print(
+            "  WARNING ASR backend failed with "
+            f"device={args.device}, compute_type={args.compute_type}; retrying cpu/int8"
+        )
+        try:
+            result = run_with_backend("cpu", "int8")
+        except PipelineError as retry_exc:
+            raise RuntimeError(f"Audio Analyzer failed: {retry_exc}") from retry_exc
     print(f"  wrote {_path_text(result.audio_segments_path)} ({result.segment_count} segments)")
 
 
