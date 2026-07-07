@@ -20,7 +20,7 @@ DEFAULT_RENDER_SETTINGS: dict[str, Any] = {
     "fps": 30,
     "format": "mp4",
     "default_transition": "cut",
-    "crop_mode": "center_crop",
+    "crop_mode": "fit",
     "keep_original_audio": False,
     "original_audio_volume": 0.0,
 }

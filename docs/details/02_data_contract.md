@@ -160,7 +160,7 @@ Một số field optional (ví dụ `clip_metadata.items[].status`, `source_path
 
 Mẫu JSON tích hợp: `docs/samples/*_sample.json`. Kiểm tra cross-file: `python scripts/validate_json.py` (samples) hoặc `python scripts/validate_json.py --input-dir data/intermediate` (runtime).
 
-Khi tài liệu mâu thuẫn, ưu tiên: **Data Contract → schemas → samples → stage spec → README module**. `docs/analysis.md` tham khảo ý tưởng, không phải contract triển khai.
+Khi tài liệu mâu thuẫn, ưu tiên: **Data Contract → schemas → samples → stage spec → README module**.
 
 ## 3. Tổng quan các file dữ liệu
 

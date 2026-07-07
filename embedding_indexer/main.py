@@ -52,6 +52,7 @@ def run(
     config_path: str | None = None,
     overwrite: bool = False,
     use_fake: bool = False,
+    device: str = "cpu",
 ) -> str:
     cfg = load_config(
         config_path,
@@ -79,7 +80,7 @@ def run(
     project_id = io.check_project_id(audio, clip)
 
     # --- Buoc 4: load model (lam som de fail-fast neu model loi) ---
-    backend = load_backend(cfg.model_name, cfg.dimension, use_fake=use_fake)
+    backend = load_backend(cfg.model_name, cfg.dimension, use_fake=use_fake, device=device)
     dim = backend.dimension
 
     os.makedirs(embedding_dir, exist_ok=True)
@@ -241,6 +242,7 @@ def main():
     p.add_argument("--config", default=None)
     p.add_argument("--overwrite", action="store_true")
     p.add_argument("--fake", action="store_true", help="Dung fake model de test pipeline")
+    p.add_argument("--device", default="cpu", help="Embedding device for real CLIP backend: cpu, cuda, or auto")
     args = p.parse_args()
 
     try:
@@ -253,6 +255,7 @@ def main():
             config_path=args.config,
             overwrite=args.overwrite,
             use_fake=args.fake,
+            device=args.device,
         )
     except io.InputError as e:
         print(f"[INPUT ERROR] {e}")

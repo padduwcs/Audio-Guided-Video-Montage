@@ -11,6 +11,7 @@ import os
 import tempfile
 import time
 import gradio as gr
+import gradio_client.utils as gradio_client_utils
 import soundfile as sf
 import numpy as np
 
@@ -20,10 +21,23 @@ from review_ui.editor import replace_clip, create_visual_from_candidate, update_
 from review_ui.storage import save_timeline, backup_timeline
 from review_ui.media import resolve_video_path, resolve_audio_path
 from review_ui.transaction_log import TransactionLog
-from renderer.core import render_timeline
+from renderer.core import extract_segment_ffmpeg, render_timeline
 
 # Resolve Repo Root Path
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+_ORIGINAL_JSON_SCHEMA_TO_PYTHON_TYPE = gradio_client_utils._json_schema_to_python_type
+
+
+def _json_schema_to_python_type_compat(schema, defs):
+    """Handle boolean JSON-schema nodes produced by newer Pydantic/FastAPI."""
+    if isinstance(schema, bool):
+        return "Any"
+    return _ORIGINAL_JSON_SCHEMA_TO_PYTHON_TYPE(schema, defs)
+
+
+gradio_client_utils._json_schema_to_python_type = _json_schema_to_python_type_compat
+
 
 def make_abs(path):
     if not path:
@@ -230,7 +244,7 @@ def launch_review_ui(
             return None
 
     # Slice video segment preview mp4 using ffmpeg
-    def slice_video(video_path, start, end):
+    def slice_video(video_path, start, end, speed=1.0, crop_mode=None, render_settings=None):
         abs_video = make_abs(video_path)
         if not abs_video or not os.path.exists(abs_video):
             return None
@@ -240,18 +254,23 @@ def launch_review_ui(
             with tempfile.NamedTemporaryFile(suffix=".mp4", dir=tmp_video_dir, delete=False) as tmpf:
                 tmp_sliced_path = tmpf.name
             
-            import subprocess
-            duration = end - start
-            cmd = [
-                "ffmpeg", "-y",
-                "-ss", str(start),
-                "-i", abs_video,
-                "-t", str(duration),
-                "-c:v", "libx264", "-preset", "ultrafast",
-                "-c:a", "aac",
-                tmp_sliced_path
-            ]
-            subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+            render_settings = render_settings or {}
+            extract_segment_ffmpeg(
+                abs_video,
+                start,
+                end,
+                tmp_sliced_path,
+                speed=speed or 1.0,
+                width=render_settings.get("width", 1920),
+                height=render_settings.get("height", 1080),
+                fps=render_settings.get("fps", 30),
+                crop_mode=crop_mode or render_settings.get("crop_mode", "fit"),
+                video_codec="libx264",
+                video_bitrate="900k",
+                audio_codec="aac",
+                audio_bitrate="64k",
+                keep_original_audio=False,
+            )
             return tmp_sliced_path
         except Exception as e:
             return abs_video
@@ -364,7 +383,7 @@ def launch_review_ui(
                         speed_input = gr.Slider(minimum=0.75, maximum=1.25, step=0.01, label="Speed", interactive=not readonly)
                         with gr.Row():
                             transition_input = gr.Dropdown(choices=["cut", "fade", "crossfade", "slide"], label="Chuyển cảnh", interactive=not readonly)
-                            crop_mode_input = gr.Dropdown(choices=["center_crop", "fit_blur", "fill"], label="Crop mode", interactive=not readonly)
+                            crop_mode_input = gr.Dropdown(choices=["fit", "blur_background", "center_crop", "fill"], label="Crop mode", interactive=not readonly)
                         with gr.Row():
                             volume_input = gr.Slider(minimum=0.0, maximum=1.0, step=0.1, label="Âm lượng", interactive=not readonly)
                             locked_input = gr.Checkbox(label="Khóa ngàm", interactive=not readonly)
@@ -473,7 +492,7 @@ def launch_review_ui(
                 return [
                     "Không tìm thấy segment", None, "", "", "", False, "",
                     gr.update(choices=[], value=None), gr.update(visible=False), gr.update(visible=False),
-                    "", "", "", 0, 0, 1.0, "cut", "center_crop", 0.0, False,
+                    "", "", "", 0, 0, 1.0, "cut", "fit", 0.0, False,
                     None, None,
                     "Không có đề xuất", gr.update(choices=[]),
                     generate_timeline_html(data, None)
@@ -484,7 +503,7 @@ def launch_review_ui(
                 return [
                     "Không tìm thấy segment", None, "", "", "", False, "",
                     gr.update(choices=[], value=None), gr.update(visible=False), gr.update(visible=False),
-                    "", "", "", 0, 0, 1.0, "cut", "center_crop", 0.0, False,
+                    "", "", "", 0, 0, 1.0, "cut", "fit", 0.0, False,
                     None, None,
                     "Không có đề xuất", gr.update(choices=[]),
                     generate_timeline_html(data, segment_id)
@@ -528,7 +547,14 @@ def launch_review_ui(
             video_preview = None
             if selected_vi_id and active_vi:
                 rel_path = resolve_video_path(data, segment_id, selected_vi_id)
-                video_preview = slice_video(rel_path, active_vi["clip_start"], active_vi["clip_end"])
+                video_preview = slice_video(
+                    rel_path,
+                    active_vi["clip_start"],
+                    active_vi["clip_end"],
+                    speed=active_vi.get("speed", 1.0),
+                    crop_mode=active_vi.get("crop_mode"),
+                    render_settings=data.timeline.get("render_settings", {}),
+                )
                 
             html_timeline = generate_timeline_html(data, segment_id)
 
@@ -540,7 +566,7 @@ def launch_review_ui(
                 c_end = active_vi["clip_end"]
                 speed = active_vi["speed"]
                 trans = active_vi["transition"]
-                crop = active_vi.get("crop_mode", "center_crop")
+                crop = active_vi.get("crop_mode", "fit")
                 vol = active_vi.get("volume", 0.0)
                 locked = active_vi.get("locked", False)
                 
@@ -561,26 +587,42 @@ def launch_review_ui(
                     gr.update(choices=[], value=None),
                     gr.update(visible=False), # Hide inspector group
                     gr.update(visible=True), # Show create visual button
-                    "", "", "", 0, 0, 1.0, "cut", "center_crop", 0.0, False,
+                    "", "", "", 0, 0, 1.0, "cut", "fit", 0.0, False,
                     None, None,
                     cand_md, gr.update(choices=cand_choices),
                     html_timeline
                 ]
 
+        def load_initial_segment(data):
+            items = data.timeline.get("items", [])
+            initial_segment_id = items[0]["segment_id"] if items else None
+            segment_options = get_segment_options(data, "all")
+            return [
+                gr.update(choices=segment_options, value=initial_segment_id),
+                *load_segment_data(initial_segment_id, data),
+            ]
+
         def load_visual_item_data(segment_id, vi_id, data):
             if not segment_id or not vi_id:
-                return [None, "", "", "", 0, 0, 1.0, "cut", "center_crop", 0.0, False, vi_id]
+                return [None, "", "", "", 0, 0, 1.0, "cut", "fit", 0.0, False, vi_id]
                 
             item = next((i for i in data.timeline["items"] if i["segment_id"] == segment_id), None)
             if not item:
-                return [None, "", "", "", 0, 0, 1.0, "cut", "center_crop", 0.0, False, vi_id]
+                return [None, "", "", "", 0, 0, 1.0, "cut", "fit", 0.0, False, vi_id]
                 
             active_vi = next((v for v in item.get("visual_items", []) if v["timeline_item_id"] == vi_id), None)
             if not active_vi:
-                return [None, "", "", "", 0, 0, 1.0, "cut", "center_crop", 0.0, False, vi_id]
+                return [None, "", "", "", 0, 0, 1.0, "cut", "fit", 0.0, False, vi_id]
                 
             rel_path = resolve_video_path(data, segment_id, vi_id)
-            video_preview = slice_video(rel_path, active_vi["clip_start"], active_vi["clip_end"])
+            video_preview = slice_video(
+                rel_path,
+                active_vi["clip_start"],
+                active_vi["clip_end"],
+                speed=active_vi.get("speed", 1.0),
+                crop_mode=active_vi.get("crop_mode"),
+                render_settings=data.timeline.get("render_settings", {}),
+            )
             
             return [
                 video_preview,
@@ -591,7 +633,7 @@ def launch_review_ui(
                 active_vi["clip_end"],
                 active_vi["speed"],
                 active_vi["transition"],
-                active_vi.get("crop_mode", "center_crop"),
+                active_vi.get("crop_mode", "fit"),
                 active_vi.get("volume", 0.0),
                 active_vi.get("locked", False),
                 vi_id
@@ -676,7 +718,14 @@ def launch_review_ui(
                 
                 # Resolve new video preview
                 rel_path = resolve_video_path(data, segment_id, vi_id)
-                abs_video = slice_video(rel_path, vi["clip_start"], vi["clip_end"])
+                abs_video = slice_video(
+                    rel_path,
+                    vi["clip_start"],
+                    vi["clip_end"],
+                    speed=vi.get("speed", 1.0),
+                    crop_mode=vi.get("crop_mode"),
+                    render_settings=data.timeline.get("render_settings", {}),
+                )
                 
                 html_timeline = generate_timeline_html(data, segment_id)
                 
@@ -830,9 +879,10 @@ def launch_review_ui(
         }
         """
         demo.load(
-            fn=load_segment_data,
-            inputs=[segment_dropdown, project_state],
+            fn=load_initial_segment,
+            inputs=[project_state],
             outputs=[
+                segment_dropdown,
                 status_box, audio_player, transcript_box, conf_box, score_box, needs_review_cb, notes_box,
                 vi_dropdown, inspector_group, create_vi_btn,
                 clip_id_input, video_id_input, source_path_input, clip_start_input, clip_end_input, speed_input, transition_input, crop_mode_input, volume_input, locked_input,
@@ -851,5 +901,9 @@ def launch_review_ui(
         )
 
     # Launch Gradio app with explicit allowed_paths whitelisting for local media serving
-    demo.launch(server_name=host, server_port=port, allowed_paths=[REPO_ROOT])
+    demo.launch(
+        server_name=host,
+        server_port=port,
+        allowed_paths=[REPO_ROOT],
+    )
 

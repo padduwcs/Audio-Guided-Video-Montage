@@ -5,7 +5,7 @@ Trách nhiệm:
 - Đảm bảo atomic, chỉ mutate field được phép, preserve optional fields.
 """
 
-# TODO: Implement transaction functions
+# Transaction helpers below mutate only the allowed timeline fields.
 
 def replace_clip(project_data, segment_id, visual_item_id, candidate_clip_id, locked=False):
     """
@@ -131,7 +131,7 @@ def create_visual_from_candidate(project_data, segment_id, candidate_clip_id):
         "speed": speed,
         "transition": project_data.timeline.get("render_settings", {}).get("default_transition", "cut"),
         "effect": None,
-        "crop_mode": project_data.timeline.get("render_settings", {}).get("crop_mode", "center_crop"),
+        "crop_mode": project_data.timeline.get("render_settings", {}).get("crop_mode", "fit"),
         "volume": 0.0,
         "source_candidate_rank": candidate["rank"] if candidate else None,
         "locked": False,

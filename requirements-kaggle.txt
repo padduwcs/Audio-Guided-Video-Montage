@@ -1,0 +1,16 @@
+# Kaggle worker dependencies for the first terminal workflow.
+#
+# This file is intentionally lighter than requirements.txt because the first
+# offload target runs Stage 1-6 with --fake-embeddings and no Review UI/Renderer.
+# Kaggle usually already has torch and many notebook packages installed; add
+# full project requirements only when running real CLIP or Stage 7-8 there.
+
+faster-whisper>=1.2,<2
+scenedetect[opencv]>=0.6.6,<0.7
+numpy>=2.1,<3
+pillow>=11,<12
+transformers>=4.47,<5
+deep-translator>=1.11,<2
+faiss-cpu>=1.9,<2
+transformers>=4.47,<5
+deep-translator>=1.11,<2

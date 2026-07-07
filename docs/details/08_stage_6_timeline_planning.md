@@ -141,7 +141,7 @@ Lỗi cấu trúc nghiêm trọng → **dừng**, không tạo timeline giả.
     "fps": 30,
     "format": "mp4",
     "default_transition": "cut",
-    "crop_mode": "center_crop",
+    "crop_mode": "fit",
     "keep_original_audio": false,
     "original_audio_volume": 0.0
   },
@@ -267,7 +267,7 @@ Lỗi cấu trúc ở bước 1–2 → dừng. Segment thiếu `segment_id`/`st
 
 Thứ tự ưu tiên: config người dùng → default module → suy ra từ video usable đầu tiên trong `media_metadata`.
 
-MVP nên dùng default ổn định (1920×1080, 30fps, mp4, `cut`, `center_crop`, `keep_original_audio=false`). Nếu suy ra từ video nguồn: chỉ video `ready|warning`; nhiều resolution khác nhau → vẫn normalize output theo config cố định.
+MVP nên dùng default ổn định (1920×1080, 30fps, mp4, `cut`, `fit`, `keep_original_audio=false`). Nếu suy ra từ video nguồn: chỉ video `ready|warning`; nhiều resolution khác nhau → vẫn normalize output theo config cố định.
 
 ### 7.3. Timeline item per audio segment
 

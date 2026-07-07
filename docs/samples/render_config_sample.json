@@ -14,7 +14,7 @@
     "original_audio_volume": 0.0
   },
   "video": {
-    "crop_mode": "center_crop",
+    "crop_mode": "fit",
     "default_transition": "cut"
   }
 }

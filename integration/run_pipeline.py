@@ -124,9 +124,9 @@ def parse_args() -> argparse.Namespace:
 
 def _path_text(path: Path) -> str:
     try:
-        return str(path.relative_to(repo_root()))
+        return path.relative_to(repo_root()).as_posix()
     except ValueError:
-        return str(path)
+        return path.as_posix()
 
 
 def _input_dir(args: argparse.Namespace) -> Path:
@@ -205,14 +205,14 @@ def _run_audio_analyzer(args: argparse.Namespace, input_dir: Path) -> None:
             min_similarity=args.query_min_similarity,
         )
 
-    backend = FasterWhisperBackend(
-        model=args.asr_model,
-        language=args.language,
-        device=args.device,
-        compute_type=args.compute_type,
-    )
-    try:
-        result = run_pipeline(
+    def run_with_backend(device: str, compute_type: str):
+        backend = FasterWhisperBackend(
+            model=args.asr_model,
+            language=args.language,
+            device=device,
+            compute_type=compute_type,
+        )
+        return run_pipeline(
             media_metadata_path=input_dir / "media_metadata.json",
             output_dir=input_dir,
             asr_backend=backend,
@@ -221,8 +221,21 @@ def _run_audio_analyzer(args: argparse.Namespace, input_dir: Path) -> None:
             query_reranker=query_reranker,
             project_root=repo_root(),
         )
+
+    try:
+        result = run_with_backend(args.device, args.compute_type)
     except PipelineError as exc:
-        raise RuntimeError(f"Audio Analyzer failed: {exc}") from exc
+        can_retry_cpu = (args.device, args.compute_type) != ("cpu", "int8")
+        if not can_retry_cpu or "failed to load faster-whisper model" not in str(exc):
+            raise RuntimeError(f"Audio Analyzer failed: {exc}") from exc
+        print(
+            "  WARNING ASR backend failed with "
+            f"device={args.device}, compute_type={args.compute_type}; retrying cpu/int8"
+        )
+        try:
+            result = run_with_backend("cpu", "int8")
+        except PipelineError as retry_exc:
+            raise RuntimeError(f"Audio Analyzer failed: {retry_exc}") from retry_exc
     print(f"  wrote {_path_text(result.audio_segments_path)} ({result.segment_count} segments)")
 
 
@@ -269,6 +282,7 @@ def _run_embedding_indexer(args: argparse.Namespace, input_dir: Path) -> None:
             config_path=args.embedding_config,
             overwrite=args.overwrite,
             use_fake=args.fake_embeddings,
+            device=args.device,
         )
     except InputError as exc:
         raise RuntimeError(f"Embedding Indexer failed: {exc}") from exc
@@ -372,7 +386,7 @@ def _write_render_config(args: argparse.Namespace, input_dir: Path, output_video
             "original_audio_volume": settings.get("original_audio_volume", 0.0),
         },
         "video": {
-            "crop_mode": settings.get("crop_mode", "center_crop"),
+            "crop_mode": settings.get("crop_mode", "fit"),
             "default_transition": settings.get("default_transition", "cut"),
         },
     }
@@ -471,7 +485,7 @@ def main() -> int:
             _run_stage(args, stage_number, input_dir=input_dir)
         if args.preview_render and 8 in selected:
             print("[validate] skipped complete contract validation for preview render")
-        else:
+        elif args.validate_when_complete or 8 in selected:
             _validate_if_complete(input_dir)
     except Exception as exc:
         print(f"ERROR: {exc}", file=sys.stderr)

@@ -182,7 +182,7 @@ def _build_visual_items_for_segment(
             remaining_duration = 0.0
         else:
             speed_if_single = clip_duration / remaining_duration
-            if speed_if_single >= MIN_SPEED - EPS:
+            if speed_if_single >= MIN_SPEED:
                 clip_start = clip_start_bound
                 clip_end = clip_end_bound
                 timeline_start = remaining_start
@@ -198,7 +198,7 @@ def _build_visual_items_for_segment(
                 remaining_start += clip_duration
                 remaining_duration -= clip_duration
 
-        if speed < MIN_SPEED - EPS or speed > MAX_SPEED + EPS:
+        if speed < MIN_SPEED or speed > MAX_SPEED:
             warnings.append(f"speed {speed:.3f} outside MVP range for clip {clip_id}")
             if visual_items:
                 continue
@@ -217,7 +217,7 @@ def _build_visual_items_for_segment(
                 "speed": round(speed, 3),
                 "transition": render_settings.get("default_transition", "cut"),
                 "effect": None,
-                "crop_mode": render_settings.get("crop_mode", "center_crop"),
+                "crop_mode": render_settings.get("crop_mode", "fit"),
                 "volume": 0.0 if not render_settings.get("keep_original_audio", False) else render_settings.get("original_audio_volume", 0.0),
                 "source_candidate_rank": rank,
                 "locked": False,

@@ -1,22 +1,18 @@
 # Video Analyzer
 
-Module Stage 3 — tạo tập clip candidate từ video nguồn.
+Stage 3 doc `media_metadata.json`, tach clip candidate tu video normalized va
+trich keyframe.
 
-## Trách nhiệm
-
-- Đọc video qua `media_metadata.json` → `videos[*].normalized_path`.
-- Chỉ xử lý video có `status` là `ready` hoặc `warning`.
-- Phát hiện scene/shot, tạo clip, trích keyframe, tính quality score.
-- Xuất `clip_metadata.json` với `status` và `source_path` trên mỗi clip.
-- Xuất `video_analysis_log.json` và ảnh keyframe.
-
-## Dữ liệu vào
+## Input
 
 ```text
 data/intermediate/media_metadata.json
 ```
 
-## Dữ liệu ra
+Module doc video tu `videos[*].normalized_path` va chi xu ly video co status
+`ready` hoac `warning`.
+
+## Output
 
 ```text
 data/intermediate/clip_metadata.json
@@ -24,20 +20,25 @@ data/intermediate/video_analysis_log.json
 data/keyframes/*.jpg
 ```
 
-## Tài liệu
+## Chay Doc Lap
 
-- Data Contract: `docs/details/02_data_contract.md`
-- Stage spec: `docs/details/05_stage_3_video_analysis.md`
-- Schema: `docs/schemas/clip_metadata.schema.md`
-- Mẫu: `docs/samples/clip_metadata_sample.json`
+```powershell
+python -m video_analyzer.main --media-metadata data/intermediate/media_metadata.json --output-dir data/intermediate --keyframe-dir data/keyframes --method fixed_window --overwrite
+```
 
-## Cách test (sẽ bổ sung khi có code)
+Dung `--method content` de tach theo scene detection. Dung `--allow-fixed-window-fallback`
+neu muon fallback khi scene detection khong tao du clip.
 
-- Input mẫu: `docs/samples/media_metadata_sample.json`
-- Output mẫu: `docs/samples/clip_metadata_sample.json`
-- Validate: `python scripts/validate_json.py --input-dir data/intermediate`
+## Test / Validation
 
-## Ranh giới
+```powershell
+python -m integration.run_pipeline --from-stage 3 --to-stage 3 --video-method fixed_window --overwrite
+python scripts/validate_json.py --input-dir data/intermediate
+```
 
-- Không matching ngữ nghĩa với audio.
-- Không tạo embedding hoặc `timeline.json`.
+## Tai Lieu
+
+- `docs/details/05_stage_3_video_analysis.md`
+- `docs/details/02_data_contract.md`
+- `docs/schemas/clip_metadata.schema.md`
+- `docs/samples/clip_metadata_sample.json`

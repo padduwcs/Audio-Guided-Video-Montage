@@ -1,0 +1,15 @@
+# Lightweight dependencies for the default terminal workflow.
+#
+# Use this when Stage 1-6 runs on Kaggle and the local machine only needs:
+# - Kaggle CLI submission/pull
+# - Review UI
+# - Stage 8 rendering orchestration
+#
+# This intentionally avoids torch/transformers/faster-whisper so new users do
+# not have to install heavy ML packages just to run the recommended workflow.
+
+kaggle>=1.6.17,<2
+gradio>=5.9,<6
+soundfile>=0.12,<1
+numpy>=2.1,<3
+tqdm>=4.67,<5

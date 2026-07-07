@@ -1,38 +1,23 @@
-# Review UI (Stage 7)
+# Review UI
 
-Module Stage 7 — review và chỉnh timeline trước khi render.
+Review UI gom hai lop giao dien Gradio:
 
-## Trách nhiệm
+- `review_ui.launcher`: giao dien cho nguoi dung cuoi, gom Bat dau, Chinh sua,
+  Xuat video.
+- `review_ui.app`: man hinh review timeline chi tiet sau khi da co ban nhap.
 
-- Hiển thị segment, transcript, clip đang chọn, score, confidence và top-k candidate.
-- Cho phép đổi clip và chỉnh tham số timeline được phép.
-- Ghi đè `timeline.json` (cập nhật `updated_at`).
-- Không render video, không sửa schema timeline.
-- Không sửa `matching_candidates.json`, `clip_metadata.json`, `audio_segments.json`.
-- Không chạy lại ASR, video analysis, embedding hoặc matching.
+Trong integration, Stage 7 mac dinh chay validation non-interactive va chi mo UI
+khi co `--launch-ui`.
 
-## Cấu trúc thư mục/module
+## Chay Ung Dung Cho Nguoi Dung
 
-```
-review_ui/
-├── __init__.py
-├── cli.py                # CLI entrypoint
-├── loader.py             # Load & index 5 JSON, fail-fast validation
-├── validator.py          # Validate schema, cross-file, renderer-readiness
-├── editor.py             # Transaction chỉnh timeline (replace clip, timing, mark reviewed)
-├── storage.py            # Atomic save, backup, log
-├── media.py              # Resolve preview path
-└── tests/
-    ├── test_loader.py
-    ├── test_validator.py
-    ├── test_editor.py
-    ├── test_storage.py
-    └── test_media.py
+```powershell
+python -m review_ui.launcher
 ```
 
-## Dữ liệu vào
+## Input
 
-```
+```text
 data/intermediate/timeline.json
 data/intermediate/matching_candidates.json
 data/intermediate/clip_metadata.json
@@ -40,78 +25,63 @@ data/intermediate/audio_segments.json
 data/intermediate/media_metadata.json
 ```
 
-Media preview: voice-over từ `media_metadata.audio.normalized_path`; video từ `visual_items[].source_path`.
+## Output
 
-## Dữ liệu ra
-
-```
-data/intermediate/timeline.json
-data/intermediate/review_ui_log.json          (optional)
-data/intermediate/timeline.before_review.json (backup, optional)
+```text
+data/intermediate/timeline.json                 cap nhat khi Save
+data/intermediate/timeline.before_review.json   backup mac dinh neu khong --no-ui-backup
+data/intermediate/review_ui_log.json            optional
 ```
 
-MVP ghi đè `timeline.json` tại cùng path.
+## Chay Qua Integration
 
-## Hướng dẫn chạy CLI
+Validate Stage 7 khong mo UI:
 
-```
-python -m review_ui.cli \
-  --project-id demo_01 \
-  --timeline data/intermediate/timeline.json \
-  --matching-candidates data/intermediate/matching_candidates.json \
-  --clip-metadata data/intermediate/clip_metadata.json \
-  --audio-segments data/intermediate/audio_segments.json \
-  --media-metadata data/intermediate/media_metadata.json \
-  --host 127.0.0.1 \
-  --port 7860
+```powershell
+python -m integration.run_pipeline --from-stage 7 --to-stage 7
 ```
 
-- Tham số `--readonly` để mở ở chế độ chỉ xem.
-- Tham số `--no-backup` để không tạo backup timeline.before_review.json.
-- Tham số `--log-path` để ghi log review_ui_log.json nếu cần.
+Mo UI:
 
-## Hướng dẫn test
+```powershell
+python -m integration.run_pipeline --from-stage 7 --to-stage 7 --launch-ui --no-ui-backup --ui-port 7870
+```
 
-- Chạy toàn bộ test:
-  ```
-  pytest review_ui/tests/
-  ```
-- Dummy test đã có cho từng module, bổ sung test thực tế khi phát triển.
+## Chay CLI Truc Tiep
 
-## Validate timeline sau chỉnh
+```powershell
+python -m review_ui.cli --project-id demo_01 --timeline data/intermediate/timeline.json --matching-candidates data/intermediate/matching_candidates.json --clip-metadata data/intermediate/clip_metadata.json --audio-segments data/intermediate/audio_segments.json --media-metadata data/intermediate/media_metadata.json --host 127.0.0.1 --port 7860
+```
 
-- Sử dụng script validate:
-  ```
-  python scripts/validate_json.py --input-dir data/intermediate
-  ```
+Tham so huu ich:
 
-## Tài liệu tham chiếu
+- `--readonly`: chi xem, khong save.
+- `--no-backup`: khong tao `timeline.before_review.json`.
+- `--log-path`: ghi log review.
 
-- Data Contract: `docs/details/02_data_contract.md`
-- Stage spec: `docs/details/09_stage_7_review_ui.md`
-- Schema: `docs/schemas/timeline.schema.md`
-- Mẫu: `docs/samples/timeline_sample.json` và các sample liên quan trong `docs/samples/`
+## Pham Vi Chinh Sua
 
-## Nguyên tắc tuân thủ
+Review UI chi duoc sua cac field review/timeline duoc phep:
 
-- Chỉ chỉnh các field cho phép trong timeline.json, preserve optional fields không hiểu.
-- Không sửa upstream file: matching_candidates, clip_metadata, audio_segments, media_metadata.
-- Save timeline phải atomic, cập nhật updated_at, backup nếu cần.
-- Không đổi schema, không đổi project_id/audio_id/created_at/schema_version.
-- Validate fail-fast khi load, chặn save nếu có error contract.
-- UI chỉ là review/chỉnh timeline, không phải editor phim đầy đủ.
+- doi clip tu top-k candidates
+- tao visual item tu candidate khi segment thieu visual
+- chinh `clip_start`, `clip_end`, `speed`
+- chinh transition/crop/volume/locked/notes/needs_review
+- cap nhat `updated_at` khi save
 
-## TODO & phạm vi MVP
+Review UI khong sua upstream files: `matching_candidates.json`,
+`clip_metadata.json`, `audio_segments.json`, `media_metadata.json`.
 
-- [x] Skeleton code, test dummy cho từng module
-- [ ] Implement loader, validator, editor, storage, media logic
-- [ ] Implement CLI argument parsing, app startup
-- [ ] Implement UI MVP (segment list, candidate list, preview, inspector)
-- [ ] Implement validation, dirty state, readonly mode
-- [ ] Manual test T01–T12 theo stage spec
+## Test / Validation
 
-## Ranh giới
+```powershell
+pytest review_ui/tests/
+python scripts/validate_json.py --input-dir data/intermediate
+```
 
-- Không render video, không sửa schema timeline.
-- Không sửa `matching_candidates.json`, `clip_metadata.json`, `audio_segments.json`.
-- Không chạy lại ASR, video analysis, embedding hoặc matching.
+## Tai Lieu
+
+- `docs/details/09_stage_7_review_ui.md`
+- `docs/details/02_data_contract.md`
+- `docs/schemas/timeline.schema.md`
+- `docs/samples/timeline_sample.json`

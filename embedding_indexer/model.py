@@ -127,14 +127,24 @@ class CLIPModelBackend(BaseBackend):
     vi CLIP goc chi hieu tieng Anh.
     """
 
-    def __init__(self, name: str = "clip-vit-base-patch32", dimension: int = 512):
+    def __init__(
+        self,
+        name: str = "clip-vit-base-patch32",
+        dimension: int = 512,
+        device: str = "cpu",
+    ):
         import torch
         from transformers import CLIPModel, CLIPProcessor
 
         self._torch = torch
+        if device == "auto":
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+        if device == "cuda" and not torch.cuda.is_available():
+            raise RuntimeError("CUDA was requested for CLIP embeddings, but torch.cuda is not available")
+        self.device = device
         hf_id = name if "/" in name else f"openai/{name}"
-        self.model = CLIPModel.from_pretrained(hf_id)
-        self.processor = CLIPProcessor.from_pretrained(hf_id)
+        self.model = CLIPModel.from_pretrained(hf_id).to(self.device)
+        self.processor = CLIPProcessor.from_pretrained(hf_id, use_fast=False)
         self.model.eval()
         self.name = name
         # Dimension that cua model (projection dim)
@@ -142,14 +152,49 @@ class CLIPModelBackend(BaseBackend):
         if self.dimension != dimension:
             # Ghi dimension THAT, khong ep theo config
             print(f"[warn] config dimension={dimension} != model dim={self.dimension}, dung {self.dimension}")
+        print(f"[info] Dung CLIPModelBackend tren device={self.device}")
+
+    def _to_device(self, inputs):
+        return {key: value.to(self.device) for key, value in inputs.items()}
+
+    def _as_projected_features(self, output, *, kind: str):
+        if self._torch.is_tensor(output):
+            return output
+
+        embed_attr = "text_embeds" if kind == "text" else "image_embeds"
+        embeds = getattr(output, embed_attr, None)
+        if embeds is not None:
+            return embeds
+
+        pooled = getattr(output, "pooler_output", None)
+        if pooled is None and isinstance(output, (tuple, list)) and output:
+            candidate = output[1] if len(output) > 1 else output[0]
+            if self._torch.is_tensor(candidate):
+                pooled = candidate
+        if pooled is None:
+            raise TypeError(
+                f"Unsupported CLIP {kind} output type: {type(output).__name__}"
+            )
+
+        projection = (
+            self.model.text_projection
+            if kind == "text"
+            else self.model.visual_projection
+        )
+        return projection(pooled)
+
+    def _features_to_numpy(self, features) -> np.ndarray:
+        return features.detach().cpu().numpy().astype("float32")
 
     def encode_text(self, text: str) -> np.ndarray:
         # Translate Vietnamese → English before CLIP encoding
         en_text = translate_to_english(text)
         inputs = self.processor(text=[en_text], return_tensors="pt", padding=True, truncation=True)
-        with self._torch.no_grad():
-            feats = self.model.get_text_features(**inputs)
-        return l2_normalize(feats[0].cpu().numpy().astype("float32"))
+        inputs = self._to_device(inputs)
+        with self._torch.inference_mode():
+            output = self.model.get_text_features(**inputs)
+            feats = self._as_projected_features(output, kind="text")
+        return l2_normalize(self._features_to_numpy(feats[0]))
 
     def encode_texts(self, texts: list[str]) -> list[np.ndarray]:
         if not texts:
@@ -157,18 +202,22 @@ class CLIPModelBackend(BaseBackend):
         # Batch translate
         en_texts = translate_batch(texts)
         inputs = self.processor(text=en_texts, return_tensors="pt", padding=True, truncation=True)
-        with self._torch.no_grad():
-            feats = self.model.get_text_features(**inputs)
-        mat = l2_normalize(feats.cpu().numpy().astype("float32"))
+        inputs = self._to_device(inputs)
+        with self._torch.inference_mode():
+            output = self.model.get_text_features(**inputs)
+            feats = self._as_projected_features(output, kind="text")
+        mat = l2_normalize(self._features_to_numpy(feats))
         return [mat[i] for i in range(mat.shape[0])]
 
     def encode_image(self, image_path: str) -> np.ndarray:
         from PIL import Image
         image = Image.open(image_path).convert("RGB")
         inputs = self.processor(images=image, return_tensors="pt")
-        with self._torch.no_grad():
-            feats = self.model.get_image_features(**inputs)
-        return l2_normalize(feats[0].cpu().numpy().astype("float32"))
+        inputs = self._to_device(inputs)
+        with self._torch.inference_mode():
+            output = self.model.get_image_features(**inputs)
+            feats = self._as_projected_features(output, kind="image")
+        return l2_normalize(self._features_to_numpy(feats[0]))
 
     def encode_images(self, image_paths: list[str]) -> list[np.ndarray]:
         if not image_paths:
@@ -176,19 +225,26 @@ class CLIPModelBackend(BaseBackend):
         from PIL import Image
         images = [Image.open(p).convert("RGB") for p in image_paths]
         inputs = self.processor(images=images, return_tensors="pt")
-        with self._torch.no_grad():
-            feats = self.model.get_image_features(**inputs)
-        mat = l2_normalize(feats.cpu().numpy().astype("float32"))
+        inputs = self._to_device(inputs)
+        with self._torch.inference_mode():
+            output = self.model.get_image_features(**inputs)
+            feats = self._as_projected_features(output, kind="image")
+        mat = l2_normalize(self._features_to_numpy(feats))
         return [mat[i] for i in range(mat.shape[0])]
 
 
-def load_backend(name: str, dimension: int, use_fake: bool = False) -> BaseBackend:
+def load_backend(
+    name: str,
+    dimension: int,
+    use_fake: bool = False,
+    device: str = "cpu",
+) -> BaseBackend:
     """Load model that; neu khong duoc (chua cai torch) va use_fake=True -> FakeBackend."""
     if use_fake:
         print("[info] Dung FakeModelBackend (test mode, vector khong co y nghia ngu nghia)")
         return FakeModelBackend(name, dimension)
     try:
-        return CLIPModelBackend(name, dimension)
+        return CLIPModelBackend(name, dimension, device=device)
     except Exception as e:
         raise RuntimeError(
             f"Khong load duoc CLIP model '{name}': {e}\n"
