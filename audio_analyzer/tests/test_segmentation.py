@@ -6,6 +6,7 @@ from pathlib import Path
 from audio_analyzer.models import ASRChunk, AudioSegment
 from audio_analyzer.segmentation import (
     SegmentationConfig,
+    cover_audio_duration,
     create_segments,
     create_segments_with_report,
 )
@@ -237,6 +238,29 @@ class SegmentationTests(unittest.TestCase):
         second = create_segments(clean_transcript_chunks(backend.transcribe(audio_path)))
 
         self.assertEqual(first, second)
+
+    def test_audio_coverage_partitions_leading_internal_and_trailing_gaps(self) -> None:
+        segments = [
+            AudioSegment("a001", 1.0, 3.0, 2.0, "Một.", None),
+            AudioSegment("a002", 5.0, 7.0, 2.0, "Hai.", None),
+        ]
+
+        result = cover_audio_duration(segments, audio_duration=10.0)
+
+        self.assertEqual(result.segments[0].start, 0.0)
+        self.assertEqual(result.segments[0].end, 4.0)
+        self.assertEqual(result.segments[1].start, 4.0)
+        self.assertEqual(result.segments[1].end, 10.0)
+        self.assertTrue(result.events)
+
+    def test_audio_coverage_rejects_overlapping_segments(self) -> None:
+        segments = [
+            AudioSegment("a001", 0.0, 3.0, 3.0, "Một.", None),
+            AudioSegment("a002", 2.0, 4.0, 2.0, "Hai.", None),
+        ]
+
+        with self.assertRaisesRegex(ValueError, "must not overlap"):
+            cover_audio_duration(segments, audio_duration=5.0)
 
 
 if __name__ == "__main__":

@@ -18,6 +18,7 @@ OUTPUT_DATA = WORK_ROOT / "output_data"
 OUTPUT_ZIP = WORK_ROOT / "kaggle_outputs.zip"
 JOB_LOG = WORK_ROOT / "job.log"
 INPUT_ROOT = SCRIPT_ROOT
+UNPACKED_INPUT_ROOT = WORK_ROOT / "input_unpacked"
 EMBEDDED_FILES: dict[str, str] = {}
 
 
@@ -56,8 +57,34 @@ def reset_job_log() -> None:
         JOB_LOG.unlink()
 
 
+def describe_input_tree(limit: int = 200) -> str:
+    if not KAGGLE_INPUT.exists():
+        return f"{KAGGLE_INPUT} does not exist"
+    entries = sorted(KAGGLE_INPUT.rglob("*"))
+    if not entries:
+        return f"{KAGGLE_INPUT} is empty"
+    lines = []
+    for path in entries[:limit]:
+        relative = path.relative_to(KAGGLE_INPUT)
+        suffix = "/" if path.is_dir() else ""
+        lines.append(f"- {relative.as_posix()}{suffix}")
+    if len(entries) > limit:
+        lines.append(f"... {len(entries) - limit} more entries")
+    return "\n".join(lines)
+
+
+def find_kaggle_config_candidates(input_root: Path) -> list[Path]:
+    if not input_root.exists():
+        return []
+    return sorted(
+        path
+        for path in input_root.rglob("kaggle_job_config.json")
+        if path.is_file()
+    )
+
+
 def read_config() -> dict:
-    candidates = sorted(KAGGLE_INPUT.glob("*/kaggle_job_config.json"))
+    candidates = find_kaggle_config_candidates(KAGGLE_INPUT)
     if not candidates:
         bundled = SCRIPT_ROOT / "kaggle_job_config.json"
         if bundled.is_file():
@@ -65,9 +92,16 @@ def read_config() -> dict:
         elif EMBEDDED_FILES:
             config_path = materialize_embedded_inputs() / "kaggle_job_config.json"
         else:
+            log("No kaggle_job_config.json found. /kaggle/input contents:")
+            log(describe_input_tree())
             raise FileNotFoundError(
                 f"Missing kaggle_job_config.json under {KAGGLE_INPUT} "
-                f"or bundled script dir {SCRIPT_ROOT}"
+                f"or bundled script dir {SCRIPT_ROOT}. This Kernel was launched "
+                "without the generated input Dataset attached. Submit the job "
+                "from the local Launcher or scripts/kaggle_job.py; do not run "
+                "the Kaggle Kernel manually. If this was submitted locally, "
+                "check that the Kaggle username/API key own the private Dataset "
+                "and that the local submit step did not report 403 Forbidden."
             )
     else:
         config_path = candidates[0]
@@ -89,6 +123,28 @@ def materialize_embedded_inputs() -> Path:
     return target_root
 
 
+def extract_input_zip(zip_path: Path) -> Path:
+    target = UNPACKED_INPUT_ROOT / zip_path.stem
+    if target.exists():
+        return target
+    target.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(zip_path) as archive:
+        archive.extractall(target)
+    return target
+
+
+def find_extracted_path(extracted_root: Path, relative_path: str) -> Path | None:
+    candidates = [
+        extracted_root / relative_path,
+        extracted_root / Path(relative_path).name,
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    matches = list(extracted_root.rglob(Path(relative_path).name))
+    return matches[0] if matches else None
+
+
 def unpack_source(config: dict) -> None:
     source_zip = INPUT_ROOT / "source.zip"
     if PROJECT_ROOT.exists():
@@ -106,6 +162,13 @@ def unpack_source(config: dict) -> None:
         PROJECT_ROOT.mkdir(parents=True, exist_ok=True)
         with zipfile.ZipFile(source_zip) as archive:
             archive.extractall(PROJECT_ROOT)
+    elif config.get("source_dir") and (INPUT_ROOT / f"{config['source_dir']}.zip").is_file():
+        extracted = extract_input_zip(INPUT_ROOT / f"{config['source_dir']}.zip")
+        extracted_source = find_extracted_path(extracted, config["source_dir"])
+        if extracted_source is not None and extracted_source.is_dir():
+            shutil.copytree(extracted_source, PROJECT_ROOT)
+        else:
+            shutil.copytree(extracted, PROJECT_ROOT)
     else:
         raise FileNotFoundError(
             f"Missing source directory/archive under {INPUT_ROOT}; tried {source_dirs} and {source_zip}"
@@ -122,6 +185,13 @@ def install_requirements() -> None:
 def resolve_input(relative_path: str) -> Path:
     path = INPUT_ROOT / relative_path
     if not path.is_file():
+        root_name = Path(relative_path).parts[0] if Path(relative_path).parts else ""
+        zip_path = INPUT_ROOT / f"{root_name}.zip"
+        if zip_path.is_file():
+            extracted = extract_input_zip(zip_path)
+            extracted_path = find_extracted_path(extracted, relative_path)
+            if extracted_path is not None and extracted_path.is_file():
+                return extracted_path
         raise FileNotFoundError(f"Input file does not exist in job input root: {path}")
     return path
 

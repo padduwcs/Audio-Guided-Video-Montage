@@ -309,14 +309,29 @@ def _run_matching_engine(args: argparse.Namespace, input_dir: Path) -> None:
 
 
 def _run_timeline_planner(input_dir: Path) -> None:
+    from integration.contract_gate import DraftContractError, validate_draft_payloads
+
+    media_metadata = read_json(input_dir / "media_metadata.json")
+    audio_segments = read_json(input_dir / "audio_segments.json")
+    clip_metadata = read_json(input_dir / "clip_metadata.json")
+    embedding_metadata = read_json(input_dir / "embedding_metadata.json")
+    matching_candidates = read_json(input_dir / "matching_candidates.json")
     try:
         timeline, planning_log = build_timeline(
-            read_json(input_dir / "media_metadata.json"),
-            read_json(input_dir / "audio_segments.json"),
-            read_json(input_dir / "clip_metadata.json"),
-            read_json(input_dir / "matching_candidates.json"),
+            media_metadata,
+            audio_segments,
+            clip_metadata,
+            matching_candidates,
         )
-    except (TimelinePlanningError, ValueError, OSError) as exc:
+        validate_draft_payloads(
+            media_metadata=media_metadata,
+            audio_segments=audio_segments,
+            clip_metadata=clip_metadata,
+            embedding_metadata=embedding_metadata,
+            matching_candidates=matching_candidates,
+            timeline=timeline,
+        )
+    except (TimelinePlanningError, DraftContractError, ValueError, OSError) as exc:
         raise RuntimeError(f"Timeline Planner failed: {exc}") from exc
 
     write_json(input_dir / "timeline.json", timeline)
@@ -409,7 +424,10 @@ def _run_renderer(args: argparse.Namespace, input_dir: Path) -> None:
         normalized = media.get("audio", {}).get("normalized_path")
         voiceover_path = (repo_root() / normalized).resolve() if normalized else None
 
-    validate_timeline(str(input_dir / "timeline.json"))
+    validate_timeline(
+        str(input_dir / "timeline.json"),
+        audio_duration=float(media.get("audio", {}).get("duration", 0)),
+    )
     _write_render_config(args, input_dir, output_video, voiceover_path)
     render_timeline(
         str(input_dir / "timeline.json"),

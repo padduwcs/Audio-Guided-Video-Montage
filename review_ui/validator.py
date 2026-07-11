@@ -6,6 +6,8 @@ Trách nhiệm:
 - Chuẩn hóa format ValidationMessage.
 """
 
+from shared.timeline_contract import timeline_contract_errors
+
 
 class ValidationMessage:
     def __init__(self, level, code, message, file=None, segment_id=None, timeline_item_id=None, field=None):
@@ -32,6 +34,21 @@ def validate_project_data(project_data, mode="edit_save"):
     clip_metadata = project_data.clip_metadata
     matching_candidates = project_data.matching_candidates
     media_metadata = project_data.media_metadata
+
+    audio_duration = media_metadata.get("audio", {}).get("duration")
+    for error in timeline_contract_errors(
+        timeline,
+        audio_duration=float(audio_duration) if audio_duration else None,
+        require_visuals=mode == "renderer_handoff",
+    ):
+        msgs.append(
+            ValidationMessage(
+                "error",
+                "TIMELINE_CONTRACT",
+                error,
+                file="timeline.json",
+            )
+        )
 
     # Top-level checks
     for name, obj in [

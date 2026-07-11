@@ -13,6 +13,7 @@ from shared.contract import (
     MIN_SPEED,
     SCHEMA_VERSION,
 )
+from shared.timeline_contract import timeline_contract_errors
 
 
 class TimelinePlanningError(Exception):
@@ -56,7 +57,7 @@ def _clip_is_valid(clip: dict[str, Any]) -> bool:
     status = clip.get("status", "usable")
     if status not in CLIP_STATUS_VALUES:
         return False
-    if status == "error":
+    if status in {"too_short", "error"}:
         return False
     duration = float(clip.get("duration", 0))
     return duration > 0
@@ -106,6 +107,7 @@ def _compute_needs_review(
     fallback_used: bool,
     visual_items: list[dict[str, Any]],
     used_non_selected: bool,
+    reused_clips: bool,
     clip_status: str | None,
 ) -> bool:
     if not visual_items:
@@ -113,6 +115,8 @@ def _compute_needs_review(
     if confidence == "low" or fallback_used:
         return True
     if used_non_selected:
+        return True
+    if reused_clips:
         return True
     if clip_status == "low_quality":
         return True
@@ -143,7 +147,18 @@ def _build_visual_items_for_segment(
     visual_index = 1
 
     clip_ids = _ordered_clip_ids(candidate_set)
-    if not clip_ids:
+    usable_clip_ids: list[str] = []
+    for clip_id in clip_ids:
+        clip = clips_by_id.get(clip_id)
+        if clip is None or not _clip_is_valid(clip):
+            warnings.append(f"skipped invalid clip {clip_id!r}")
+            continue
+        if not _resolve_source_path(clip, videos_by_id):
+            warnings.append(f"missing source_path for clip {clip_id}")
+            continue
+        usable_clip_ids.append(clip_id)
+
+    if not usable_clip_ids:
         warnings.append("candidate set has no clips")
         log.summary["warnings"] += 1
         return [], {
@@ -153,21 +168,21 @@ def _build_visual_items_for_segment(
         }
 
     clip_pointer = 0
-    while remaining_duration > EPS and clip_pointer < len(clip_ids):
-        clip_id = clip_ids[clip_pointer]
+    reused_clips = False
+    while remaining_duration > EPS:
+        if clip_pointer >= len(usable_clip_ids) and not reused_clips:
+            reused_clips = True
+            warnings.append("reused ranked clips to cover the full audio segment")
+        clip_id = usable_clip_ids[clip_pointer % len(usable_clip_ids)]
         clip_pointer += 1
         clip = clips_by_id.get(clip_id)
-        if clip is None or not _clip_is_valid(clip):
-            warnings.append(f"skipped invalid clip {clip_id!r}")
-            continue
+        assert clip is not None
 
         if selected_clip_id and clip_id != selected_clip_id and not visual_items:
             used_non_selected = True
 
         source_path = _resolve_source_path(clip, videos_by_id)
-        if not source_path:
-            warnings.append(f"missing source_path for clip {clip_id}")
-            continue
+        assert source_path is not None
 
         clip_start_bound = float(clip["start"])
         clip_end_bound = float(clip["end"])
@@ -247,6 +262,7 @@ def _build_visual_items_for_segment(
     primary_clip = clips_by_id.get(visual_items[0]["clip_id"]) if visual_items else None
     return visual_items, {
         "used_non_selected": used_non_selected,
+        "reused_clips": reused_clips,
         "clip_status": primary_clip.get("status") if primary_clip else None,
     }
 
@@ -289,6 +305,10 @@ def build_timeline(
         segment_id = candidate_set.get("audio_segment_id")
         if not isinstance(segment_id, str):
             raise TimelinePlanningError("matching candidate set missing audio_segment_id")
+        if segment_id in candidate_by_segment:
+            raise TimelinePlanningError(
+                f"duplicate candidate set for segment {segment_id}"
+            )
         candidate_by_segment[segment_id] = candidate_set
 
     settings = dict(DEFAULT_RENDER_SETTINGS)
@@ -326,6 +346,7 @@ def build_timeline(
             fallback_used=fallback_used,
             visual_items=visual_items,
             used_non_selected=bool(meta.get("used_non_selected")),
+            reused_clips=bool(meta.get("reused_clips")),
             clip_status=meta.get("clip_status"),
         )
 
@@ -357,6 +378,16 @@ def build_timeline(
         "render_settings": settings,
         "items": timeline_items,
     }
+
+    contract_errors = timeline_contract_errors(
+        timeline,
+        audio_duration=float(audio.get("duration", 0)),
+        require_visuals=True,
+    )
+    if contract_errors:
+        raise TimelinePlanningError(
+            "timeline postcondition failed: " + "; ".join(contract_errors)
+        )
 
     planning_log = {
         "project_id": project_id,
