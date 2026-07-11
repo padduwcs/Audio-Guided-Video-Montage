@@ -3,7 +3,9 @@
 import json
 import os
 
-def validate_timeline(timeline_path):
+from shared.timeline_contract import validate_timeline_contract
+
+def validate_timeline(timeline_path, *, audio_duration=None):
     if not os.path.exists(timeline_path):
         raise FileNotFoundError(f"Timeline file not found: {timeline_path}")
     with open(timeline_path, "r", encoding="utf-8") as f:
@@ -40,6 +42,10 @@ def validate_timeline(timeline_path):
             if not (0.75 <= speed <= 1.25):
                 raise ValueError(f"speed {speed} out of range [0.75, 1.25] in visual_items[{vidx}] of segment {item.get('segment_id')}")
 
-    # TODO: Add more contract checks as per schema
+    validate_timeline_contract(
+        timeline,
+        audio_duration=audio_duration,
+        require_visuals=True,
+    )
 
     return True

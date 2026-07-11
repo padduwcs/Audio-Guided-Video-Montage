@@ -133,8 +133,10 @@ class PipelineIntegrationTests(unittest.TestCase):
         self.run_pipeline_case(self.backend_with_merge_split_and_review())
         items = self.read_json("audio_segments.json")["items"]
 
+        self.assertEqual(items[0]["start"], 0.0)
+        self.assertEqual(items[-1]["end"], 14.0)
         for previous, current in zip(items, items[1:]):
-            self.assertLessEqual(previous["end"], current["start"])
+            self.assertEqual(previous["end"], current["start"])
         for item in items:
             self.assertAlmostEqual(item["duration"], item["end"] - item["start"])
 
@@ -265,7 +267,7 @@ class PipelineIntegrationTests(unittest.TestCase):
         self.assertEqual(log["status"], "failed")
         self.assertTrue(any("simulated backend failure" in error for error in log["errors"]))
 
-    def test_invalid_overlapping_chunks_leave_no_segments_file(self) -> None:
+    def test_overlapping_chunks_are_reconciled_before_segmentation(self) -> None:
         self.write_metadata()
         backend = FakeASRBackend(
             [
@@ -274,10 +276,16 @@ class PipelineIntegrationTests(unittest.TestCase):
             ]
         )
 
-        with self.assertRaisesRegex(PipelineError, "must not overlap"):
-            self.run_pipeline_case(backend)
+        self.run_pipeline_case(backend)
+        output = self.read_json("audio_segments.json")
+        log = self.read_json("audio_analysis_log.json")
 
-        self.assertFalse((self.output_dir / "audio_segments.json").exists())
+        self.assertTrue(output["items"])
+        self.assertEqual(output["items"][0]["start"], 0.0)
+        self.assertEqual(output["items"][-1]["end"], 14.0)
+        self.assertTrue(
+            any("resolved overlap" in warning for warning in log["warnings"])
+        )
 
     def test_small_timestamp_overrun_is_clamped_logged_and_reviewed(self) -> None:
         self.write_metadata(duration=4.908)
@@ -298,13 +306,24 @@ class PipelineIntegrationTests(unittest.TestCase):
             log["review_segments"][-1]["reasons"],
         )
 
-    def test_large_timestamp_overrun_still_fails_without_partial_output(self) -> None:
+    def test_large_timestamp_overrun_is_clamped_without_failing(self) -> None:
         self.write_metadata(duration=4.0)
         backend = FakeASRBackend(
-            [ASRChunk(0.0, 5.0, "Đây là khu vực trưng bày.", None)]
+            [ASRChunk(0.0, 7.0, "Đây là khu vực trưng bày.", None)]
         )
 
-        with self.assertRaisesRegex(PipelineError, "maximum safe overrun"):
+        self.run_pipeline_case(backend)
+        output = self.read_json("audio_segments.json")
+
+        self.assertEqual(output["items"][-1]["end"], 4.0)
+
+    def test_chunks_fully_outside_audio_fail_without_partial_output(self) -> None:
+        self.write_metadata(duration=4.0)
+        backend = FakeASRBackend(
+            [ASRChunk(4.5, 7.0, "Đây là nội dung ngoài audio.", None)]
+        )
+
+        with self.assertRaisesRegex(PipelineError, "within the audio duration"):
             self.run_pipeline_case(backend)
 
         self.assertFalse((self.output_dir / "audio_segments.json").exists())

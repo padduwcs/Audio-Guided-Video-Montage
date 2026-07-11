@@ -111,8 +111,10 @@ def validate_audio_segments_document(
             raise OutputValidationError(f"{label} has an invalid timestamp range")
         if abs(item["duration"] - (item["end"] - item["start"])) > 1e-9:
             raise OutputValidationError(f"{label}.duration must equal end - start")
-        if item["start"] < previous_end - 1e-9:
-            raise OutputValidationError(f"{label} overlaps the previous segment")
+        if abs(item["start"] - previous_end) > 1e-9:
+            raise OutputValidationError(
+                f"{label}.start must equal the previous segment end"
+            )
         if item["end"] > audio_duration + 1e-9:
             raise OutputValidationError(f"{label}.end exceeds audio duration")
         previous_end = item["end"]
@@ -141,6 +143,9 @@ def validate_audio_segments_document(
             raise OutputValidationError(f"{label}.segment_type is unsupported")
         if not isinstance(item["needs_review"], bool):
             raise OutputValidationError(f"{label}.needs_review must be boolean")
+
+    if abs(previous_end - audio_duration) > 1e-9:
+        raise OutputValidationError("audio segments must cover the full audio duration")
 
 
 def write_json_atomic(path: Path, document: dict[str, Any]) -> None:

@@ -88,15 +88,21 @@ def run(
     # Validate trước khi ghi
     _validate_output(output, audio_data, clip_data, log)
 
-    io.write_json(candidates_path, output)
-
-    # Ghi log phụ
     log["config"] = {
         "top_k": cfg.top_k,
         "score_weights": cfg.raw["score_weights"],
         "penalties": cfg.raw["penalties"],
         "confidence_thresholds": cfg.raw["confidence_thresholds"],
     }
+    if log["errors"]:
+        io.write_json(log_path, log)
+        raise io.InputError(
+            "Matching output khong hop le: " + "; ".join(log["errors"])
+        )
+
+    io.write_json(candidates_path, output)
+
+    # Ghi log phụ
     log["summary"] = {
         "total_segments": len(audio_data["items"]),
         "total_candidate_sets": len(candidate_sets),
@@ -133,6 +139,7 @@ def _validate_output(
     allowed_confidence = {"high", "medium", "low"}
 
     seen_set_ids: set[str] = set()
+    seen_segment_ids: set[str] = set()
 
     for cs in output.get("items", []):
         set_id = cs.get("candidate_set_id", "")
@@ -146,6 +153,12 @@ def _validate_output(
                 f"audio_segment_id '{seg_id}' khong ton tai "
                 f"trong audio_segments"
             )
+        elif seg_id in seen_segment_ids:
+            log["errors"].append(
+                f"audio_segment_id '{seg_id}' co nhieu candidate set"
+            )
+        else:
+            seen_segment_ids.add(seg_id)
 
         confidence = cs.get("confidence")
         if confidence not in allowed_confidence:
@@ -155,6 +168,17 @@ def _validate_output(
 
         selected = cs.get("selected_clip_id")
         candidates = cs.get("candidates", [])
+        if not isinstance(candidates, list) or not candidates:
+            log["errors"].append(f"candidate set {set_id} khong co candidates")
+            continue
+        if len(candidates) > output.get("top_k", 0):
+            log["errors"].append(f"candidate set {set_id} vuot qua top_k")
+
+        ranks = [candidate.get("rank") for candidate in candidates]
+        if ranks != list(range(1, len(candidates) + 1)):
+            log["errors"].append(
+                f"candidate set {set_id} co rank khong lien tuc tu 1"
+            )
 
         # selected_clip_id phải khớp candidates hoặc null
         if selected is not None:
@@ -186,6 +210,12 @@ def _validate_output(
                     f"final_score={fs} ngoai [0,1] cho clip {cid} "
                     f"trong set {set_id}"
                 )
+
+    missing_segments = valid_seg_ids - seen_segment_ids
+    if missing_segments:
+        log["errors"].append(
+            "thieu candidate set cho segment: " + ", ".join(sorted(missing_segments))
+        )
 
 
 def main():

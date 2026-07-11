@@ -39,6 +39,68 @@ class SegmentationResult:
     events: tuple[dict[str, Any], ...]
 
 
+def cover_audio_duration(
+    segments: Iterable[AudioSegment],
+    *,
+    audio_duration: float,
+) -> SegmentationResult:
+    """Turn speech intervals into a continuous partition of the audio track."""
+
+    if audio_duration <= 0:
+        raise ValueError("audio_duration must be greater than 0")
+
+    source = list(segments)
+    if not source:
+        raise ValueError("segments must be non-empty")
+
+    events: list[dict[str, Any]] = []
+    covered: list[AudioSegment] = []
+    for index, segment in enumerate(source):
+        if index and segment.start < source[index - 1].end:
+            raise ValueError("audio segments must not overlap")
+        if segment.end > audio_duration:
+            raise ValueError("audio segment exceeds audio duration")
+
+        start = (
+            0.0
+            if index == 0
+            else (source[index - 1].end + segment.start) / 2.0
+        )
+        end = (
+            audio_duration
+            if index == len(source) - 1
+            else (segment.end + source[index + 1].start) / 2.0
+        )
+        if end <= start:
+            raise ValueError("audio coverage produced a non-positive segment")
+
+        if abs(start - segment.start) > 1e-9 or abs(end - segment.end) > 1e-9:
+            events.append(
+                {
+                    "type": "audio_coverage_adjustment",
+                    "segment_id": segment.segment_id,
+                    "original_start": segment.start,
+                    "original_end": segment.end,
+                    "adjusted_start": start,
+                    "adjusted_end": end,
+                }
+            )
+
+        covered.append(
+            AudioSegment(
+                segment_id=segment.segment_id,
+                start=start,
+                end=end,
+                duration=end - start,
+                text=segment.text,
+                confidence=segment.confidence,
+                timestamp_estimated=segment.timestamp_estimated,
+            )
+        )
+
+    return SegmentationResult(segments=tuple(covered), events=tuple(events))
+
+
 @dataclass(frozen=True)
 class _SegmentPart:
     start: float

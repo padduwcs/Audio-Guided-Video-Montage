@@ -1,9 +1,0 @@
-name: audio-montage-dev
-channels:
-  - conda-forge
-dependencies:
-  - python=3.11
-  - pip
-  - ffmpeg
-  - pip:
-      - -r requirements-dev.txt

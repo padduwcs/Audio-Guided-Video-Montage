@@ -17,7 +17,7 @@ from audio_analyzer.output import (
     validate_audio_segments_document,
     write_json_atomic,
 )
-from audio_analyzer.segmentation import create_segments_with_report
+from audio_analyzer.segmentation import cover_audio_duration, create_segments_with_report
 from audio_analyzer.query_reranker import QueryReranker, QueryRerankerError
 from audio_analyzer.transcript import clean_transcript_chunks
 from audio_analyzer.timestamps import align_chunks_to_audio_duration
@@ -177,17 +177,43 @@ def run_pipeline(
             timestamp_alignment.adjustments
         )
         for adjustment in timestamp_alignment.adjustments:
-            analysis_log["warnings"].append(
-                "clamped ASR chunk "
-                f"{adjustment['chunk_index']} end from "
-                f"{adjustment['original_end']:.3f}s to "
-                f"{adjustment['adjusted_end']:.3f}s"
+            reason = adjustment["reason"]
+            if reason == "chunk_outside_audio_discarded":
+                analysis_log["warnings"].append(
+                    "discarded ASR chunk "
+                    f"{adjustment['chunk_index']} outside audio duration"
+                )
+            elif reason == "end_overrun_clamped_to_audio_duration":
+                analysis_log["warnings"].append(
+                    "clamped ASR chunk "
+                    f"{adjustment['chunk_index']} end from "
+                    f"{adjustment['original_end']:.3f}s to "
+                    f"{adjustment['adjusted_end']:.3f}s"
+                )
+            elif reason == "overlap_split_at_midpoint":
+                analysis_log["warnings"].append(
+                    "resolved overlap between ASR chunks "
+                    f"{adjustment['left_chunk_index']} and "
+                    f"{adjustment['right_chunk_index']} at "
+                    f"{adjustment['boundary']:.3f}s"
+                )
+            elif reason == "chunks_reordered_by_timestamp":
+                analysis_log["warnings"].append(
+                    "reordered ASR chunks by timestamp"
+                )
+        if not cleaned_chunks:
+            raise PipelineError(
+                "ASR returned no transcript chunks within the audio duration"
             )
 
         segmentation = create_segments_with_report(cleaned_chunks)
+        coverage = cover_audio_duration(
+            segmentation.segments,
+            audio_duration=audio_input.duration,
+        )
         try:
             enriched_segments = enrich_segments(
-                segmentation.segments,
+                coverage.segments,
                 query_reranker=query_reranker,
             )
         except QueryRerankerError as exc:
@@ -195,8 +221,11 @@ def run_pipeline(
             analysis_log["warnings"].append(
                 f"local query reranker failed; used deterministic rules: {exc}"
             )
-            enriched_segments = enrich_segments(segmentation.segments)
-        analysis_log["segmentation_events"] = list(segmentation.events)
+            enriched_segments = enrich_segments(coverage.segments)
+        analysis_log["segmentation_events"] = [
+            *segmentation.events,
+            *coverage.events,
+        ]
         analysis_log["review_segments"] = _review_document(enriched_segments)
         analysis_log["query_generation"]["segments"] = _query_decision_document(
             enriched_segments

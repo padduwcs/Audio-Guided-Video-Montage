@@ -2,20 +2,27 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SAMPLES = ROOT / "docs" / "samples"
-EPS = 0.02
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
-CONFIDENCE_VALUES = {"high", "medium", "low"}
-MEDIA_STATUS_VALUES = {"ready", "warning", "error"}
-CLIP_STATUS_VALUES = {"usable", "low_quality", "too_short", "error"}
+from shared.contract import (
+    CLIP_STATUS_VALUES,
+    CONFIDENCE_VALUES,
+    CROP_MODE_VALUES,
+    EPS,
+    MEDIA_STATUS_VALUES,
+    TRANSITION_VALUES,
+)
+
+
+SAMPLES = ROOT / "docs" / "samples"
 SEGMENT_TYPE_VALUES = {"description", "action", "transition", "abstract", "unknown"}
-TRANSITION_VALUES = {"cut", "fade", "crossfade"}
-CROP_MODE_VALUES = {"fit", "fill", "center_crop", "blur_background"}
 EFFECT_VALUES = {None, "none"}
 RENDER_STATUS_VALUES = {"success", "warning", "failed"}
 
@@ -212,8 +219,8 @@ def validate_samples(samples_dir: Path, *, runtime: bool = False) -> None:
         label = f"segment {segment['segment_id']}"
         require(segment, files["audio"], ["segment_id", "start", "end", "duration", "text", "query", "asr_confidence"])
         check_time_range(segment["start"], segment["end"], segment["duration"], label)
-        if float(segment["start"]) < previous_end - EPS:
-            raise ValidationError(f"{label}: overlaps previous segment")
+        if abs(float(segment["start"]) - previous_end) > EPS:
+            raise ValidationError(f"{label}: is not contiguous with previous segment")
         previous_end = float(segment["end"])
         if not segment["text"]:
             raise ValidationError(f"{label}.text must not be empty")
@@ -284,7 +291,12 @@ def validate_samples(samples_dir: Path, *, runtime: bool = False) -> None:
         if embedding["vector_path"] is not None:
             check_relative_path(embedding["vector_path"], f"visual embedding {embedding['embedding_id']}.vector_path")
         visual_clip_ids.add(embedding["clip_id"])
-    missing_visual_embeddings = set(clip_by_id) - visual_clip_ids
+    expected_visual_clip_ids = {
+        clip_id
+        for clip_id, clip in clip_by_id.items()
+        if clip.get("status", "usable") not in {"too_short", "error"}
+    }
+    missing_visual_embeddings = expected_visual_clip_ids - visual_clip_ids
     if missing_visual_embeddings:
         raise ValidationError(f"missing visual embeddings for clips: {sorted(missing_visual_embeddings)}")
 

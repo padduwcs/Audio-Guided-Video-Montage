@@ -286,6 +286,13 @@ def render_timeline(
         if progress_callback:
             progress_callback(total_segs / (total_segs + 1), "Đang ghép nối các phân đoạn và lồng âm thanh thuyết minh...")
 
+        if any(transition != "cut" for transition in transitions):
+            warnings.append(
+                "Transitions other than 'cut' are not supported by this renderer; "
+                "they were rendered as cuts."
+            )
+            transitions = ["cut" for _ in transitions]
+
         if all(t == "cut" for t in transitions):
             concat_file = os.path.join(temp_dir, "concat_list.txt")
             with open(concat_file, "w") as cf:
@@ -314,9 +321,7 @@ def render_timeline(
                 errors.append(err_msg)
                 raise RuntimeError(err_msg)
         else:
-            warnings.append("Transitions other than 'cut' are not fully supported for multi-segment in MVP. Fallback to cut is recommended.")
-            # Basic fallback if complex is needed (skipped for brevity)
-            raise NotImplementedError("Complex transitions not implemented completely.")
+            raise RuntimeError("renderer transition normalization failed")
 
         render_time = time.time() - start_time
         timeline_duration = previous_timeline_end or sum(item.get("duration", 0) for item in segments)
