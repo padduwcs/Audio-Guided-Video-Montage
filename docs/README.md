@@ -1,35 +1,50 @@
-# Docs Hub
+# Trung Tâm Tài Liệu
 
-Day la ban do tai lieu cua repo Audio-Guided Video Montage.
+Đây là bản đồ tài liệu của repo **Audio-Guided Video Montage**.
 
-## Doc Theo Vai Tro
+## Người Dùng Cuối
 
-Nguoi dung cuoi:
+Đọc theo thứ tự:
 
 1. [USER_GUIDE.md](USER_GUIDE.md)
-2. [kaggle_terminal_workflow.md](kaggle_terminal_workflow.md) neu can debug Kaggle
+2. `environment-terminal.yml`
 
-Dev:
+Người dùng cuối chỉ cần mở Launcher UI, chọn video/audio, nhập Kaggle API key,
+tạo bản nháp, chỉnh sửa và xuất video.
+
+## Dev
+
+Đọc theo thứ tự:
 
 1. [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md)
 2. [details/02_data_contract.md](details/02_data_contract.md)
-3. Stage spec tuong ung trong `details/03` den `details/10`
-4. README cua module dang sua
+3. README của module đang sửa
+4. File spec tương ứng trong `docs/details/`
 
-Integration/leader:
+## Kaggle
 
-1. [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md)
-2. [details/01_system_architecture.md](details/01_system_architecture.md)
-3. [details/02_data_contract.md](details/02_data_contract.md)
+Thông thường người dùng không cần đọc sâu phần này. Nếu cần debug terminal:
 
-## Tai Lieu Chinh
+```text
+docs/kaggle_terminal_workflow.md
+```
+
+Lưu ý quan trọng:
+
+- Job Kaggle phải được submit từ Launcher hoặc `scripts/kaggle_job.py`.
+- Không bấm Run thủ công trên Kaggle web cho kernel do repo tạo.
+- Lỗi `403 Forbidden` thường là lỗi Kaggle API key/quyền Dataset private.
+- Lỗi thiếu `kaggle_job_config.json` nghĩa là Dataset input chưa attach vào
+  kernel trong môi trường Kaggle.
+
+## Tài Liệu Chính
 
 ```text
 docs/
-  README.md                         file nay
-  USER_GUIDE.md                     clone-and-run cho nguoi dung cuoi
-  DEVELOPER_GUIDE.md                ban do repo, contract, test cho dev
-  kaggle_terminal_workflow.md       chi tiet scripts/kaggle_job.py
+  README.md
+  USER_GUIDE.md
+  DEVELOPER_GUIDE.md
+  kaggle_terminal_workflow.md
 
   details/
     00_project_scope.md
@@ -44,48 +59,20 @@ docs/
     09_stage_7_review_ui.md
     10_stage_8_rendering.md
 
-  schemas/                          schema toi thieu cho JSON contract
-  samples/                          sample JSON hop le de test contract
+  schemas/
+  samples/
 ```
 
-## Contract Va Validation
+## Kiểm Tra Contract
 
-Data contract chinh:
+Validate sample:
 
-```text
-docs/details/02_data_contract.md
+```bash
+python scripts/validate_json.py
 ```
 
-Validate sample contract:
+Validate dữ liệu runtime:
 
-```powershell
-python scripts\validate_json.py
+```bash
+python scripts/validate_json.py --input-dir data/intermediate
 ```
-
-Validate runtime contract:
-
-```powershell
-python scripts\validate_json.py --input-dir data/intermediate
-```
-
-Khi thay doi format JSON, cap nhat dong thoi:
-
-1. `details/02_data_contract.md`
-2. file schema trong `schemas/`
-3. sample JSON trong `samples/`
-4. code doc/ghi JSON
-5. README/guide lien quan
-
-## Trang Thai Code Hien Tai
-
-Tat ca Stage 1-8 da co code. `integration.run_pipeline` la entrypoint chinh.
-`--use-sample-data` chi dung cho contract demo; render that can media path
-that.
-
-Gioi han van hanh dang can nho:
-
-- Stage 4 mac dinh dung real CLIP embeddings; `--fake-embeddings` chi de debug nhanh.
-- Stage 7 mac dinh validate non-interactive; them `--launch-ui` de mo Gradio.
-- Stage 8 on dinh nhat voi transition `cut`.
-- Output trong `data/` co the bi ghi de giua cac lan chay; backup vao `runs/`
-  neu can giu ket qua.

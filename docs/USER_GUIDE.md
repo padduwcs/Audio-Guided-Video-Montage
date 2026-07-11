@@ -1,243 +1,174 @@
-# User Guide
+# Hướng Dẫn Sử Dụng
 
-Huong dan nay danh cho nguoi dung cuoi: clone repo, mo giao dien local, chon
-video/audio, chay tao ban nhap, chinh sua va xuat video. Ban khong can hieu
-tung module ben trong.
+Hướng dẫn này dành cho người mới, máy chưa cài gì. Bạn chỉ cần làm theo từng
+bước để mở ứng dụng, chọn video/audio, tạo bản nháp, chỉnh sửa và xuất video.
 
-## Ket Qua Can Dat
+Kết quả cuối cùng sẽ nằm ở:
 
 ```text
 data/final/final_video.mp4
 ```
 
-Luong mac dinh:
+## 1. Cài Công Cụ Cần Thiết
 
-```text
-Raw video/audio
-  -> Bat dau tren Launcher UI
-  -> Chinh sua ban dung
-  -> Xuat video
-  -> final_video.mp4
-```
+Cài 3 thứ sau:
 
-## 1. Chuan Bi
+1. Git: https://git-scm.com/downloads
+2. Miniconda hoặc Anaconda: https://docs.conda.io/projects/miniconda
+3. Tài khoản Kaggle: https://www.kaggle.com
 
-Can co:
+Sau khi cài xong, mở Terminal:
 
-- Git de clone repo.
-- Python 3.11 hoac 3.12.
-- FFmpeg va FFprobe tren PATH.
-- Kaggle account va API key.
-- It nhat 1 video nguon va 1 file audio/voice.
+- Windows: mở **Anaconda Prompt** hoặc **PowerShell**.
+- macOS: mở **Terminal**.
 
-Kiem tra nhanh:
+Kiểm tra nhanh:
 
-```powershell
+```bash
 git --version
-python --version
-ffmpeg -version
-ffprobe -version
+conda --version
 ```
 
-## 2. Clone Va Cai Moi Truong
-
-```powershell
-git clone <GITHUB_REPO_URL>
-cd "Audio-Guided Video Montage"
-python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install --upgrade pip
-.\.venv\Scripts\python.exe -m pip install -r requirements-terminal.txt
-```
-
-Neu dung Bash/macOS/Linux:
+## 2. Tải Repo Về Máy
 
 ```bash
 git clone <GITHUB_REPO_URL>
 cd "Audio-Guided Video Montage"
-python -m venv .venv
-./.venv/bin/python -m pip install --upgrade pip
-./.venv/bin/python -m pip install -r requirements-terminal.txt
 ```
 
-## 3. Mo Ung Dung
+Thay `<GITHUB_REPO_URL>` bằng link repo thật.
 
-Chay Launcher UI:
+## 3. Tạo Môi Trường Chạy
 
-```powershell
-.\.venv\Scripts\python.exe -B -m review_ui.launcher
+Dùng Conda để Windows/macOS có cùng Python và FFmpeg:
+
+```bash
+conda env create -f environment-terminal.yml
+conda activate audio-montage
 ```
 
-Mo trinh duyet tai:
+Mỗi lần mở terminal mới để chạy app, dùng lại:
+
+```bash
+conda activate audio-montage
+```
+
+## 4. Chuẩn Bị Kaggle API Key
+
+Trên Kaggle:
+
+1. Vào **Account Settings**.
+2. Tìm mục **API**.
+3. Bấm **Create New Token**.
+4. Máy sẽ tải file `kaggle.json`.
+
+Mở file `kaggle.json`, bạn sẽ thấy:
+
+```json
+{
+  "username": "...",
+  "key": "..."
+}
+```
+
+Giữ lại `username` và `key` để nhập trong ứng dụng.
+
+## 5. Mở Ứng Dụng
+
+Trong terminal đang ở thư mục repo:
+
+```bash
+python -B -m review_ui.launcher
+```
+
+Mở trình duyệt tại:
 
 ```text
 http://127.0.0.1:7860
 ```
 
-Neu cong `7860` dang ban, ung dung se tu dung cong tiep theo. Hay mo dung URL
-duoc in trong terminal.
+Nếu terminal in ra cổng khác, mở đúng URL mà terminal hiển thị.
 
-Ung dung co 3 tab chinh:
+## 6. Tạo Bản Nháp Video
 
-```text
-Bat dau     chon file, cau hinh Kaggle, tao ban nhap
-Chinh sua   mo Review UI de doi clip/chinh timeline
-Xuat video  render va xem video cuoi
-```
+Trong tab **Bắt đầu**:
 
-## 4. Cau Hinh Kaggle Tren UI
+1. Chọn một hoặc nhiều video nguồn.
+2. Chọn một file audio/voice-over.
+3. Nhập Kaggle `username` và `key`.
+4. Bấm **Lưu Kaggle**.
+5. Bấm **Kiểm tra**.
+6. Bấm **Dùng các file này**.
+7. Bấm **Tạo bản nháp video**.
 
-Tren Kaggle web:
-
-1. Vao account Settings.
-2. Tim muc API.
-3. Bam Create New Token.
-4. Tai file `kaggle.json`.
-
-Trong tab `Bat dau`, nhap:
+Định dạng hỗ trợ:
 
 ```text
-Username
-API key
+Video: .mp4, .mov, .mkv, .webm
+Audio: .wav, .mp3, .m4a, .aac, .flac, .ogg
 ```
 
-Bam:
+Không bấm **Run** thủ công trên Kaggle web. Hãy để ứng dụng tự gửi job lên
+Kaggle.
+
+## 7. Chỉnh Sửa Bản Nháp
+
+Khi bản nháp đã sẵn sàng, vào tab **Chỉnh sửa** và bấm:
 
 ```text
-Luu Kaggle
-Kiem tra
+Mở màn hình chỉnh sửa
 ```
 
-Ung dung chi luu API key tren may cua ban tai `~/.kaggle/kaggle.json`. Key
-khong duoc ghi vao repo, log hay output.
-
-## 5. Tao Ban Nhap
-
-Trong tab `Bat dau`:
-
-```text
-1. Chon mot hoac nhieu video nguon.
-2. Chon mot file voice-over/audio.
-3. Bam Dung cac file nay.
-4. Bam Tao ban nhap video.
-```
-
-Ung dung se tu:
-
-```text
-copy input vao data/raw
-upload len Kaggle
-chay phan tich video/audio
-tai timeline ve may
-```
-
-Khi xong, ban nhap nam trong:
-
-```text
-data/intermediate/timeline.json
-```
-
-## 6. Review Timeline
-
-Trong tab `Chinh sua`, bam:
-
-```text
-Mo man hinh chinh sua
-```
-
-Ung dung se mo Review UI tai:
+Ứng dụng sẽ mở Review UI tại:
 
 ```text
 http://127.0.0.1:7870
 ```
 
-Trong Review UI, xem tung doan, doi clip neu can, roi bam `Luu Thay Doi`.
+Trong Review UI:
 
-## 7. Xuat Video Cuoi
+1. Xem từng đoạn.
+2. Đổi clip nếu cần.
+3. Chỉnh thời gian/crop/âm lượng nếu muốn.
+4. Bấm **Lưu Thay Đổi**.
 
-Quay lai Launcher UI, vao tab `Xuat video`, bam `Xuat video`.
+## 8. Xuất Video Cuối
 
-Thanh pham nam tai:
+Quay lại Launcher UI, vào tab **Xuất video**, bấm:
+
+```text
+Xuất video
+```
+
+Video cuối nằm ở:
 
 ```text
 data/final/final_video.mp4
 ```
 
-## 8. Chay Lai Case Moi
+## 9. Chạy Dự Án Mới
 
-```text
-data/intermediate/
-data/normalized/
-data/keyframes/
-data/final/
-```
+Nếu muốn làm video mới, mở Launcher UI và chọn file mới.
 
-Neu can giu ket qua cu, copy cac thu muc nay sang `runs/<ten_case>/` truoc khi
-chay case moi.
+Nếu muốn xóa kết quả cũ trước khi chạy lại:
 
-Muon xoa output de chay lai, dung lenh goi PowerShell ro rang. Cach nay chay
-duoc ca khi ban dang o CMD:
+Windows:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\clean_outputs.ps1
 powershell -ExecutionPolicy Bypass -File .\scripts\clean_outputs.ps1 -Yes
 ```
 
-Lenh dau la dry run; lenh thu hai moi xoa.
+macOS/Linux:
 
-## 9. Loi Thuong Gap
-
-Kaggle authentication error:
-
-```powershell
-dir "%USERPROFILE%\.kaggle\kaggle.json"
-.\.venv\Scripts\kaggle.exe datasets list --mine
+```bash
+bash scripts/clean_outputs.sh
 ```
 
-Khong thay `ffmpeg` hoac `ffprobe`:
+## 10. Ghi Nhớ
 
-```powershell
-ffmpeg -version
-ffprobe -version
-```
-
-Neu Windows khong nhan lenh, cai FFmpeg va mo terminal moi de PATH duoc cap
-nhat.
-
-Kaggle kernel loi:
-
-```powershell
-.\.venv\Scripts\python.exe -B scripts\kaggle_job.py logs
-```
-
-Loi `Requested ... compute type` tren CUDA:
-
-```text
-Mo Tuy chon nang cao trong tab Bat dau
-Chon Thiet bi Kaggle = cpu
-Chon Compute type = int8
-Chay Tao ban nhap video lai
-```
-
-Review UI bi cache port cu:
-
-```powershell
-.\.venv\Scripts\python.exe -B -m integration.run_pipeline --from-stage 7 --to-stage 7 --launch-ui --no-ui-backup --ui-port 7871
-```
-
-## 10. Checklist Nhanh
-
-```text
-[ ] Clone repo
-[ ] Tao .venv
-[ ] pip install -r requirements-terminal.txt
-[ ] FFmpeg/FFprobe chay duoc
-[ ] Mo Launcher UI
-[ ] Luu va kiem tra Kaggle tren UI
-[ ] Chon video/audio tren UI
-[ ] Tao ban nhap video
-[ ] Mo man hinh chinh sua va Save timeline
-[ ] Xuat video
-[ ] Kiem tra data/final/final_video.mp4
-```
-
-Can chi tiet hon ve Kaggle terminal workflow: [kaggle_terminal_workflow.md](kaggle_terminal_workflow.md).
+- Người dùng cuối chỉ cần mở Launcher UI.
+- Stage 1-6 chạy trên Kaggle.
+- Review và render chạy trên máy local.
+- Nếu Kaggle báo `401 Unauthorized`, hãy tạo lại API token trên Kaggle rồi
+  bấm **Lưu Kaggle** và **Kiểm tra** trong Launcher.
+- Không commit video, audio, output, embedding hoặc file trong `data/`.

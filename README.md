@@ -1,120 +1,115 @@
 # Audio-Guided Video Montage
 
-Tao video montage tu **video nguon co san** va **audio thuyet minh**.
-He thong khong sinh video moi; no phan tich audio, chon/cat/sap xep clip tu
-footage, cho nguoi dung review, roi render thanh mot file video cuoi.
+Tạo video montage từ **video nguồn có sẵn** và **audio/voice-over**.
+Hệ thống không sinh video mới; nó phân tích audio, chọn/cắt/sắp xếp clip từ
+footage, cho người dùng review, rồi render video cuối.
 
-## Nen Bat Dau O Dau?
+## Bắt Đầu Nhanh
 
-Neu ban chi muon clone repo va tao video:
+Người dùng mới nên đọc:
 
-1. Doc [docs/USER_GUIDE.md](docs/USER_GUIDE.md)
-2. Chay Launcher UI local
-3. Chon video, voice-over va cau hinh Kaggle tren UI
-4. Bam tao ban nhap, chinh sua, roi xuat video
-
-Neu ban la dev hoac muon toi uu pipeline:
-
-1. Doc [docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md)
-2. Doc data contract: [docs/details/02_data_contract.md](docs/details/02_data_contract.md)
-3. Doc spec cua module minh phu trach trong `docs/details/`
-
-## Workflow Cho Nguoi Dung
-
-Can co Python 3.11+, FFmpeg/FFprobe va Kaggle API key.
-
-```powershell
-python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install --upgrade pip
-.\.venv\Scripts\python.exe -m pip install -r requirements-terminal.txt
+```text
+docs/USER_GUIDE.md
 ```
 
-Mo Launcher UI:
+Luồng sử dụng:
 
-```powershell
-.\.venv\Scripts\python.exe -B -m review_ui.launcher
+```text
+Cài Git + Conda
+-> Clone repo
+-> Tạo môi trường bằng environment-terminal.yml
+-> Mở Launcher UI
+-> Chọn video/audio
+-> Nhập Kaggle API key
+-> Tạo bản nháp
+-> Chỉnh sửa
+-> Xuất video
 ```
 
-Trong trinh duyet, lam theo 3 tab: `Bat dau`, `Chinh sua`, `Xuat video`.
-Neu cong `7860` dang ban, mo URL ma terminal in ra.
+Lệnh chạy sau khi đã cài Conda:
 
-Thanh pham nam tai:
+```bash
+conda env create -f environment-terminal.yml
+conda activate audio-montage
+python -B -m review_ui.launcher
+```
+
+Video cuối nằm ở:
 
 ```text
 data/final/final_video.mp4
 ```
 
-## Workflow Cho Dev
+## Dành Cho Dev
 
-Cai full dependency:
+Cài môi trường đầy đủ:
 
-```powershell
-.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+```bash
+conda env create -f environment-dev.yml
+conda activate audio-montage-dev
 ```
 
-Smoke test contract va sample pipeline:
+Hoặc dùng pip:
 
-```powershell
-python scripts\validate_json.py
-python -m integration.run_pipeline --use-sample-data --overwrite --from-stage 1 --to-stage 6 --skip-ui
-python scripts\validate_json.py --input-dir data/intermediate
+```bash
+python -m pip install -r requirements-dev.txt
 ```
 
-Hoac chay script:
+Tài liệu chính:
 
-```powershell
-.\scripts\run_demo.ps1
-```
+- [docs/USER_GUIDE.md](docs/USER_GUIDE.md): hướng dẫn cho người dùng cuối.
+- [docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md): hướng dẫn cho dev.
+- [docs/details/02_data_contract.md](docs/details/02_data_contract.md): data contract.
+- [docs/kaggle_terminal_workflow.md](docs/kaggle_terminal_workflow.md): debug Kaggle bằng terminal.
 
 ## Pipeline
 
-| Stage | Module | Output chinh |
+| Stage | Module | Output chính |
 | --- | --- | --- |
 | 1 | `input_processor` | `media_metadata.json` |
 | 2 | `audio_analyzer` | `audio_segments.json` |
 | 3 | `video_analyzer` | `clip_metadata.json` |
-| 4 | `embedding_indexer` | `embedding_metadata.json`, vectors/index |
+| 4 | `embedding_indexer` | `embedding_metadata.json` |
 | 5 | `matching_engine` | `matching_candidates.json` |
 | 6 | `timeline_planner` | `timeline.json` |
-| 7 | `review_ui` | `timeline.json` da review |
-| 8 | `renderer` | `final_video.mp4`, `render_log.json` |
+| 7 | `review_ui` | timeline đã review |
+| 8 | `renderer` | `final_video.mp4` |
 
-Entry point chinh la:
+Entry point chính:
 
 ```text
 integration.run_pipeline
 ```
 
-Kaggle workflow goi cung pipeline do thong qua:
+Người dùng cuối chủ yếu đi qua:
 
 ```text
-scripts/kaggle_job.py
+review_ui.launcher
 ```
 
-## Cau Truc Repo
+## Cấu Trúc Repo
 
 ```text
-audio_analyzer/       Stage 2: ASR, segmentation, query enrichment
-embedding_indexer/    Stage 4: text/visual embedding va index
-input_processor/      Stage 1: normalize media va metadata
-matching_engine/      Stage 5: top-k clip candidates
-timeline_planner/     Stage 6: tao timeline draft
-review_ui/            Stage 7: Gradio review UI va validator
-renderer/             Stage 8: ffmpeg renderer
-video_analyzer/       Stage 3: scene/fixed-window clips va keyframes
+audio_analyzer/       Stage 2
+embedding_indexer/    Stage 4
+input_processor/      Stage 1
+matching_engine/      Stage 5
+timeline_planner/     Stage 6
+review_ui/            Stage 7 + Launcher UI
+renderer/             Stage 8
+video_analyzer/       Stage 3
 
-integration/          runner noi cac stage
-shared/               JSON/path/contract helpers dung chung
-scripts/              bootstrap, validate, demo, Kaggle submit
-kaggle/               runner chay tren Kaggle
-docs/                 user guide, developer guide, architecture, contract
-data/                 input/output local; chi commit .gitkeep
+integration/          runner nối các stage
+shared/               helper dùng chung
+scripts/              script chạy local/Kaggle/validate
+kaggle/               runner chạy trên Kaggle
+docs/                 tài liệu
+data/                 input/output local, chỉ commit .gitkeep
 ```
 
-## Quy Tac Du Lieu
+## Ghi Nhớ
 
-- Khong commit media, output render, vector, index, model cache.
-- Runtime JSON dung relative path trong repo.
-- `timeline.json` la artifact trung tam cho Review UI va Renderer.
-- Khi code va docs mau thuan, uu tien code hien tai + data contract, roi cap
-  nhat docs ngay.
+- Không commit media, output render, model cache, vector hoặc index.
+- `data/` là dữ liệu runtime local.
+- Kaggle Dataset/Kernel phải được tạo từ Launcher hoặc `scripts/kaggle_job.py`.
+- Không bấm Run thủ công trên Kaggle web cho kernel do repo generate.

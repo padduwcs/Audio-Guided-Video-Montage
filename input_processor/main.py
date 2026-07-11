@@ -12,8 +12,8 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
-VIDEO_EXTENSIONS = {".mp4", ".mov", ".mkv"}
-AUDIO_EXTENSIONS = {".wav", ".mp3", ".m4a"}
+VIDEO_EXTENSIONS = {".mp4", ".mov", ".mkv", ".webm"}
+AUDIO_EXTENSIONS = {".wav", ".mp3", ".m4a", ".aac", ".flac", ".ogg"}
 
 
 class InputProcessorError(Exception):
@@ -275,14 +275,16 @@ def validate_raw_video(path: Path) -> None:
     if not path.exists() or not path.is_file():
         raise InputProcessorError(f"Video input not found: {path}")
     if path.suffix.lower() not in VIDEO_EXTENSIONS:
-        raise InputProcessorError(f"Unsupported video extension for {path.name}. Expected: .mp4, .mov, .mkv")
+        expected = ", ".join(sorted(VIDEO_EXTENSIONS))
+        raise InputProcessorError(f"Unsupported video extension for {path.name}. Expected: {expected}")
 
 
 def validate_raw_audio(path: Path) -> None:
     if not path.exists() or not path.is_file():
         raise InputProcessorError(f"Audio input not found: {path}")
     if path.suffix.lower() not in AUDIO_EXTENSIONS:
-        raise InputProcessorError(f"Unsupported audio extension for {path.name}. Expected: .wav, .mp3, .m4a")
+        expected = ", ".join(sorted(AUDIO_EXTENSIONS))
+        raise InputProcessorError(f"Unsupported audio extension for {path.name}. Expected: {expected}")
 
 
 def output_paths(output_dir: Path) -> tuple[Path, Path, Path, Path]:

@@ -25,6 +25,10 @@ DEFAULT_DATASET = "audio-guided-video-montage-input"
 DEFAULT_KERNEL = "audio-guided-video-montage-runner"
 DEFAULT_TRANSFER_MODE = "dataset"
 
+
+class KaggleInputConfigMissingError(RuntimeError):
+    """Raised when the Kaggle runner cannot resolve the generated config file."""
+
 EXCLUDED_DIR_NAMES = {
     ".git",
     ".venv",
@@ -123,6 +127,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-wait-minutes", type=int, default=360)
     parser.add_argument("--dataset-wait-seconds", type=int, default=30)
     parser.add_argument("--dataset-max-wait-minutes", type=int, default=20)
+    parser.add_argument(
+        "--kernel-mount-retries",
+        type=int,
+        default=2,
+        help=(
+            "Retry by pushing a new Kernel version when Kaggle starts a Kernel "
+            "before mounting the generated input Dataset."
+        ),
+    )
     parser.add_argument("--message", default="Update Audio-Guided Video Montage job input")
     return parser.parse_args()
 
@@ -146,22 +159,19 @@ def set_active_dirs(dataset_dir: Path, kernel_dir: Path) -> None:
     KERNEL_DIR = kernel_dir
 
 
-def save_active_dirs() -> None:
+def save_active_dirs(args: argparse.Namespace | None = None) -> None:
     WORK_ROOT.mkdir(parents=True, exist_ok=True)
-    STATE_PATH.write_text(
-        json.dumps(
-            {
-                "dataset_dir": str(DATASET_DIR.relative_to(ROOT)),
-                "kernel_dir": str(KERNEL_DIR.relative_to(ROOT)),
-            },
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
+    state = {
+        "dataset_dir": str(DATASET_DIR.relative_to(ROOT)),
+        "kernel_dir": str(KERNEL_DIR.relative_to(ROOT)),
+    }
+    if args is not None:
+        state["dataset"] = args.dataset
+        state["kernel"] = args.kernel
+    STATE_PATH.write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
 
 
-def load_active_dirs() -> None:
+def load_active_dirs(args: argparse.Namespace | None = None) -> None:
     if not STATE_PATH.is_file():
         return
     state = json.loads(STATE_PATH.read_text(encoding="utf-8"))
@@ -169,6 +179,11 @@ def load_active_dirs() -> None:
     kernel_dir = ROOT / state["kernel_dir"]
     if dataset_dir.is_dir() and kernel_dir.is_dir():
         set_active_dirs(dataset_dir, kernel_dir)
+    if args is not None:
+        if args.dataset == DEFAULT_DATASET and state.get("dataset"):
+            args.dataset = state["dataset"]
+        if args.kernel == DEFAULT_KERNEL and state.get("kernel"):
+            args.kernel = state["kernel"]
 
 
 def run(command: list[str], *, check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -206,7 +221,12 @@ def kaggle_command(*args: str) -> list[str]:
     if executable:
         return [executable, *args]
 
-    return [sys.executable, "-m", "kaggle", *args]
+    raise RuntimeError(
+        "Kaggle CLI executable was not found in the active Python environment "
+        "or PATH. Activate the Conda environment, then run "
+        "`python -m pip install -r requirements-terminal.txt` or recreate it "
+        "from environment-terminal.yml."
+    )
 
 
 def output_lines(output: str) -> list[str]:
@@ -218,6 +238,58 @@ def kaggle_status_value(output: str) -> str:
     if not lines:
         return ""
     return lines[-1].lower()
+
+
+def is_dataset_status_ready(returncode: int, output: str) -> bool:
+    return returncode == 0 and kaggle_status_value(output) == "ready"
+
+
+def missing_dataset_file_groups(
+    files_output: str,
+    required_file_groups: list[list[str]],
+) -> list[str]:
+    """Return required file groups that are not visible in Kaggle's file list.
+
+    Kaggle can expose directories uploaded with --dir-mode zip either as the
+    compressed archive name or as extracted paths, depending on processing
+    timing and CLI/API behavior. Each group contains equivalent forms.
+    """
+
+    text = (files_output or "").lower()
+    missing: list[str] = []
+    for group in required_file_groups:
+        normalized = [item.lower() for item in group if item]
+        if normalized and not any(item in text for item in normalized):
+            missing.append(" or ".join(normalized))
+    return missing
+
+
+def is_kaggle_auth_error(output: str) -> bool:
+    text = (output or "").lower()
+    return ("401" in text and "unauthorized" in text) or ("403" in text and "forbidden" in text)
+
+
+def is_kaggle_unauthorized(output: str) -> bool:
+    text = (output or "").lower()
+    return "401" in text and "unauthorized" in text
+
+
+def is_kaggle_forbidden(output: str) -> bool:
+    text = (output or "").lower()
+    return "403" in text and "forbidden" in text
+
+
+def kaggle_permission_help(resource_ref: str) -> str:
+    return (
+        f"Kaggle denied access to {resource_ref} (401 Unauthorized or 403 Forbidden). "
+        "This usually means the Kaggle username/API key is missing, expired, "
+        "copied incorrectly, or does not belong to the account that owns the "
+        "private Dataset/Kernel. In the Launcher, save the Kaggle username and "
+        "API key from the same Kaggle account, then click Kiem tra. If it still "
+        "fails after Kiem tra succeeds, delete the old private Dataset/Kernel "
+        f"named {resource_ref} on Kaggle or pass a new --dataset/--kernel slug "
+        "and submit again."
+    )
 
 
 def ensure_inside_workspace(path: Path) -> Path:
@@ -350,7 +422,12 @@ def copy_inputs(args: argparse.Namespace) -> list[str]:
 
 
 def build_package(args: argparse.Namespace) -> None:
-    package_id = f"job_{int(time.time() * 1000)}"
+    package_millis = int(time.time() * 1000)
+    package_id = f"job_{package_millis}"
+    if args.dataset == DEFAULT_DATASET:
+        args.dataset = f"{DEFAULT_DATASET}-{package_millis}"
+    if args.kernel == DEFAULT_KERNEL:
+        args.kernel = f"{DEFAULT_KERNEL}-{package_millis}"
     set_active_dirs(
         WORK_ROOT / "packages" / package_id / "dataset",
         WORK_ROOT / "packages" / package_id / "kernel",
@@ -415,6 +492,7 @@ def build_package(args: argparse.Namespace) -> None:
         missing = ", ".join(str(path) for path in missing_kernel_files)
         raise RuntimeError(f"Kernel bundle is incomplete: {missing}")
 
+    enable_gpu = args.device == "cuda"
     (KERNEL_DIR / "kernel-metadata.json").write_text(
         json.dumps(
             {
@@ -424,8 +502,9 @@ def build_package(args: argparse.Namespace) -> None:
                 "language": "python",
                 "kernel_type": "script",
                 "is_private": True,
-                "enable_gpu": True,
+                "enable_gpu": enable_gpu,
                 "enable_internet": True,
+                "machine_shape": "NvidiaTeslaT4" if enable_gpu else "",
                 "dataset_sources": [dataset_ref] if args.transfer_mode == "dataset" else [],
                 "competition_sources": [],
                 "kernel_sources": [],
@@ -442,21 +521,24 @@ def build_package(args: argparse.Namespace) -> None:
     print(f"[package] video(s): {', '.join(dataset_videos)}")
     print(f"[package] audio: {dataset_audio}")
     print(f"[package] active package: {DATASET_DIR.parent.relative_to(ROOT)}")
-    save_active_dirs()
+    save_active_dirs(args)
 
 
 def push_dataset(args: argparse.Namespace) -> None:
     if not (DATASET_DIR / "dataset-metadata.json").is_file():
         build_package(args)
+    dataset_ref = kaggle_ref(args.username, args.dataset)
     create = run(
         kaggle_command("datasets", "create", "-p", str(DATASET_DIR), "--dir-mode", "zip"),
         check=False,
     )
     create_output = create.stdout.lower()
+    if is_kaggle_auth_error(create.stdout):
+        raise PermissionError(kaggle_permission_help(dataset_ref))
     if create.returncode == 0 and "dataset creation error" not in create_output and "already in use" not in create_output:
         return
     print("[dataset] create failed, trying dataset version update")
-    run(
+    version = run(
         kaggle_command(
             "datasets",
             "version",
@@ -466,8 +548,13 @@ def push_dataset(args: argparse.Namespace) -> None:
             args.message,
             "--dir-mode",
             "zip",
-        )
+        ),
+        check=False,
     )
+    if is_kaggle_auth_error(version.stdout):
+        raise PermissionError(kaggle_permission_help(dataset_ref))
+    if version.returncode != 0:
+        raise RuntimeError(f"Kaggle dataset version update failed for {dataset_ref}.")
 
 
 def wait_for_dataset(args: argparse.Namespace) -> None:
@@ -477,36 +564,56 @@ def wait_for_dataset(args: argparse.Namespace) -> None:
     deadline = time.time() + (args.dataset_max_wait_minutes * 60)
     config_path = DATASET_DIR / "kaggle_job_config.json"
     config = json.loads(config_path.read_text(encoding="utf-8")) if config_path.is_file() else {}
-    expected_files = [
-        "kaggle_job_config.json",
-        *config.get("videos", []),
-        config.get("audio", ""),
-        f"{config.get('source_dir', '')}/requirements-kaggle.txt" if config.get("source_dir") else "",
-        f"{config.get('source_dir', '')}/integration/run_pipeline.py" if config.get("source_dir") else "",
+    source_dir = config.get("source_dir", "")
+    required_file_groups = [
+        ["kaggle_job_config.json"],
+        [
+            "raw.zip",
+            *config.get("videos", []),
+            config.get("audio", ""),
+        ],
+        [
+            f"{source_dir}.zip" if source_dir else "",
+            f"{source_dir}/requirements-kaggle.txt" if source_dir else "",
+            f"{source_dir}/integration/run_pipeline.py" if source_dir else "",
+        ],
     ]
-    expected_files = [item.lower() for item in expected_files if item]
     while True:
         status = run(kaggle_command("datasets", "status", dataset_ref), check=False)
+        if is_kaggle_unauthorized(status.stdout):
+            raise PermissionError(kaggle_permission_help(dataset_ref))
         status_value = kaggle_status_value(status.stdout)
+        status_ready = is_dataset_status_ready(status.returncode, status.stdout)
         files = run(
             kaggle_command("datasets", "files", dataset_ref, "--page-size", "200"),
             check=False,
         )
-        files_output = files.stdout.lower()
-        if status_value == "ready":
-            if files.returncode == 0:
-                missing = [
-                    expected
-                    for expected in expected_files
-                    if expected not in files_output
-                ]
-                if missing:
+        if is_kaggle_unauthorized(files.stdout):
+            raise PermissionError(kaggle_permission_help(dataset_ref))
+        if files.returncode == 0:
+            missing = missing_dataset_file_groups(files.stdout, required_file_groups)
+            if not missing and status_ready:
+                print("[dataset] ready for kernel attachment")
+                return
+            if not missing:
+                if is_kaggle_forbidden(status.stdout):
                     print(
-                        "[dataset] ready, but file listing did not show: "
-                        + ", ".join(missing)
+                        "[dataset] files are visible, but Kaggle has not marked "
+                        "the private Dataset ready for Kernel attachment yet."
                     )
-            print("[dataset] ready for kernel attachment")
-            return
+                else:
+                    shown_status = status_value or "unknown"
+                    print(
+                        "[dataset] files are visible, but Dataset status is "
+                        f"{shown_status!r}; waiting for 'ready'."
+                    )
+                print("[dataset] waiting for Dataset to become attachable")
+            else:
+                print("[dataset] waiting for required files: " + ", ".join(missing))
+        elif is_kaggle_forbidden(files.stdout) or is_kaggle_forbidden(status.stdout):
+            print("[dataset] Kaggle has not exposed the new private Dataset yet.")
+        elif status_ready:
+            print("[dataset] ready, but file listing failed.")
         if status.returncode == 0 and status_value in {"error", "failed", "cancelled", "canceled"}:
             raise RuntimeError("Kaggle dataset creation/versioning failed.")
         if time.time() > deadline:
@@ -521,10 +628,13 @@ def wait_for_dataset(args: argparse.Namespace) -> None:
 def push_kernel(args: argparse.Namespace) -> None:
     if not (KERNEL_DIR / "kernel-metadata.json").is_file():
         build_package(args)
+    kernel_ref = kaggle_ref(args.username, args.kernel)
     deadline = time.time() + (args.dataset_max_wait_minutes * 60)
     while True:
         result = run(kaggle_command("kernels", "push", "-p", str(KERNEL_DIR)), check=False)
         output = result.stdout.lower()
+        if is_kaggle_auth_error(result.stdout):
+            raise PermissionError(kaggle_permission_help(kernel_ref))
         if result.returncode != 0:
             raise RuntimeError(
                 f"Kernel push failed with exit code {result.returncode}. "
@@ -552,7 +662,16 @@ def print_status(args: argparse.Namespace) -> str:
 
 def print_logs(args: argparse.Namespace) -> str:
     try:
-        pull_outputs(args, copy_to_data=False)
+        reset_dir(OUTPUT_DIR)
+        run(
+            kaggle_command(
+                "kernels",
+                "output",
+                kaggle_ref(args.username, args.kernel),
+                "-p",
+                str(OUTPUT_DIR),
+            )
+        )
     except Exception as exc:
         message = (
             "Could not download kernel output for logs. "
@@ -562,8 +681,13 @@ def print_logs(args: argparse.Namespace) -> str:
         print(message)
         return message
 
-    log_path = EXTRACT_DIR / "job.log"
+    log_path = OUTPUT_DIR / "job.log"
     if not log_path.is_file():
+        runner_logs = sorted(OUTPUT_DIR.glob("*.log"))
+        if runner_logs:
+            output = _read_kaggle_log_file(runner_logs[0])
+            print(output, end="" if output.endswith("\n") else "\n")
+            return output
         message = (
             f"job.log not found in downloaded kernel output. "
             f"Open https://www.kaggle.com/code/{kaggle_ref(args.username, args.kernel)} "
@@ -573,8 +697,31 @@ def print_logs(args: argparse.Namespace) -> str:
         return message
 
     output = log_path.read_text(encoding="utf-8", errors="replace")
+    runner_logs = sorted(path for path in OUTPUT_DIR.glob("*.log") if path.name != "job.log")
+    if runner_logs:
+        runner_output = _read_kaggle_log_file(runner_logs[0])
+        if runner_output.strip() and runner_output.strip() not in output:
+            output = output.rstrip() + "\n\n[kaggle runner log]\n" + runner_output
     print(output, end="" if output.endswith("\n") else "\n")
     return output
+
+
+def _read_kaggle_log_file(path: Path) -> str:
+    raw = path.read_text(encoding="utf-8", errors="replace")
+    try:
+        entries = json.loads(raw)
+    except json.JSONDecodeError:
+        return raw
+    if not isinstance(entries, list):
+        return raw
+    lines: list[str] = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        data = entry.get("data")
+        if isinstance(data, str):
+            lines.append(data.rstrip("\n"))
+    return "\n".join(lines)
 
 
 def wait_for_kernel(args: argparse.Namespace) -> None:
@@ -586,12 +733,39 @@ def wait_for_kernel(args: argparse.Namespace) -> None:
             return
         if any(word in output for word in ("error", "failed", "cancel")):
             print("[logs] latest Kaggle kernel logs:")
-            print_logs(args)
+            logs = print_logs(args)
+            if "Missing kaggle_job_config.json" in logs:
+                raise KaggleInputConfigMissingError(
+                    "Kaggle kernel could not resolve kaggle_job_config.json "
+                    "inside /kaggle/input. Check the runner log for the printed "
+                    "/kaggle/input tree."
+                )
             raise RuntimeError("Kaggle kernel did not complete successfully.")
         if time.time() > deadline:
             raise TimeoutError("Timed out waiting for Kaggle kernel.")
         print(f"[wait] sleeping {args.poll_seconds}s")
         time.sleep(args.poll_seconds)
+
+
+def push_kernel_and_optionally_wait(args: argparse.Namespace) -> None:
+    attempts = max(1, args.kernel_mount_retries + 1) if args.wait else 1
+    for attempt in range(1, attempts + 1):
+        push_kernel(args)
+        if not args.wait:
+            return
+        try:
+            wait_for_kernel(args)
+            return
+        except KaggleInputConfigMissingError as exc:
+            if attempt >= attempts:
+                raise
+            print(
+                "[kernel] Kaggle runner could not resolve the generated input "
+                "config. Waiting before pushing a new Kernel version "
+                f"(retry {attempt}/{attempts - 1})."
+            )
+            print(f"[kernel] details: {exc}")
+            time.sleep(args.dataset_wait_seconds)
 
 
 def pull_outputs(args: argparse.Namespace, *, copy_to_data: bool = True) -> None:
@@ -629,14 +803,16 @@ def pull_outputs(args: argparse.Namespace, *, copy_to_data: bool = True) -> None
 def main() -> int:
     args = parse_args()
     try:
-        if args.command != "package":
-            load_active_dirs()
+        if args.command not in {"package", "submit"}:
+            load_active_dirs(args)
         if args.command == "package":
             build_package(args)
         elif args.command == "push-dataset":
             push_dataset(args)
-        elif args.command in {"push-kernel", "run"}:
+        elif args.command == "push-kernel":
             push_kernel(args)
+        elif args.command == "run":
+            push_kernel_and_optionally_wait(args)
         elif args.command == "status":
             print_status(args)
         elif args.command == "logs":
@@ -650,9 +826,7 @@ def main() -> int:
             if args.transfer_mode == "dataset":
                 push_dataset(args)
                 wait_for_dataset(args)
-            push_kernel(args)
-            if args.wait:
-                wait_for_kernel(args)
+            push_kernel_and_optionally_wait(args)
             if args.pull:
                 pull_outputs(args, copy_to_data=True)
         else:
