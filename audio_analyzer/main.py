@@ -41,8 +41,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--model",
-        default="base",
-        help="faster-whisper model name or local model path (default: base).",
+        default="medium",
+        help="faster-whisper model name or local model path (default: medium).",
     )
     parser.add_argument(
         "--language",

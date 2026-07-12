@@ -23,7 +23,7 @@ class FasterWhisperBackend(ASRBackend):
     def __init__(
         self,
         *,
-        model: str = "base",
+        model: str = "medium",
         language: str = "auto",
         device: str = "cpu",
         compute_type: str = "int8",

@@ -111,7 +111,7 @@ def parse_args() -> argparse.Namespace:
         help=argparse.SUPPRESS,
     )
     parser.add_argument("--video-method", choices=("content", "fixed_window"), default="fixed_window")
-    parser.add_argument("--asr-model", default="base")
+    parser.add_argument("--asr-model", default="medium")
     parser.add_argument("--language", choices=("auto", "vi", "en"), default="auto")
     parser.add_argument("--device", choices=("auto", "cpu", "cuda"), default="cpu")
     parser.add_argument("--compute-type", default="int8")

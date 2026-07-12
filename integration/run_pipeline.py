@@ -77,7 +77,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--no-normalize-video", action="store_true")
     parser.add_argument("--no-normalize-audio", action="store_true")
 
-    parser.add_argument("--asr-model", default="base")
+    parser.add_argument("--asr-model", default="medium")
     parser.add_argument("--language", choices=("auto", "vi", "en"), default="auto")
     parser.add_argument("--device", default="cpu")
     parser.add_argument("--compute-type", default="int8")
