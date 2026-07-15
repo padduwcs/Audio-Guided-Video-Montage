@@ -32,6 +32,9 @@ class KaggleInputConfigMissingError(RuntimeError):
 EXCLUDED_DIR_NAMES = {
     ".git",
     ".venv",
+    "venv",
+    "env310",
+    "env",
     ".kaggle_work",
     "__pycache__",
     ".pytest_cache",
