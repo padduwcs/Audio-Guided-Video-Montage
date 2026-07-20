@@ -7,20 +7,22 @@
 - Giao diện phẳng (Flat mode), tối giản, màu sắc trung tính nhẹ nhàng, tối ưu dễ dùng
 """
 
+import html
 import os
 import tempfile
 import time
+from urllib.parse import quote
 import gradio as gr
 import gradio_client.utils as gradio_client_utils
 import soundfile as sf
-import numpy as np
 
 from review_ui.loader import load_project_data
 from review_ui.validator import validate_project_data
-from review_ui.editor import replace_clip, create_visual_from_candidate, update_timing, update_speed, mark_reviewed, update_visual_properties
+from review_ui.editor import replace_clip, create_visual_from_candidate, update_timing, update_speed, update_visual_properties
 from review_ui.storage import save_timeline, backup_timeline
-from review_ui.media import resolve_video_path, resolve_audio_path
+from review_ui.media import resolve_video_path
 from review_ui.transaction_log import TransactionLog
+from review_ui.theme import APP_THEME_CSS, THEME_JS, THEME_SWITCHER_HTML
 from renderer.core import extract_segment_ffmpeg, render_timeline
 
 # Resolve Repo Root Path
@@ -46,6 +48,33 @@ def make_abs(path):
         return path
     return os.path.abspath(os.path.join(REPO_ROOT, path))
 
+
+def make_file_url(path):
+    abs_path = make_abs(path)
+    if not abs_path:
+        return ""
+    return "/gradio_api/file=" + quote(abs_path.replace("\\", "/"), safe="/:")
+
+
+def final_video_html(path):
+    abs_path = make_abs(path)
+    if not abs_path or not os.path.exists(abs_path):
+        return """
+        <div class="final-video-empty">
+            Video hoàn chỉnh chưa có sẵn trong phiên này.
+        </div>
+        """
+
+    source = html.escape(make_file_url(abs_path), quote=True)
+    return f"""
+    <div class="final-video-player">
+      <video controls preload="metadata" playsinline>
+        <source src="{source}" type="video/mp4">
+        Trình duyệt không hỗ trợ phát video này.
+      </video>
+    </div>
+    """
+
 def generate_timeline_html(data, selected_id):
     """
     Generate horizontal visual timeline HTML representing segments proportional to duration.
@@ -53,7 +82,7 @@ def generate_timeline_html(data, selected_id):
     """
     items = data.timeline.get("items", [])
     if not items:
-        return "<p style='color: #64748b; font-family: sans-serif; font-size: 13px;'>Timeline trống</p>"
+        return "<p style='color: var(--app-text-muted); font-family: sans-serif; font-size: 13px;'>Timeline trống</p>"
     
     total_duration = sum(item["duration"] for item in items)
     if total_duration <= 0:
@@ -78,14 +107,14 @@ def generate_timeline_html(data, selected_id):
         if sid in error_segs:
             badge_html = '<span style="position: absolute; top: 4px; right: 4px; background: #ef4444; color: white; padding: 2px 4px; border-radius: 4px; font-size: 10px; font-weight: bold; z-index: 10;">Lỗi</span>'
         elif sid in needs_review_segs:
-            badge_html = '<span style="position: absolute; top: 4px; right: 4px; background: #f59e0b; color: white; padding: 2px 4px; border-radius: 4px; font-size: 10px; font-weight: bold; z-index: 10;">Review</span>'
+            badge_html = '<span style="position: absolute; top: 4px; right: 4px; background: #f59e0b; color: white; padding: 2px 4px; border-radius: 4px; font-size: 10px; font-weight: bold; z-index: 10;">Kiểm tra</span>'
         elif sid in edited_segs:
             badge_html = '<span style="position: absolute; top: 4px; right: 4px; background: #3b82f6; color: white; padding: 2px 4px; border-radius: 4px; font-size: 10px; font-weight: bold; z-index: 10;">Đã sửa</span>'
             
-        border_style = "border: 3px solid #0ea5e9; box-shadow: 0 0 0 3px rgba(14,165,233,0.3);" if is_selected else "border: 3px solid transparent;"
+        border_style = "border: 3px solid var(--app-primary); box-shadow: 0 0 0 3px var(--app-primary-soft);" if is_selected else "border: 3px solid transparent;"
         
         bg_html = ""
-        text_color = "#52525b"
+        text_color = "var(--app-text-muted)"
         bg_color = "#a1a1aa"
         text_shadow = "none"
         
@@ -107,14 +136,14 @@ def generate_timeline_html(data, selected_id):
                     text_shadow = "0 1px 4px rgba(0,0,0,0.9)"
         
         html += f'''
-        <div style="flex: 0 0 auto; width: 140px; display: flex; flex-direction: column; gap: 8px; cursor: pointer; font-family: -apple-system, sans-serif; {border_style} border-radius: 8px; padding: 4px; transition: all 0.2s;" title="Segment: {sid}">
+        <div style="flex: 0 0 auto; width: 140px; display: flex; flex-direction: column; gap: 8px; font-family: -apple-system, sans-serif; {border_style} border-radius: 8px; padding: 4px; transition: all 0.2s;" title="Phân đoạn: {sid}">
             <div style="height: 80px; background-color: {bg_color}; border-radius: 4px; position: relative; overflow: hidden; display: flex; justify-content: center; align-items: center; box-shadow: inset 0 0 10px rgba(0,0,0,0.1);">
                 {bg_html}
                 <span style="color: {text_color}; font-size: 14px; font-weight: 600; z-index: 10; text-shadow: {text_shadow};">{sid}</span>
                 <span style="position: absolute; bottom: 4px; left: 4px; background: rgba(0,0,0,0.7); color: white; padding: 2px 5px; border-radius: 4px; font-size: 11px; z-index: 10;">{item["duration"]:.1f}s</span>
                 {badge_html}
             </div>
-            <div style="font-size: 12px; color: #3f3f46; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 2px;">
+            <div style="font-size: 12px; color: var(--app-text); text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 2px;">
                 {item["text"]}
             </div>
         </div>
@@ -128,12 +157,12 @@ def generate_timeline_html(data, selected_id):
     error_count = len(error_segs)
     
     html += f'''
-    <div style="display: flex; gap: 15px; font-size: 12px; margin-top: 10px; flex-wrap: wrap; color: #52525b; font-family: -apple-system, sans-serif; justify-content: center;">
+    <div style="display: flex; gap: 15px; font-size: 12px; margin-top: 10px; flex-wrap: wrap; color: var(--app-text-muted); font-family: -apple-system, sans-serif; justify-content: center;">
         <div style="display: flex; align-items: center; gap: 6px;"><span style="display: inline-block; width: 12px; height: 12px; background-color: #a1a1aa; border-radius: 3px;"></span> Chưa sửa ({len(items) - edited_count})</div>
         <div style="display: flex; align-items: center; gap: 6px;"><span style="display: inline-block; width: 12px; height: 12px; background-color: #3b82f6; border-radius: 3px;"></span> Đã sửa ({edited_count})</div>
-        <div style="display: flex; align-items: center; gap: 6px;"><span style="display: inline-block; width: 12px; height: 12px; background-color: #f59e0b; border-radius: 3px;"></span> Cần Review ({review_count})</div>
+        <div style="display: flex; align-items: center; gap: 6px;"><span style="display: inline-block; width: 12px; height: 12px; background-color: #f59e0b; border-radius: 3px;"></span> Cần kiểm tra ({review_count})</div>
         <div style="display: flex; align-items: center; gap: 6px;"><span style="display: inline-block; width: 12px; height: 12px; background-color: #ef4444; border-radius: 3px;"></span> Lỗi ({error_count})</div>
-        <div style="margin-left: 20px; color: #18181b; font-weight: 600;">Tổng: {total_duration:.2f}s | {len(items)} phân đoạn</div>
+        <div style="margin-left: 20px; color: var(--app-text); font-weight: 600;">Tổng: {total_duration:.2f}s | {len(items)} phân đoạn</div>
     </div>
     '''
     return html
@@ -164,12 +193,10 @@ def launch_review_ui(
     transaction_log.reset(project_data)
 
     # Initial backup if requested
-    backup_created = False
     if not readonly and not no_backup:
         try:
             backup_path = timeline_path + ".before_review.json"
             backup_timeline(project_data.timeline, backup_path)
-            backup_created = True
         except Exception as e:
             print(f"[Warning] Failed to create initial backup: {e}")
 
@@ -209,7 +236,7 @@ def launch_review_ui(
             if sid in error_segs:
                 badge = "[Lỗi] "
             elif sid in needs_review_segs:
-                badge = "[Review] "
+                badge = "[Kiểm tra] "
             elif sid in edited_segs:
                 badge = "[Sửa] "
             elif sid in missing_visual_segs:
@@ -272,45 +299,89 @@ def launch_review_ui(
                 keep_original_audio=False,
             )
             return tmp_sliced_path
-        except Exception as e:
+        except Exception:
             return abs_video
 
-    custom_css = """
-    /* iMovie-inspired Theme (Light) */
-    .gradio-container { background: #f9fafb !important; color: #111827 !important; }
+    custom_css = APP_THEME_CSS + """
     .imovie-top-row { background: transparent !important; padding-bottom: 10px; align-items: stretch !important; }
     .imovie-top-row > div { height: auto !important; }
     .imovie-media-panel, .imovie-preview-panel {
-        background: #ffffff !important;
-        border-radius: 8px !important;
-        border: 1px solid #e5e7eb !important;
+        background: var(--app-surface) !important;
+        border-radius: 14px !important;
+        border: 1px solid var(--app-border) !important;
         padding: 16px !important;
-        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
+        box-shadow: var(--app-shadow) !important;
         height: 100% !important;
         display: flex !important;
         flex-direction: column !important;
     }
     .imovie-bottom-row {
-        background: #f3f4f6 !important;
-        border-top: 1px solid #e5e7eb !important;
+        background: var(--app-surface) !important;
+        border: 1px solid var(--app-border) !important;
+        border-radius: 14px !important;
         padding: 20px 30px !important;
         min-height: 250px;
         margin-top: 10px;
+        box-shadow: var(--app-shadow) !important;
     }
     .imovie-storyboard-panel { background: transparent !important; border: none !important; }
     button, .gr-button { border-radius: 6px !important; font-weight: 500 !important; }
-    button.primary, .gr-button-primary { background: #0a84ff !important; color: white !important; border: none !important; }
+    .workspace-header {
+        display: flex; align-items: center; justify-content: space-between; gap: 18px;
+        padding: 12px 14px; margin-bottom: 12px; border: 1px solid var(--app-border);
+        border-radius: 12px; background: var(--app-surface); box-shadow: var(--app-shadow);
+    }
+    .workspace-title { color: var(--app-text) !important; font-size: 15px; }
+    .workspace-meta { color: var(--app-text-muted) !important; font-size: 12px; margin-top: 3px; }
+    .final-video-player {
+        width: 100%;
+        min-height: 450px;
+        display: grid;
+        place-items: center;
+        border: 1px solid var(--app-border);
+        border-radius: 8px;
+        background: #111827;
+        overflow: hidden;
+    }
+    .final-video-player video {
+        width: 100%;
+        height: 450px;
+        display: block;
+        background: #000;
+        object-fit: contain;
+    }
+    .final-video-empty {
+        min-height: 450px;
+        display: grid;
+        place-items: center;
+        border: 1px dashed var(--app-border);
+        border-radius: 8px;
+        color: var(--app-text-muted);
+        background: var(--app-surface-soft);
+        font-size: 14px;
+    }
+    @media (max-width: 1120px) {
+        .imovie-top-row { flex-wrap: wrap !important; }
+        .imovie-top-row > div { min-width: min(100%, 360px) !important; }
+    }
+    @media (max-width: 700px) {
+        .workspace-header { align-items: flex-start; flex-direction: column; }
+        .imovie-bottom-row { padding: 14px !important; }
+    }
     """
 
-    with gr.Blocks(title="Review UI", css=custom_css) as demo:
-        gr.HTML("<script>document.documentElement.classList.remove('dark');</script>")
-        
-        with gr.Row(elem_classes="capcut-nav-bar"):
-            gr.HTML(
-                f"""
-                <div class="nav-title" style="padding: 10px; color: #111827; font-size: 16px;">Review UI — Dự án: <strong>{project_data.timeline.get('project_id')}</strong> &nbsp;|&nbsp; Tập tin: <code>{os.path.basename(timeline_path)}</code></div>
-                """
-            )
+    with gr.Blocks(title="Không gian chỉnh sửa", css=custom_css) as demo:
+        gr.HTML(
+            f"""
+            <div class="workspace-header">
+              <div>
+                <div class="workspace-title"><strong>Không gian chỉnh sửa</strong> — {project_data.timeline.get('project_id')}</div>
+                <div class="workspace-meta">Timeline: <code>{os.path.basename(timeline_path)}</code></div>
+              </div>
+              {THEME_SWITCHER_HTML}
+            </div>
+            """
+        )
 
         # App state variables
         project_state = gr.State(project_data)
@@ -321,73 +392,81 @@ def launch_review_ui(
         with gr.Row(elem_classes="imovie-top-row"):
             with gr.Column(scale=3, elem_classes="imovie-media-panel", min_width=350):
                 with gr.Tabs():
-                    with gr.Tab("My Media"):
-                        gr.Markdown("### Quản lý Phân Đoạn")
+                    with gr.Tab("Phân đoạn"):
+                        gr.Markdown("### Quản lý phân đoạn")
                         with gr.Row():
                             filter_dropdown = gr.Dropdown(choices=[("Tất cả", "all"), ("Cần review", "needs_review"), ("Độ tin cậy thấp", "low_confidence"), ("Sử dụng fallback", "fallback"), ("Đã chỉnh sửa", "edited"), ("Thiếu hình ảnh", "missing_visual"), ("Có lỗi", "error")], value="all", label="Lọc điều kiện", scale=1)
                             segment_dropdown = gr.Dropdown(choices=get_segment_options(project_data, "all"), value=project_data.timeline["items"][0]["segment_id"] if project_data.timeline["items"] else None, label="Chọn phân đoạn", scale=2)
                         
-                        gr.Markdown("### Gợi ý Thay thế (Candidates)")
+                        gr.Markdown("### Clip thay thế được đề xuất")
                         candidates_markdown = gr.Markdown("Không có đề xuất.")
                         with gr.Row():
-                            candidate_dropdown = gr.Dropdown(choices=[], label="Chọn Clip Gợi Ý", scale=2, interactive=not readonly)
-                            choose_cand_btn = gr.Button("Đổi Clip", variant="primary", scale=1, interactive=not readonly)
+                            candidate_dropdown = gr.Dropdown(choices=[], label="Chọn clip gợi ý", scale=2, interactive=not readonly)
+                            choose_cand_btn = gr.Button("Thay clip", variant="primary", scale=1, interactive=not readonly)
 
                         status_box = gr.Markdown("Sẵn sàng.")
                         with gr.Row():
-                            undo_btn = gr.Button("↶ Undo", variant="secondary", interactive=True)
-                            redo_btn = gr.Button("↷ Redo", variant="secondary", interactive=True)
+                            undo_btn = gr.Button("↶ Hoàn tác", variant="secondary", interactive=True)
+                            redo_btn = gr.Button("↷ Làm lại", variant="secondary", interactive=True)
                         with gr.Row():
-                            save_btn = gr.Button("Lưu Thay Đổi", variant="primary", interactive=not readonly)
-                            render_btn = gr.Button("Render Video", variant="primary", interactive=not readonly)
+                            save_btn = gr.Button("Lưu thay đổi", variant="primary", interactive=not readonly)
+                            render_btn = gr.Button("Xuất video", variant="secondary", interactive=not readonly)
 
-                    with gr.Tab("Audio & Văn bản"):
-                        audio_player = gr.Audio(label="Audio gốc", interactive=False)
+                    with gr.Tab("Âm thanh và văn bản"):
+                        audio_player = gr.Audio(label="Âm thanh gốc", interactive=False)
                         transcript_box = gr.Textbox(label="Lời thoại", interactive=False, lines=4)
                         with gr.Row():
                             conf_box = gr.Textbox(label="Độ tin cậy", interactive=False)
                             score_box = gr.Textbox(label="Điểm số", interactive=False)
-                        needs_review_cb = gr.Checkbox(label="Cần Review", interactive=not readonly)
+                        needs_review_cb = gr.Checkbox(label="Cần kiểm tra lại", interactive=not readonly)
                         notes_box = gr.Textbox(label="Ghi chú", interactive=not readonly)
                         apply_properties_btn = gr.Button("Cập nhật ghi chú", variant="secondary", interactive=not readonly)
                     
-                    with gr.Tab("Dự án & Log"):
+                    with gr.Tab("Dự án và nhật ký"):
                         validate_btn = gr.Button("Kiểm lỗi dự án", variant="secondary")
-                        export_audit_btn = gr.Button("Xuất Audit Log", variant="secondary")
-                        audit_log_box = gr.Textbox(label="Audit Log (JSON)", lines=5, interactive=False)
+                        export_audit_btn = gr.Button("Xuất nhật ký thao tác", variant="secondary")
+                        audit_log_box = gr.Textbox(label="Nhật ký thao tác (JSON)", lines=5, interactive=False)
 
             # CENTER: Video Preview
             with gr.Column(scale=4, elem_classes="imovie-preview-panel", min_width=400):
                 with gr.Tabs(selected="preview_tab") as video_tabs:
-                    with gr.Tab("Preview Clip", id="preview_tab"):
-                        video_player = gr.Video(label="Preview", interactive=False, height=450)
-                    with gr.Tab("Video Kết Quả (Final)", id="render_tab"):
-                        final_video_player = gr.Video(label="Final Render", interactive=False, height=450)
+                    with gr.Tab("Xem trước clip", id="preview_tab"):
+                        video_player = gr.Video(label="Clip đang chọn", interactive=False, height=450)
+                    with gr.Tab("Video hoàn chỉnh", id="render_tab"):
+                        final_video_player = gr.HTML(final_video_html(None))
             
             # RIGHT SIDE: Inspector Panel
             with gr.Column(scale=3, elem_classes="imovie-media-panel", min_width=350):
-                with gr.Accordion("Chi tiết Clip (Inspector)", open=True):
+                with gr.Accordion("Thuộc tính clip", open=True):
                     with gr.Row():
-                        vi_dropdown = gr.Dropdown(choices=[], label="Visual Item (Lớp Video)", interactive=True, scale=2)
-                        create_vi_btn = gr.Button("Tạo từ Candidate", variant="secondary", visible=False, interactive=not readonly, scale=1)
+                        vi_dropdown = gr.Dropdown(choices=[], label="Lớp video", interactive=True, scale=2)
+                        create_vi_btn = gr.Button("Tạo từ clip gợi ý", variant="secondary", visible=False, interactive=not readonly, scale=1)
                     
                     inspector_group = gr.Group(visible=True)
                     with inspector_group:
                         with gr.Row():
-                            clip_id_input = gr.Textbox(label="Clip ID", interactive=False)
-                            video_id_input = gr.Textbox(label="Video ID", interactive=False)
+                            clip_id_input = gr.Textbox(label="Mã clip", interactive=False)
+                            video_id_input = gr.Textbox(label="Mã video", interactive=False)
                         source_path_input = gr.Textbox(label="Nguồn", interactive=False)
                         with gr.Row():
-                            clip_start_input = gr.Number(label="Start (s)")
-                            clip_end_input = gr.Number(label="End (s)")
-                        speed_input = gr.Slider(minimum=0.75, maximum=1.25, step=0.01, label="Speed", interactive=not readonly)
+                            clip_start_input = gr.Number(label="Bắt đầu (giây)")
+                            clip_end_input = gr.Number(label="Kết thúc (giây)")
+                        speed_input = gr.Slider(minimum=0.75, maximum=1.25, step=0.01, label="Tốc độ", interactive=not readonly)
                         with gr.Row():
-                            transition_input = gr.Dropdown(choices=["cut", "fade", "crossfade", "slide"], label="Chuyển cảnh", interactive=not readonly)
-                            crop_mode_input = gr.Dropdown(choices=["fit", "blur_background", "center_crop", "fill"], label="Crop mode", interactive=not readonly)
+                            transition_input = gr.Dropdown(
+                                choices=[("Cắt", "cut"), ("Mờ dần", "fade"), ("Hòa trộn", "crossfade"), ("Trượt", "slide")],
+                                label="Chuyển cảnh",
+                                interactive=not readonly,
+                            )
+                            crop_mode_input = gr.Dropdown(
+                                choices=[("Vừa khung", "fit"), ("Nền làm mờ", "blur_background"), ("Cắt giữa", "center_crop"), ("Lấp đầy", "fill")],
+                                label="Chế độ khung hình",
+                                interactive=not readonly,
+                            )
                         with gr.Row():
                             volume_input = gr.Slider(minimum=0.0, maximum=1.0, step=0.1, label="Âm lượng", interactive=not readonly)
-                            locked_input = gr.Checkbox(label="Khóa ngàm", interactive=not readonly)
-                        update_inspector_btn = gr.Button("Áp dụng Thay đổi", variant="primary", interactive=not readonly)
+                            locked_input = gr.Checkbox(label="Khóa clip", interactive=not readonly)
+                        update_inspector_btn = gr.Button("Áp dụng thay đổi", variant="primary", interactive=not readonly)
 
         # BOTTOM ROW: Storyboard Timeline
         with gr.Row(elem_classes="imovie-bottom-row"):
@@ -395,28 +474,17 @@ def launch_review_ui(
                 timeline_html_map = gr.HTML(generate_timeline_html(project_data, project_data.timeline["items"][0]["segment_id"] if project_data.timeline["items"] else None))
 
         # Undo/Redo callbacks
-        def on_undo(data, tlog):
+        def on_undo(data, is_dirty, tlog):
             new_state = tlog.undo()
             if new_state is not None:
-                return new_state, False, "Đã hoàn tác thao tác gần nhất.", tlog
-            return data, False, "Không thể hoàn tác.", tlog
+                return new_state, True, "Đã hoàn tác thao tác gần nhất. Hãy lưu để giữ trạng thái này.", tlog
+            return data, is_dirty, "Không còn thao tác nào để hoàn tác.", tlog
 
-        def on_redo(data, tlog):
+        def on_redo(data, is_dirty, tlog):
             new_state = tlog.redo()
             if new_state is not None:
-                return new_state, False, "Đã làm lại thao tác.", tlog
-            return data, False, "Không thể làm lại.", tlog
-
-        undo_btn.click(
-            fn=on_undo,
-            inputs=[project_state, transaction_log_state],
-            outputs=[project_state, dirty_state, status_box, transaction_log_state]
-        )
-        redo_btn.click(
-            fn=on_redo,
-            inputs=[project_state, transaction_log_state],
-            outputs=[project_state, dirty_state, status_box, transaction_log_state]
-        )
+                return new_state, True, "Đã làm lại thao tác. Hãy lưu để giữ trạng thái này.", tlog
+            return data, is_dirty, "Không còn thao tác nào để làm lại.", tlog
 
         # Export audit log
         def on_export_audit_log(tlog):
@@ -439,16 +507,16 @@ def launch_review_ui(
                         validate_fn=lambda t: validate_project_data(data, mode="edit_save")
                     )
                 except Exception as e:
-                    return None, f"Tự động lưu thất bại: {e}. Vui lòng kiểm tra lại!", is_dirty, gr.update()
+                    return final_video_html(None), f"Tự động lưu thất bại: {e}. Vui lòng kiểm tra lại!", is_dirty, gr.update()
 
             # 2. Validate for renderer handoff
             msgs = validate_project_data(data, mode="renderer_handoff")
             errors = [m for m in msgs if m.level == "error"]
             if errors:
-                err_msg = "\\n".join([f"- Segment {err.segment_id}: {err.message}" for err in errors[:5]])
+                err_msg = "\\n".join([f"- Phân đoạn {err.segment_id}: {err.message}" for err in errors[:5]])
                 if len(errors) > 5:
                     err_msg += f"\\n... và {len(errors) - 5} lỗi khác."
-                return None, f"Lỗi không thể render (Thiếu hình ảnh hoặc lỗi nghiêm trọng):\\n{err_msg}", is_dirty, gr.update()
+                return final_video_html(None), f"Lỗi không thể render (Thiếu hình ảnh hoặc lỗi nghiêm trọng):\\n{err_msg}", is_dirty, gr.update()
 
             # Resolve voice-over path from media_metadata
             voice_over_path = None
@@ -473,9 +541,9 @@ def launch_review_ui(
                     voice_over_path=voice_over_path,
                     progress_callback=lambda ratio, desc: progress(ratio, desc=desc)
                 )
-                return output_video_path, "Render video thành công tại data/final/final_video.mp4!", False, gr.update(selected="render_tab")
+                return final_video_html(output_video_path), "Xuất video thành công tại data/final/final_video.mp4!", False, gr.update(selected="render_tab")
             except Exception as e:
-                return None, f"Render video thất bại: {e}", is_dirty, gr.update()
+                return final_video_html(None), f"Xuất video thất bại: {e}", is_dirty, gr.update()
 
         render_btn.click(
             fn=on_render,
@@ -517,7 +585,7 @@ def launch_review_ui(
             info = f"Lời thoại: {item['text']}\nThời lượng: {item['audio_start']} - {item['audio_end']}s ({item['duration']}s)"
             transcript = item["text"]
             conf = item["confidence"]
-            score = str(item["score"]) if item.get("score") is not None else "null"
+            score = str(item["score"]) if item.get("score") is not None else "Không có"
             needs_review = item.get("needs_review", False)
             notes = item.get("notes", "")
             
@@ -535,8 +603,8 @@ def launch_review_ui(
             if candidate_set:
                 cand_md = "#### Clip gợi ý có sẵn:\n"
                 for cand in candidate_set.get("candidates", []):
-                    cand_md += f"* **Rank {cand['rank']}**: `{cand['clip_id']}` (Điểm: {cand['final_score']:.2f})\n"
-                    cand_choices.append((f"Rank {cand['rank']} | {cand['clip_id']} ({cand['final_score']:.2f})", cand['clip_id']))
+                    cand_md += f"* **Hạng {cand['rank']}**: `{cand['clip_id']}` (Điểm: {cand['final_score']:.2f})\n"
+                    cand_choices.append((f"Hạng {cand['rank']} | {cand['clip_id']} ({cand['final_score']:.2f})", cand['clip_id']))
             else:
                 cand_md = "Không có đề xuất"
                 
@@ -675,6 +743,38 @@ def launch_review_ui(
             ]
         )
 
+        def refresh_after_history(segment_id, data):
+            refreshed = load_segment_data(segment_id, data)
+            refreshed[0] = gr.update()  # Giữ thông báo hoàn tác/làm lại trong status box.
+            return refreshed
+
+        history_refresh_outputs = [
+            status_box, audio_player, transcript_box, conf_box, score_box, needs_review_cb, notes_box,
+            vi_dropdown, inspector_group, create_vi_btn,
+            clip_id_input, video_id_input, source_path_input, clip_start_input, clip_end_input,
+            speed_input, transition_input, crop_mode_input, volume_input, locked_input,
+            video_player, selected_vi_state, candidates_markdown, candidate_dropdown, timeline_html_map,
+        ]
+
+        undo_btn.click(
+            fn=on_undo,
+            inputs=[project_state, dirty_state, transaction_log_state],
+            outputs=[project_state, dirty_state, status_box, transaction_log_state],
+        ).then(
+            fn=refresh_after_history,
+            inputs=[segment_dropdown, project_state],
+            outputs=history_refresh_outputs,
+        )
+        redo_btn.click(
+            fn=on_redo,
+            inputs=[project_state, dirty_state, transaction_log_state],
+            outputs=[project_state, dirty_state, status_box, transaction_log_state],
+        ).then(
+            fn=refresh_after_history,
+            inputs=[segment_dropdown, project_state],
+            outputs=history_refresh_outputs,
+        )
+
         # Update visual properties trigger
         def on_apply_properties(segment_id, notes, needs_review, data, tlog):
             if readonly:
@@ -751,10 +851,10 @@ def launch_review_ui(
             try:
                 if vi_id:
                     replace_clip(data, segment_id, vi_id, cand_clip_id)
-                    action_msg = f"Đã thay thế Visual Item {vi_id} bằng clip {cand_clip_id}."
+                    action_msg = f"Đã thay lớp video {vi_id} bằng clip {cand_clip_id}."
                 else:
                     create_visual_from_candidate(data, segment_id, cand_clip_id)
-                    action_msg = f"Đã tạo Visual Item mới từ clip {cand_clip_id}."
+                    action_msg = f"Đã tạo lớp video mới từ clip {cand_clip_id}."
                 tlog.record_state(data, f"choose_candidate:{segment_id}:{vi_id}:{cand_clip_id}")
                 # Reload segment view
                 res = load_segment_data(segment_id, data)
@@ -788,18 +888,18 @@ def launch_review_ui(
                 errors = [m for m in msgs if m.level == "error"]
                 warnings = [m for m in msgs if m.level == "warning"]
                 
-                res_text = f"### Kết quả xác thực (Validation Results)\n"
-                res_text += f"* **Lỗi chặn (Errors)**: {len(errors)}\n"
-                res_text += f"* **Cảnh báo (Warnings)**: {len(warnings)}\n\n"
+                res_text = "### Kết quả kiểm tra\n"
+                res_text += f"* **Lỗi chặn**: {len(errors)}\n"
+                res_text += f"* **Cảnh báo**: {len(warnings)}\n\n"
                 
                 if errors:
                     res_text += "#### Lỗi nghiêm trọng (Chặn lưu):\n"
                     for err in errors:
-                        res_text += f"- **{err.code}**: {err.message} (Segment: `{err.segment_id}`)\n"
+                        res_text += f"- **{err.code}**: {err.message} (Phân đoạn: `{err.segment_id}`)\n"
                 if warnings:
                     res_text += "#### Cảnh báo (Cho phép lưu):\n"
                     for warn in warnings:
-                        res_text += f"- **{warn.code}**: {warn.message} (Segment: `{warn.segment_id}`)\n"
+                        res_text += f"- **{warn.code}**: {warn.message} (Phân đoạn: `{warn.segment_id}`)\n"
                 if not errors and not warnings:
                     res_text += "Không tìm thấy lỗi nào. Sẵn sàng render!"
                 return res_text
@@ -841,8 +941,6 @@ def launch_review_ui(
                     except Exception as le:
                         print(f"[Warning] Failed to write review log: {le}")
 
-                # Reload segment options to reflect badges
-                opts = get_segment_options(data, filter_dropdown.value)
                 html_timeline = generate_timeline_html(data, segment_id)
                 
                 return False, f"Đã lưu timeline thành công! ({time.strftime('%H:%M:%S')})", html_timeline
@@ -857,25 +955,16 @@ def launch_review_ui(
 
         js_code = """
         () => {
-            document.body.classList.remove('dark');
-            
             window.isGradioDirty = false;
-            window.addEventListener('beforeunload', function (e) {
-                if (window.isGradioDirty) {
-                    e.preventDefault();
-                    e.returnValue = 'Bạn có thay đổi chưa lưu. Bạn có chắc chắn muốn rời khỏi trang không?';
-                }
-            });
-
-            function styleButtons() {
-                document.querySelectorAll('.imovie-bottom-row *').forEach(el => {
-                    // Override any forced dark theme styles in the storyboard panel
-                    if(el.style) el.style.color = '#111';
+            if (!window.__audioMontageUnloadGuard) {
+                window.__audioMontageUnloadGuard = true;
+                window.addEventListener('beforeunload', function (e) {
+                    if (window.isGradioDirty) {
+                        e.preventDefault();
+                        e.returnValue = 'Bạn có thay đổi chưa lưu. Bạn có chắc chắn muốn rời khỏi trang không?';
+                    }
                 });
             }
-            
-            setInterval(styleButtons, 500);
-            document.body.addEventListener('click', () => setTimeout(styleButtons, 100));
         }
         """
         demo.load(
@@ -892,6 +981,7 @@ def launch_review_ui(
             ],
             js=js_code
         )
+        demo.load(fn=None, js=THEME_JS)
         
         # Sync dirty state to JS variable for beforeunload
         dirty_state.change(

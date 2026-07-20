@@ -6,8 +6,11 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import Iterable
+from urllib.error import URLError
+from urllib.request import urlopen
 
 from scripts.kaggle_job import kaggle_command
 
@@ -33,6 +36,26 @@ SUPPORTED_AUDIO_SUFFIXES = {".mp3", ".wav", ".m4a", ".aac", ".flac", ".ogg"}
 _review_process: subprocess.Popen | None = None
 
 
+def _review_url(port: int) -> str:
+    return f"http://127.0.0.1:{port}"
+
+
+def _wait_for_review_server(port: int, timeout_seconds: float = 25.0) -> bool:
+    deadline = time.monotonic() + timeout_seconds
+    url = _review_url(port)
+
+    while time.monotonic() < deadline:
+        try:
+            with urlopen(url, timeout=1.0) as response:
+                if 200 <= response.status < 500:
+                    return True
+        except (OSError, URLError):
+            pass
+        time.sleep(0.25)
+
+    return False
+
+
 def _is_inside_root(path: Path) -> bool:
     try:
         path.resolve().relative_to(ROOT)
@@ -47,7 +70,7 @@ def _uploaded_path(value) -> Path:
     name = getattr(value, "name", None)
     if name:
         return Path(name)
-    raise ValueError("Khong doc duoc file upload.")
+    raise ValueError("Không đọc được file đã chọn.")
 
 
 def _safe_filename(name: str) -> str:
@@ -92,9 +115,9 @@ def save_kaggle_credentials(username: str, api_key: str) -> str:
     username = (username or "").strip()
     api_key = (api_key or "").strip()
     if not username:
-        raise ValueError("Vui long nhap Kaggle username.")
+        raise ValueError("Vui lòng nhập tên người dùng Kaggle.")
     if not api_key:
-        raise ValueError("Vui long nhap Kaggle API key.")
+        raise ValueError("Vui lòng nhập khóa API Kaggle.")
 
     kaggle_dir = Path.home() / ".kaggle"
     kaggle_dir.mkdir(parents=True, exist_ok=True)
@@ -107,13 +130,13 @@ def save_kaggle_credentials(username: str, api_key: str) -> str:
         os.chmod(kaggle_json, 0o600)
     except OSError:
         pass
-    return f"Da luu Kaggle API cho user `{username}` tai `{kaggle_json}`."
+    return f"Đã lưu kết nối Kaggle cho người dùng `{username}` tại `{kaggle_json}`."
 
 
 def check_kaggle_credentials(timeout_seconds: int = 45) -> str:
     username = read_kaggle_username()
     if not username:
-        return "Chua tim thay Kaggle API. Hay nhap username va API key roi bam Luu."
+        return "Chưa tìm thấy cấu hình Kaggle. Hãy nhập tên người dùng và khóa API rồi bấm Lưu kết nối."
 
     command = kaggle_command("datasets", "list", "--mine")
     try:
@@ -129,21 +152,21 @@ def check_kaggle_credentials(timeout_seconds: int = 45) -> str:
             check=False,
         )
     except FileNotFoundError:
-        return "Khong tim thay Kaggle CLI. Hay cai dependency bang requirements-terminal.txt."
+        return "Không tìm thấy Kaggle CLI. Hãy cài dependency bằng requirements-terminal.txt."
     except subprocess.TimeoutExpired:
-        return "Kaggle CLI phan hoi qua lau. Kiem tra internet hoac API key."
+        return "Kaggle phản hồi quá lâu. Hãy kiểm tra kết nối mạng hoặc khóa API."
 
     if result.returncode == 0:
-        return f"Kaggle da san sang cho user `{username}`."
-    return "Kaggle chua san sang:\n" + _tail(result.stdout)
+        return f"Kaggle đã sẵn sàng cho người dùng `{username}`."
+    return "Kaggle chưa sẵn sàng:\n" + _tail(result.stdout)
 
 
 def stage_inputs(video_files: Iterable, audio_file) -> tuple[list[Path], Path, str]:
     video_files = list(video_files or [])
     if not video_files:
-        raise ValueError("Hay chon it nhat mot video nguon.")
+        raise ValueError("Hãy chọn ít nhất một video nguồn.")
     if not audio_file:
-        raise ValueError("Hay chon mot file voice-over/audio.")
+        raise ValueError("Hãy chọn một file voice-over hoặc audio.")
 
     RAW_DIR.mkdir(parents=True, exist_ok=True)
     staged_videos: list[Path] = []
@@ -153,7 +176,7 @@ def stage_inputs(video_files: Iterable, audio_file) -> tuple[list[Path], Path, s
         source = _uploaded_path(value)
         suffix = source.suffix.lower()
         if suffix not in SUPPORTED_VIDEO_SUFFIXES:
-            raise ValueError(f"File video khong ho tro: {source.name}")
+            raise ValueError(f"Định dạng video không được hỗ trợ: {source.name}")
         destination = _unique_destination(RAW_DIR, _safe_filename(source.name))
         shutil.copy2(source, destination)
         staged_videos.append(destination)
@@ -162,7 +185,7 @@ def stage_inputs(video_files: Iterable, audio_file) -> tuple[list[Path], Path, s
     audio_source = _uploaded_path(audio_file)
     audio_suffix = audio_source.suffix.lower()
     if audio_suffix not in SUPPORTED_AUDIO_SUFFIXES:
-        raise ValueError(f"File audio khong ho tro: {audio_source.name}")
+        raise ValueError(f"Định dạng audio không được hỗ trợ: {audio_source.name}")
     audio_destination = _unique_destination(RAW_DIR, _safe_filename(audio_source.name))
     shutil.copy2(audio_source, audio_destination)
     messages.append(f"Voice: `{audio_destination.relative_to(ROOT)}`")
@@ -173,14 +196,14 @@ def stage_inputs(video_files: Iterable, audio_file) -> tuple[list[Path], Path, s
 def draft_status() -> tuple[bool, str]:
     missing = [name for name in REQUIRED_DRAFT_FILES if not (INTERMEDIATE_DIR / name).is_file()]
     if missing:
-        return False, "Chua co ban nhap. Thieu: " + ", ".join(missing)
-    return True, "Ban nhap da san sang. Co the mo man hinh chinh sua."
+        return False, "Chưa có bản nháp. Còn thiếu: " + ", ".join(missing)
+    return True, "Bản nháp đã sẵn sàng. Bạn có thể mở không gian chỉnh sửa."
 
 
 def final_status() -> tuple[bool, str]:
     if FINAL_VIDEO.is_file():
-        return True, f"Video cuoi da san sang: `{FINAL_VIDEO.relative_to(ROOT)}`"
-    return False, "Chua co video cuoi. Hay render sau khi review."
+        return True, f"Video hoàn chỉnh đã sẵn sàng: `{FINAL_VIDEO.relative_to(ROOT)}`"
+    return False, "Chưa có video hoàn chỉnh. Hãy xuất video sau khi chỉnh sửa."
 
 
 def run_kaggle_draft(
@@ -193,14 +216,14 @@ def run_kaggle_draft(
     fake_embeddings: bool = False,
 ):
     if not videos or not audio:
-        raise ValueError("Thieu video hoac audio da chon.")
+        raise ValueError("Thiếu video hoặc audio đã chọn.")
     videos = [Path(path) for path in videos]
     audio = Path(audio)
     for path in [*videos, audio]:
         if not _is_inside_root(path):
-            raise ValueError(f"Duong dan phai nam trong repo: {path}")
+            raise ValueError(f"Đường dẫn phải nằm trong thư mục dự án: {path}")
         if not path.is_file():
-            raise FileNotFoundError(f"Khong tim thay file: {path}")
+            raise FileNotFoundError(f"Không tìm thấy file: {path}")
 
     device = (device or "cpu").strip()
     compute_type = (compute_type or "int8").strip()
@@ -226,7 +249,7 @@ def run_kaggle_draft(
     if fake_embeddings:
         command.append("--fake-embeddings")
 
-    yield from _run_command_stream(command, success_message="Da tao ban nhap va tai output ve may.")
+    yield from _run_command_stream(command, success_message="Đã tạo bản nháp và tải kết quả về máy.")
 
 
 def launch_review_server(port: int = 7870) -> str:
@@ -236,8 +259,14 @@ def launch_review_server(port: int = 7870) -> str:
     if not ready:
         return message
 
+    url = _review_url(port)
+    if _wait_for_review_server(port, timeout_seconds=0.75):
+        return f"Không gian chỉnh sửa đang chạy tại {url}"
+
     if _review_process and _review_process.poll() is None:
-        return f"Review UI dang chay tai http://127.0.0.1:{port}"
+        if _wait_for_review_server(port):
+            return f"Không gian chỉnh sửa đang chạy tại {url}"
+        return "Không gian chỉnh sửa đang khởi động. Vui lòng bấm lại sau vài giây."
 
     command = [
         sys.executable,
@@ -260,7 +289,11 @@ def launch_review_server(port: int = 7870) -> str:
         stderr=subprocess.DEVNULL,
         text=True,
     )
-    return f"Da mo Review UI: http://127.0.0.1:{port}"
+    if _wait_for_review_server(port):
+        return f"Đã khởi động không gian chỉnh sửa: {url}"
+    if _review_process.poll() is not None:
+        return "Không khởi động được không gian chỉnh sửa. Hãy xem terminal để biết lỗi chi tiết."
+    return "Không gian chỉnh sửa đang khởi động. Vui lòng bấm lại sau vài giây."
 
 
 def run_render_final():
@@ -275,11 +308,11 @@ def run_render_final():
         "8",
         "--overwrite",
     ]
-    yield from _run_command_stream(command, success_message="Da render video cuoi.")
+    yield from _run_command_stream(command, success_message="Đã xuất video hoàn chỉnh.")
 
 
 def _run_command_stream(command: list[str], *, success_message: str):
-    lines = ["Dang chay lenh..."]
+    lines = ["Đang khởi chạy tác vụ..."]
     yield "\n".join(lines)
 
     env = os.environ.copy()
@@ -305,7 +338,7 @@ def _run_command_stream(command: list[str], *, success_message: str):
     if exit_code == 0:
         lines.append(success_message)
     else:
-        lines.append(f"Lenh dung voi ma loi {exit_code}. Xem log phia tren.")
+        lines.append(f"Tác vụ dừng với mã lỗi {exit_code}. Hãy xem nhật ký phía trên.")
     yield "\n".join(lines[-100:])
 
 
