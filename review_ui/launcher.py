@@ -7,20 +7,20 @@ from urllib.parse import quote
 
 import gradio as gr
 
+from review_ui.app import build_review_workspace
 from review_ui.launcher_backend import (
     FINAL_VIDEO,
     ROOT,
     check_kaggle_credentials,
     draft_status,
     final_status,
-    launch_review_server,
     read_kaggle_username,
     run_kaggle_draft,
     run_render_final,
     save_kaggle_credentials,
     stage_inputs,
 )
-from review_ui.theme import APP_THEME_CSS, THEME_JS, THEME_SWITCHER_HTML
+from review_ui.theme import APP_THEME_CSS, REVIEW_WORKSPACE_CSS, THEME_JS, THEME_SWITCHER_HTML
 
 
 def _operation_status_html(state: str, title: str, detail: str) -> str:
@@ -73,8 +73,8 @@ def _final_video_preview_html(path) -> str:
     """
 
 
-LAUNCHER_CSS = APP_THEME_CSS + """
-.app-shell { max-width: 1180px; margin: 0 auto; padding-bottom: 36px; }
+LAUNCHER_CSS = APP_THEME_CSS + REVIEW_WORKSPACE_CSS + """
+.app-shell { max-width: 1280px; margin: 0 auto; padding-bottom: 36px; }
 .app-header {
     display: flex; align-items: flex-start; justify-content: space-between;
     gap: 24px; padding: 24px 4px 16px; border-bottom: 1px solid var(--app-border);
@@ -232,20 +232,7 @@ def build_launcher() -> gr.Blocks:
                             )
 
                 with gr.Tab("Chỉnh sửa", id="review"):
-                    with gr.Column(elem_classes="simple-panel"):
-                        gr.Markdown(
-                            "### Chỉnh sửa bản dựng\nXem từng đoạn, so sánh clip gợi ý, điều chỉnh thuộc tính và lưu timeline."
-                        )
-                        open_review_btn = gr.Button(
-                            "Mở không gian chỉnh sửa",
-                            variant="primary",
-                            interactive=draft_ready_initial,
-                        )
-                        review_status = gr.Markdown(
-                            "Sẵn sàng mở không gian chỉnh sửa."
-                            if draft_ready_initial
-                            else "Bản nháp chưa sẵn sàng."
-                        )
+                    review_workspace = build_review_workspace(show_header=False)
 
                 with gr.Tab("Xuất video", id="export"):
                     with gr.Column(elem_classes="simple-panel"):
@@ -288,8 +275,10 @@ def build_launcher() -> gr.Blocks:
 
         def on_run_draft(videos, audio, project_id, device, compute_type, fake_embeddings):
             if not videos or not audio:
-                message = "Hãy chọn video và audio, sau đó bấm 'Xác nhận dữ liệu' trước."
-                yield _operation_status_html("error", "Thiếu dữ liệu", message), message
+                yield (
+                    _operation_status_html("error", "Chưa có dữ liệu", "Hãy chọn video và voice-over ở phía trên."),
+                    "Hãy bấm Xác nhận dữ liệu trước khi tạo bản nháp.",
+                )
                 return
 
             last_update = ""
@@ -315,13 +304,7 @@ def build_launcher() -> gr.Blocks:
 
         def refresh_actions():
             draft_ready, _ = draft_status()
-            return (
-                gr.update(interactive=draft_ready),
-                gr.update(interactive=draft_ready),
-            )
-
-        def on_open_review():
-            return launch_review_server()
+            return gr.update(interactive=draft_ready)
 
         def on_render():
             last_update = ""
@@ -377,17 +360,20 @@ def build_launcher() -> gr.Blocks:
             show_api=False,
         ).then(
             fn=refresh_actions,
-            outputs=[open_review_btn, render_btn],
+            outputs=[render_btn],
+            show_api=False,
+        ).then(
+            fn=review_workspace["reload_fn"],
+            outputs=review_workspace["reload_outputs"],
             show_api=False,
         )
-        open_review_btn.click(fn=on_open_review, outputs=[review_status], show_api=False)
         render_btn.click(
             fn=on_render,
             outputs=[render_job_status, render_log, final_video_direct],
             show_api=False,
         ).then(
             fn=refresh_actions,
-            outputs=[open_review_btn, render_btn],
+            outputs=[render_btn],
             show_api=False,
         )
         demo.load(fn=None, js=THEME_JS)

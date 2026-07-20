@@ -321,3 +321,60 @@ html[data-app-theme="light"] .gradio-container button:not(.primary) * {
 }
 footer { display: none !important; }
 """
+
+REVIEW_WORKSPACE_CSS = """
+/* === Review Workspace (Editor) Layout === */
+.review-workspace-shell { width: 100%; }
+.imovie-top-row { background: transparent !important; padding-bottom: 10px; align-items: stretch !important; }
+.imovie-top-row > div { height: auto !important; }
+.imovie-media-panel, .imovie-preview-panel {
+    background: var(--app-surface) !important;
+    border-radius: 14px !important;
+    border: 1px solid var(--app-border) !important;
+    padding: 16px !important;
+    box-shadow: var(--app-shadow) !important;
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+.imovie-bottom-row {
+    background: var(--app-surface) !important;
+    border: 1px solid var(--app-border) !important;
+    border-radius: 14px !important;
+    padding: 20px 30px !important;
+    min-height: 250px;
+    margin-top: 10px;
+    box-shadow: var(--app-shadow) !important;
+}
+.imovie-storyboard-panel { background: transparent !important; border: none !important; }
+.workspace-header {
+    display: flex; align-items: center; justify-content: space-between; gap: 18px;
+    padding: 12px 14px; margin-bottom: 12px; border: 1px solid var(--app-border);
+    border-radius: 12px; background: var(--app-surface); box-shadow: var(--app-shadow);
+}
+.workspace-title { color: var(--app-text) !important; font-size: 15px; }
+.workspace-meta { color: var(--app-text-muted) !important; font-size: 12px; margin-top: 3px; }
+.storyboard-container { scrollbar-width: thin; }
+.final-video-player {
+    width: 100%; min-height: 450px; display: grid; place-items: center;
+    border: 1px solid var(--app-border); border-radius: 8px;
+    background: #111827; overflow: hidden;
+}
+.final-video-player video {
+    width: 100%; height: 450px; display: block;
+    background: #000; object-fit: contain;
+}
+.final-video-empty {
+    min-height: 200px; display: grid; place-items: center;
+    border: 1px dashed var(--app-border); border-radius: 8px;
+    color: var(--app-text-muted); background: var(--app-surface-soft); font-size: 14px;
+}
+@media (max-width: 1120px) {
+    .imovie-top-row { flex-wrap: wrap !important; }
+    .imovie-top-row > div { min-width: min(100%, 360px) !important; }
+}
+@media (max-width: 700px) {
+    .workspace-header { align-items: flex-start; flex-direction: column; }
+    .imovie-bottom-row { padding: 14px !important; }
+}
+"""
